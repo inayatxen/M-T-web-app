@@ -1,0 +1,6 @@
+{
+  "name": "Meter Testing Laboratory Management System",
+  "description": "Comprehensive lab management for power companies to receive, track, test and verify meters, CTs, and PTs with automated report generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
