@@ -79,7 +79,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
             {/* Vector Company Logo */}
             <div className="w-24 h-24 bg-white overflow-hidden rounded-xl flex items-center justify-center shadow-md border border-slate-200 shrink-0 select-none">
               <img 
-                src="/src/assets/images/pesco_logo.jpg" 
+                src="/src/assets/images/pesco_logo_1781201510811.jpg" 
                 alt="PESCO Logo" 
                 className="w-full h-full object-cover" 
                 referrerPolicy="no-referrer"

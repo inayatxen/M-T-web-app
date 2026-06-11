@@ -50,6 +50,8 @@ interface SupabaseSyncViewProps {
   setAuditLogs: React.Dispatch<React.SetStateAction<AuditLog[]>>;
   standards: CalibrationStandard[];
   setStandards: React.Dispatch<React.SetStateAction<CalibrationStandard[]>>;
+  todos?: any[];
+  setTodos?: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export default function SupabaseSyncView({
@@ -60,7 +62,9 @@ export default function SupabaseSyncView({
   cases, setCases,
   reports, setReports,
   auditLogs, setAuditLogs,
-  standards, setStandards
+  standards, setStandards,
+  todos = [],
+  setTodos
 }: SupabaseSyncViewProps) {
   const [dbStatus, setDbStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
   const [dbMessage, setDbMessage] = useState<string>('');
@@ -79,6 +83,7 @@ export default function SupabaseSyncView({
     reports: 'Click test',
     auditLogs: 'Click test',
     standards: 'Click test',
+    todos: 'Click test',
   });
 
   const checkConnection = async () => {
@@ -99,7 +104,7 @@ export default function SupabaseSyncView({
   };
 
   const fetchSupabaseCounts = async () => {
-    const tables = ['meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards'];
+    const tables = ['meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos'];
     const updated: { [key: string]: number | string } = {};
 
     for (const t of tables) {
@@ -283,6 +288,7 @@ CREATE TABLE IF NOT EXISTS standards (
       { name: 'reports', data: reports },
       { name: 'auditLogs', data: auditLogs },
       { name: 'standards', data: standards },
+      { name: 'todos', data: todos },
     ];
 
     for (const item of items) {
@@ -323,6 +329,7 @@ CREATE TABLE IF NOT EXISTS standards (
       { name: 'reports', stateSetter: setReports },
       { name: 'auditLogs', stateSetter: setAuditLogs },
       { name: 'standards', stateSetter: setStandards },
+      { name: 'todos', stateSetter: setTodos || (() => {}) },
     ];
 
     for (const job of pullingJobs) {
@@ -513,7 +520,8 @@ CREATE TABLE IF NOT EXISTS standards (
                 { label: 'Joint Dispute Cases', name: 'cases', localCount: cases.length },
                 { label: 'Signed Reports Archive', name: 'reports', localCount: reports.length },
                 { label: 'Lab Audit Logs', name: 'auditLogs', localCount: auditLogs.length },
-                { label: 'Calibration Standards', name: 'standards', localCount: standards.length }
+                { label: 'Calibration Standards', name: 'standards', localCount: standards.length },
+                { label: 'Live Todo Tasks', name: 'todos', localCount: todos.length }
               ].map((row, idx) => (
                 <div key={idx} className="p-2.5 px-3 flex justify-between items-center hover:bg-slate-50/55 dark:hover:bg-slate-850/20 transition">
                   <div className="flex items-center gap-2">

@@ -573,7 +573,7 @@ export default function App() {
           <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
             <div className="w-14 h-14 bg-white rounded-full overflow-hidden flex items-center justify-center shadow shrink-0 border border-slate-700">
               <img 
-                src="/src/assets/images/pesco_logo.jpg" 
+                src="/src/assets/images/pesco_logo_1781201510811.jpg" 
                 alt="PESCO Logo" 
                 className="w-full h-full object-cover" 
                 referrerPolicy="no-referrer"
@@ -885,6 +885,8 @@ export default function App() {
                   setAuditLogs={setAuditLogs}
                   standards={standards}
                   setStandards={setStandards}
+                  todos={todos}
+                  setTodos={setTodos}
                 />
               )}
 
