@@ -269,7 +269,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode }: LoginViewProps
             {/* Centered PESCO Logo */}
             <div className="w-20 h-20 bg-white rounded-full overflow-hidden flex items-center justify-center border-2 border-slate-700 shadow-xl mb-3 p-1.5 transition-transform hover:scale-105 duration-300">
               <img 
-                src="/src/assets/images/pesco_logo_1781201510811.jpg" 
+                src="/src/assets/images/pesco_logo.jpg" 
                 alt="PESCO Logo" 
                 className="w-full h-full object-cover" 
                 referrerPolicy="no-referrer"
