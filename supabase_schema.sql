@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS public.todos (
 );
 
 -- ==========================================
--- DISABLE ROW LEVEL SECURITY (RLS) FOR QUICK TESTING
+-- DISABLE ROW LEVEL SECURITY (RLS) FOR PIPELINE BYPASS
 -- ==========================================
 ALTER TABLE public.meters DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.receipts DISABLE ROW LEVEL SECURITY;
@@ -167,7 +167,32 @@ ALTER TABLE public.standards DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.todos DISABLE ROW LEVEL SECURITY;
 
 -- ==========================================
--- ALTERNATIVELY, CONFIGURING OPEN ACCESS SCHEMES IF RLS IS REQUIRED
+-- REAL-TIME FALLBACK POLICIES IF YOU RE-ENABLE RLS OR TO BYPASS RESTRICTIONS
 -- ==========================================
--- ALTER TABLE public.todos ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY "allow_all_todos" ON public.todos FOR ALL USING (true);
+DROP POLICY IF EXISTS "allow_anon_meters" ON public.meters;
+CREATE POLICY "allow_anon_meters" ON public.meters FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_receipts" ON public.receipts;
+CREATE POLICY "allow_anon_receipts" ON public.receipts FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_cts" ON public.cts;
+CREATE POLICY "allow_anon_cts" ON public.cts FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_pts" ON public.pts;
+CREATE POLICY "allow_anon_pts" ON public.pts FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_cases" ON public.cases;
+CREATE POLICY "allow_anon_cases" ON public.cases FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_reports" ON public.reports;
+CREATE POLICY "allow_anon_reports" ON public.reports FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_auditLogs" ON public."auditLogs";
+CREATE POLICY "allow_anon_auditLogs" ON public."auditLogs" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_standards" ON public.standards;
+CREATE POLICY "allow_anon_standards" ON public.standards FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_todos" ON public.todos;
+CREATE POLICY "allow_anon_todos" ON public.todos FOR ALL TO anon USING (true) WITH CHECK (true);
+
