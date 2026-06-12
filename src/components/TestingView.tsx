@@ -203,7 +203,14 @@ export default function TestingView({
     const testId = `tr-gen-${Date.now()}`;
     const reportNumber = `REP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const readings: MeterReadings = {
+    const readings: MeterReadings = defaultCategoryFilter === 'single_phase' ? {
+      kwhPeak,
+      kwhOffPeak: '—',
+      kvarhPeak: '—',
+      kvarhOffPeak: '—',
+      mdiPeak: '—',
+      mdiOffPeak: '—'
+    } : {
       kwhPeak,
       kwhOffPeak,
       kvarhPeak,
@@ -525,68 +532,85 @@ export default function TestingView({
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">III. As-Found Register Dial Indexes</h4>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Peak *</label>
+              {defaultCategoryFilter === 'single_phase' ? (
+                <div className="max-w-xs font-mono">
+                  <label className="block text-[10px] font-extrabold text-slate-500 mb-1 uppercase">Final Reading (kWh) *</label>
                   <input
                     type="text"
                     value={kwhPeak}
                     onChange={(e) => setKwhPeak(e.target.value)}
                     className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-900"
+                    placeholder="Enter Final Reading"
                     required
                   />
+                  <p className="text-[10.5px] text-indigo-700/80 font-semibold mt-1">
+                    ℹ️ For single phase meters, only one "Final Reading" is required. All other complex billing registers are omitted.
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Off Peak *</label>
-                  <input
-                    type="text"
-                    value={kwhOffPeak}
-                    onChange={(e) => setKwhOffPeak(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-900"
-                    required
-                  />
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Peak *</label>
+                    <input
+                      type="text"
+                      value={kwhPeak}
+                      onChange={(e) => setKwhPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Off Peak *</label>
+                    <input
+                      type="text"
+                      value={kwhOffPeak}
+                      onChange={(e) => setKwhOffPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Peak *</label>
+                    <input
+                      type="text"
+                      value={kvarhPeak}
+                      onChange={(e) => setKvarhPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Off Peak *</label>
+                    <input
+                      type="text"
+                      value={kvarhOffPeak}
+                      onChange={(e) => setKvarhOffPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Peak * (kW)</label>
+                    <input
+                      type="text"
+                      value={mdiPeak}
+                      onChange={(e) => setMdiPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg font-black text-indigo-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Off Peak * (kW)</label>
+                    <input
+                      type="text"
+                      value={mdiOffPeak}
+                      onChange={(e) => setMdiOffPeak(e.target.value)}
+                      className="w-full text-xs p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg font-black text-indigo-900"
+                      required
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Peak *</label>
-                  <input
-                    type="text"
-                    value={kvarhPeak}
-                    onChange={(e) => setKvarhPeak(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Off Peak *</label>
-                  <input
-                    type="text"
-                    value={kvarhOffPeak}
-                    onChange={(e) => setKvarhOffPeak(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Peak * (kW)</label>
-                  <input
-                    type="text"
-                    value={mdiPeak}
-                    onChange={(e) => setMdiPeak(e.target.value)}
-                    className="w-full text-xs p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg font-black text-indigo-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Off Peak * (kW)</label>
-                  <input
-                    type="text"
-                    value={mdiOffPeak}
-                    onChange={(e) => setMdiOffPeak(e.target.value)}
-                    className="w-full text-xs p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg font-black text-indigo-900"
-                    required
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Sec IV: Accuracy test details */}

@@ -184,36 +184,46 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                <tr>
-                  <td className="p-2.5 pl-3">Active Energy Consumption - Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono">{report.readings.kwhPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kWh</td>
-                </tr>
-                <tr className="bg-slate-50/50">
-                  <td className="p-2.5 pl-3">Active Energy Consumption - Off-Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono">{report.readings.kwhOffPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kWh</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 pl-3">Reactive Energy Consumption - Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono">{report.readings.kvarhPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kVARh</td>
-                </tr>
-                <tr className="bg-slate-50/50">
-                  <td className="p-2.5 pl-3">Reactive Energy Consumption - Off-Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono">{report.readings.kvarhOffPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kVARh</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kW</td>
-                </tr>
-                <tr className="bg-slate-50/50">
-                  <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Off-Peak Hours</td>
-                  <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiOffPeak}</td>
-                  <td className="p-2.5 text-right text-slate-500">kW</td>
-                </tr>
+                {report.meterType === 'single_phase' ? (
+                  <tr>
+                    <td className="p-2.5 pl-3">Final Reading (Active Energy)</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-indigo-905">{report.readings.kwhPeak}</td>
+                    <td className="p-2.5 text-right text-slate-500">kWh</td>
+                  </tr>
+                ) : (
+                  <>
+                    <tr>
+                      <td className="p-2.5 pl-3">Active Energy Consumption - Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono">{report.readings.kwhPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kWh</td>
+                    </tr>
+                    <tr className="bg-slate-50/50">
+                      <td className="p-2.5 pl-3">Active Energy Consumption - Off-Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono">{report.readings.kwhOffPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kWh</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 pl-3">Reactive Energy Consumption - Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono">{report.readings.kvarhPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kVARh</td>
+                    </tr>
+                    <tr className="bg-slate-50/50">
+                      <td className="p-2.5 pl-3">Reactive Energy Consumption - Off-Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono">{report.readings.kvarhOffPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kVARh</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kW</td>
+                    </tr>
+                    <tr className="bg-slate-50/50">
+                      <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Off-Peak Hours</td>
+                      <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiOffPeak}</td>
+                      <td className="p-2.5 text-right text-slate-500">kW</td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
