@@ -21,7 +21,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { TestReport, Meter, CTRecord, PTRecord, CommitteeCase } from '../types';
-import { parseRegionalAccountNumber, getCircleName } from '../utils';
+import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
 
 interface ReportsArchiveViewProps {
   reports: TestReport[];
@@ -576,14 +576,23 @@ export default function ReportsArchiveView({
                 </label>
                 <select
                   value={regDivision}
-                  onChange={(e) => setRegDivision(e.target.value)}
-                  className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
+                  onChange={(e) => {
+                    setRegDivision(e.target.value);
+                    setRegSubdivision('all');
+                  }}
+                  className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
                   <option value="all">All Divisions</option>
                   {dynamicDivisions.map(d => (
-                    <option key={d} value={d}>Division {d}</option>
+                    <option key={d} value={d}>{getDivisionName(d, regCircle)} (Div {d})</option>
                   ))}
-                  {!dynamicDivisions.includes('1') && <option value="1">Division 1</option>}
+                  {(regCircle === 'all' || regCircle === '3') && (
+                    <>
+                      {!dynamicDivisions.includes('1') && <option value="1">Division-I (26310)</option>}
+                      {!dynamicDivisions.includes('2') && <option value="2">Division-II (26320)</option>}
+                      {!dynamicDivisions.includes('5') && <option value="5">Division-III (26350)</option>}
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -595,14 +604,42 @@ export default function ReportsArchiveView({
                 <select
                   value={regSubdivision}
                   onChange={(e) => setRegSubdivision(e.target.value)}
-                  className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
+                  className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
                   <option value="all">All Sub-Divs</option>
-                  {dynamicSubdivisions.map(s => (
-                    <option key={s} value={s}>Sub-Div {s}</option>
-                  ))}
-                  {!dynamicSubdivisions.includes('8') && <option value="8">Sub-Div 8</option>}
-                  {!dynamicSubdivisions.includes('1') && <option value="1">Sub-Div 1</option>}
+                  {dynamicSubdivisions.map(s => {
+                    if (regDivision !== 'all') {
+                      if (regDivision === '1' && !['1', '2', '3', '4', '5', '6', '7'].includes(String(s))) return null;
+                      if (regDivision === '2' && !['1', '2', '3', '4', '8', '9'].includes(String(s))) return null;
+                      if (regDivision === '5' && !['1', '2', '4', '5'].includes(String(s))) return null;
+                    }
+                    return (
+                      <option key={s} value={s}>{getSubdivisionName(s, regDivision, regCircle)}</option>
+                    );
+                  })}
+                  {(regCircle === 'all' || regCircle === '3') && (
+                    <>
+                      {regDivision === '1' && (
+                        <>
+                          <option value="1">Subdivision-I (26311)</option>
+                          <option value="2">Subdivision-II (26312)</option>
+                          <option value="3">Subdivision-III (26313)</option>
+                        </>
+                      )}
+                      {regDivision === '2' && (
+                        <>
+                          <option value="8">Subdivision-VIII (26328)</option>
+                          <option value="9">Subdivision-IX (26329)</option>
+                        </>
+                      )}
+                      {regDivision === '5' && (
+                        <>
+                          <option value="4">Subdivision-IV (26354)</option>
+                          <option value="5">Subdivision-V (26355)</option>
+                        </>
+                      )}
+                    </>
+                  )}
                 </select>
               </div>
             </div>

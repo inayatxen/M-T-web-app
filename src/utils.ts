@@ -58,11 +58,11 @@ export function parseRegionalAccountNumber(accountNum: string): RegionalAccount 
     isValid,
     raw: sanitized,
     batch: padded.substring(0, 2),
-    company: padded.substring(2, 7),
-    circle: padded.substring(7, 8),
-    division: padded.substring(8, 9),
-    subdivision: padded.substring(9, 10),
-    consumer: padded.substring(10),
+    company: padded.substring(2, 7), // 5 digits (e.g. 26311)
+    circle: padded.substring(4, 5),   // 5th digit (e.g. '3' for Mardan)
+    division: padded.substring(5, 6), // 6th digit (e.g. '1', '2', '5')
+    subdivision: padded.substring(6, 7), // 7th digit (e.g. subdivision within division)
+    consumer: padded.substring(7),
   };
 }
 
@@ -196,5 +196,87 @@ export function getCircleName(circleCode: string | number): string {
     default:
       return `Circle ${code}`;
   }
+}
+
+export function getDivisionName(divisionCode: string | number, circleCode?: string | number): string {
+  const divStr = String(divisionCode);
+  const circleStr = circleCode ? String(circleCode) : '3';
+  
+  let code = divStr;
+  if (divStr.startsWith('263')) {
+    code = divStr.substring(4, 5);
+  }
+
+  if (circleStr === '3' || circleStr === '263' || circleStr === '26300' || circleStr === 'all') {
+    switch (code) {
+      case '1':
+        return 'Division-I (26310)';
+      case '2':
+        return 'Division-II (26320)';
+      case '5':
+        return 'Division-III (26350)';
+      default:
+        return `Division ${code}`;
+    }
+  }
+
+  return `Division ${code}`;
+}
+
+export function getSubdivisionName(
+  subdivCode: string | number,
+  divisionCode?: string | number,
+  circleCode?: string | number
+): string {
+  const subStr = String(subdivCode);
+  const divStr = divisionCode ? String(divisionCode) : '1';
+  const circleStr = circleCode ? String(circleCode) : '3';
+  
+  let sCode = subStr;
+  let dCode = divStr;
+
+  if (subStr.startsWith('263')) {
+    dCode = subStr.substring(3, 4);
+    sCode = subStr.substring(4, 5);
+  } else if (divStr.startsWith('263')) {
+    dCode = divStr.substring(4, 5);
+  }
+
+  if (circleStr === '3' || circleStr === '263' || circleStr === '26300' || circleStr === 'all') {
+    const prefix = `263${dCode}${sCode}`;
+    
+    if (dCode === '1') { // 26310
+      switch (sCode) {
+        case '1': return `Subdivision-I (26311)`;
+        case '2': return `Subdivision-II (26312)`;
+        case '3': return `Subdivision-III (26313)`;
+        case '4': return `Subdivision-IV (26314)`;
+        case '5': return `Subdivision-V (26315)`;
+        case '6': return `Subdivision-VI (26316)`;
+        case '7': return `Subdivision-VII (26317)`;
+        default: return `Sub-Div ${sCode} (2631${sCode})`;
+      }
+    } else if (dCode === '2') { // 26320
+      switch (sCode) {
+        case '1': return `Subdivision-I (26321)`;
+        case '2': return `Subdivision-II (26322)`;
+        case '3': return `Subdivision-III (26323)`;
+        case '4': return `Subdivision-IV (26324)`;
+        case '8': return `Subdivision-VIII (26328)`;
+        case '9': return `Subdivision-IX (26329)`;
+        default: return `Sub-Div ${sCode} (2632${sCode})`;
+      }
+    } else if (dCode === '5') { // 26350
+      switch (sCode) {
+        case '1': return `Subdivision-I (26351)`;
+        case '2': return `Subdivision-II (26352)`;
+        case '4': return `Subdivision-IV (26354)`;
+        case '5': return `Subdivision-V (26355)`;
+        default: return `Sub-Div ${sCode} (2635${sCode})`;
+      }
+    }
+  }
+
+  return `Sub-Div ${sCode}`;
 }
 

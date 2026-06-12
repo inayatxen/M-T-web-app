@@ -22,7 +22,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { EquipmentReceipt, MeterCategory, Meter } from '../types';
-import { parseAccountNumber } from '../utils';
+import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
 
 interface RegisterViewProps {
   receipts: EquipmentReceipt[];
@@ -501,20 +501,20 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
                     </div>
                     <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Circle Code</span>
-                      <span className="font-mono font-black text-slate-800 dark:text-white">
-                        {parsedAccount.circleCode ? `Circle ${parsedAccount.circleCode}` : '—'}
+                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.circleCode ? getCircleName(parsedAccount.circleCode) : ''}>
+                        {parsedAccount.circleCode ? `${parsedAccount.circleCode} (${getCircleName(parsedAccount.circleCode)})` : '—'}
                       </span>
                     </div>
                     <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Division Code</span>
-                      <span className="font-mono font-black text-slate-800 dark:text-white">
-                        {parsedAccount.divisionCode ? `Div ${parsedAccount.divisionCode}` : '—'}
+                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
+                        {parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
                       </span>
                     </div>
                     <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Sub-Division</span>
-                      <span className="font-mono font-black text-slate-800 dark:text-white">
-                        {parsedAccount.subdivisionCode ? `Sub-Div ${parsedAccount.subdivisionCode}` : '—'}
+                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
+                        {parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
                       </span>
                     </div>
                     <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
@@ -749,20 +749,33 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
                 <label className="block text-[8.5px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Filter Division</label>
                 <select
                   value={filterDivision}
-                  onChange={(e) => setFilterDivision(e.target.value)}
+                  onChange={(e) => {
+                    setFilterDivision(e.target.value);
+                    setFilterSubdivision('all');
+                  }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
                   <option value="all">All Divisions</option>
-                  <option value="1">Division 1</option>
-                  <option value="2">Division 2</option>
-                  <option value="3">Division 3</option>
-                  <option value="4">Division 4</option>
-                  <option value="5">Division 5</option>
-                  <option value="6">Division 6</option>
-                  <option value="7">Division 7</option>
-                  <option value="8">Division 8</option>
-                  <option value="9">Division 9</option>
-                  <option value="0">Division 0</option>
+                  {(filterCircle === 'all' || filterCircle === '3') ? (
+                    <>
+                      <option value="1">Division-I (26310)</option>
+                      <option value="2">Division-II (26320)</option>
+                      <option value="5">Division-III (26350)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="1">Division 1</option>
+                      <option value="2">Division 2</option>
+                      <option value="3">Division 3</option>
+                      <option value="4">Division 4</option>
+                      <option value="5">Division 5</option>
+                      <option value="6">Division 6</option>
+                      <option value="7">Division 7</option>
+                      <option value="8">Division 8</option>
+                      <option value="9">Division 9</option>
+                      <option value="0">Division 0</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -774,16 +787,66 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
                   <option value="all">All Sub-Divisions</option>
-                  <option value="1">Sub-Division 1</option>
-                  <option value="2">Sub-Division 2</option>
-                  <option value="3">Sub-Division 3</option>
-                  <option value="4">Sub-Division 4</option>
-                  <option value="5">Sub-Division 5</option>
-                  <option value="6">Sub-Division 6</option>
-                  <option value="7">Sub-Division 7</option>
-                  <option value="8">Sub-Division 8</option>
-                  <option value="9">Sub-Division 9</option>
-                  <option value="0">Sub-Division 0</option>
+                  {(filterCircle === 'all' || filterCircle === '3') ? (
+                    <>
+                      {filterDivision === '1' && (
+                        <>
+                          <option value="1">Subdivision-I (26311)</option>
+                          <option value="2">Subdivision-II (26312)</option>
+                          <option value="3">Subdivision-III (26313)</option>
+                          <option value="4">Subdivision-IV (26314)</option>
+                          <option value="5">Subdivision-V (26315)</option>
+                          <option value="6">Subdivision-VI (26316)</option>
+                          <option value="7">Subdivision-VII (26317)</option>
+                        </>
+                      )}
+                      {filterDivision === '2' && (
+                        <>
+                          <option value="1">Subdivision-I (26321)</option>
+                          <option value="2">Subdivision-II (26322)</option>
+                          <option value="3">Subdivision-III (26323)</option>
+                          <option value="4">Subdivision-IV (26324)</option>
+                          <option value="8">Subdivision-VIII (26328)</option>
+                          <option value="9">Subdivision-IX (26329)</option>
+                        </>
+                      )}
+                      {filterDivision === '5' && (
+                        <>
+                          <option value="1">Subdivision-I (26351)</option>
+                          <option value="2">Subdivision-II (26352)</option>
+                          <option value="4">Subdivision-IV (26354)</option>
+                          <option value="5">Subdivision-V (26355)</option>
+                        </>
+                      )}
+                      {filterDivision === 'all' && (
+                        <>
+                          <option disabled className="text-slate-400">— Set Division first —</option>
+                          <option value="1">Subdivision 1</option>
+                          <option value="2">Subdivision 2</option>
+                          <option value="3">Subdivision 3</option>
+                          <option value="4">Subdivision 4</option>
+                          <option value="5">Subdivision 5</option>
+                          <option value="6">Subdivision 6</option>
+                          <option value="7">Subdivision 7</option>
+                          <option value="8">Subdivision 8</option>
+                          <option value="9">Subdivision 9</option>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <option value="1">Sub-Division 1</option>
+                      <option value="2">Sub-Division 2</option>
+                      <option value="3">Sub-Division 3</option>
+                      <option value="4">Sub-Division 4</option>
+                      <option value="5">Sub-Division 5</option>
+                      <option value="6">Sub-Division 6</option>
+                      <option value="7">Sub-Division 7</option>
+                      <option value="8">Sub-Division 8</option>
+                      <option value="9">Sub-Division 9</option>
+                      <option value="0">Sub-Division 0</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -867,13 +930,16 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
                             {parsed.isValid && (
                               <div className="flex flex-wrap gap-1 text-[8.5px] font-black uppercase tracking-tight select-none">
                                 <span className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 px-1 rounded truncate max-w-[125px]" title={parsed.companyName}>
-                                  {parsed.companyName.split(' ')[0]}
+                                  {parsed.companyName}
                                 </span>
                                 <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-1 rounded">
-                                  Cir {parsed.circleCode}
+                                  {getCircleName(parsed.circleCode)} Circle
+                                </span>
+                                <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-1 rounded">
+                                  {getDivisionName(parsed.divisionCode, parsed.circleCode)}
                                 </span>
                                 <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-450 px-1 rounded">
-                                  Sub-Div {parsed.subdivisionCode}
+                                  {getSubdivisionName(parsed.subdivisionCode, parsed.divisionCode, parsed.circleCode)}
                                 </span>
                                 <span className="bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 px-1 rounded">
                                   Bch {parsed.batchNumber}
