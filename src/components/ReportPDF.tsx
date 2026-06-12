@@ -71,7 +71,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         className="mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
       >
         {/* Certificate Decorative Border */}
-        <div className="absolute inset-4 border-2 border-indigo-700/20 pointer-events-none print:inset-0 print:border-slate-400" />
+        <div className="absolute inset-4 border-2 border-indigo-700/20 pointer-events-none print:hidden" />
         <div className="absolute inset-5 border border-indigo-700/10 pointer-events-none print:hidden" />
 
         {/* 1. Header Section */}
