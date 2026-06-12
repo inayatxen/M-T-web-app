@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport } from '../types';
 import { parseRegionalAccountNumber, getCircleName } from '../utils';
+import pescoLogo from '../assets/images/pesco_logo.jpg';
 
 interface DashboardViewProps {
   meters: Meter[];
@@ -161,7 +162,7 @@ export default function DashboardView({
         <div className="flex items-center gap-4 relative z-10 w-full md:w-auto">
           <div className="w-20 h-20 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-lg border border-slate-700 shrink-0 select-none">
             <img 
-              src="/src/assets/images/pesco_logo.jpg" 
+              src={pescoLogo} 
               alt="PESCO Logo" 
               className="w-full h-full object-cover" 
               referrerPolicy="no-referrer"
