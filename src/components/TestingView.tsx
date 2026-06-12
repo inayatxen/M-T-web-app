@@ -18,10 +18,11 @@ import {
   Flame,
   FileCheck
 } from 'lucide-react';
-import { Meter, TestReport, MeterCategory, MeterReadings, AccuracyTest } from '../types';
+import { Meter, TestReport, MeterCategory, MeterReadings, AccuracyTest, EquipmentReceipt } from '../types';
 
 interface TestingViewProps {
   meters: Meter[];
+  receipts?: EquipmentReceipt[];
   onAddReportAndVerifyMeter: (updatedMeter: Meter, report: TestReport) => void;
   currentUser: any;
   defaultCategoryFilter: MeterCategory; // which bench is active
@@ -29,6 +30,7 @@ interface TestingViewProps {
 
 export default function TestingView({ 
   meters, 
+  receipts = [],
   onAddReportAndVerifyMeter, 
   currentUser,
   defaultCategoryFilter
@@ -96,29 +98,43 @@ export default function TestingView({
         setSerialNumber(match.serialNumber);
         setManufacturer(match.manufacturer);
         
-        // Custom consumer mapping based on preseeded receipts (if exist)
-        if (match.meterNumber === 'MTR-102941') {
-          setAccountNumber('12093847210928');
-          setConsumerName('Blue Ridge Textiles Ltd');
-          setFatherName('Waris Ali');
-          setNatureOfConnection('Industrial Bulk Feed (Seasonal Tariff)');
-        } else if (match.meterNumber === 'MTR-772183') {
-          setAccountNumber('14221190281726');
-          setConsumerName('Dr. Sameer Al-Faisal');
-          setFatherName('Ibrahim Al-Faisal');
-          setNatureOfConnection('General Commercial Sub-Phase');
-        } else if (match.meterNumber === 'MTR-309128') {
-          setAccountNumber('11029182736450');
-          setConsumerName('Alpha Tech Parks Inc');
-          setFatherName('W. L. Tech');
-          setNatureOfConnection('Smart High Voltage Feeder Grid');
-        } else {
-          // Generate realistic placeholder consumer
-          const randomAccountParts = Math.floor(1000000000 + Math.random() * 9000000000);
-          setAccountNumber(`100${randomAccountParts}`);
-          setConsumerName(`Govt Feeder Client-${match.meterNumber}`);
+        // Search for dynamic matches in the Inward Register (receipts)
+        const matchedReceipt = receipts.find(r => 
+          r.meterNumber.toUpperCase() === match.meterNumber.toUpperCase() ||
+          r.serialNumber.toUpperCase() === match.serialNumber.toUpperCase()
+        );
+
+        if (matchedReceipt) {
+          setAccountNumber(matchedReceipt.consumerAccount || '');
+          setConsumerName(matchedReceipt.consumerName || '');
+          setNatureOfConnection(matchedReceipt.reasonForTesting || 'Routine Calibration');
+          setTariff(matchedReceipt.remarks?.includes('Commercial') ? 'Commercial B3-A' : 'Domestic A1-R');
           setFatherName('Official Utility Custody');
-          setNatureOfConnection('Standard Grid Tie');
+        } else {
+          // Custom consumer mapping based on preseeded receipts (if exist)
+          if (match.meterNumber === 'MTR-102941') {
+            setAccountNumber('12093847210928');
+            setConsumerName('Blue Ridge Textiles Ltd');
+            setFatherName('Waris Ali');
+            setNatureOfConnection('Industrial Bulk Feed (Seasonal Tariff)');
+          } else if (match.meterNumber === 'MTR-772183') {
+            setAccountNumber('14221190281726');
+            setConsumerName('Dr. Sameer Al-Faisal');
+            setFatherName('Ibrahim Al-Faisal');
+            setNatureOfConnection('General Commercial Sub-Phase');
+          } else if (match.meterNumber === 'MTR-309128') {
+            setAccountNumber('11029182736450');
+            setConsumerName('Alpha Tech Parks Inc');
+            setFatherName('W. L. Tech');
+            setNatureOfConnection('Smart High Voltage Feeder Grid');
+          } else {
+            // Generate realistic placeholder consumer
+            const randomAccountParts = Math.floor(1000000000 + Math.random() * 9000000000);
+            setAccountNumber(`100${randomAccountParts}`);
+            setConsumerName(`Govt Feeder Client-${match.meterNumber}`);
+            setFatherName('Official Utility Custody');
+            setNatureOfConnection('Standard Grid Tie');
+          }
         }
       }
     } else {
@@ -129,7 +145,34 @@ export default function TestingView({
       setAccountNumber('');
       setConsumerName('');
     }
-  }, [selectedMeterId, meters]);
+  }, [selectedMeterId, meters, receipts]);
+
+  // Dynamically carry forward details from Inward Receipts when meterNumber or serialNumber changes manually
+  useEffect(() => {
+    if (meterNumber && !selectedMeterId) {
+      const matchReceipt = receipts.find(r => r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase());
+      if (matchReceipt) {
+        setAccountNumber(matchReceipt.consumerAccount || '');
+        setConsumerName(matchReceipt.consumerName || '');
+        setSerialNumber(matchReceipt.serialNumber || '');
+        setManufacturer(matchReceipt.make || '');
+        setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
+      }
+    }
+  }, [meterNumber, selectedMeterId, receipts]);
+
+  useEffect(() => {
+    if (serialNumber && !selectedMeterId) {
+      const matchReceipt = receipts.find(r => r.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
+      if (matchReceipt) {
+        setAccountNumber(matchReceipt.consumerAccount || '');
+        setConsumerName(matchReceipt.consumerName || '');
+        setMeterNumber(matchReceipt.meterNumber || '');
+        setManufacturer(matchReceipt.make || '');
+        setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
+      }
+    }
+  }, [serialNumber, selectedMeterId, receipts]);
 
   const handleDiscrepancyToggle = (profile: string) => {
     if (profile === 'No Discrepancy') {
@@ -331,6 +374,36 @@ export default function TestingView({
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">I. Consumer Account Profile Information</h4>
               </div>
+
+              {(() => {
+                const matchingReceipt = receipts.find(r => {
+                  const m = selectedMeterId ? meters.find(item => item.id === selectedMeterId) : null;
+                  if (m) {
+                    return r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+                           r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase();
+                  }
+                  return (meterNumber && r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase()) ||
+                         (serialNumber && r.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
+                });
+
+                if (!matchingReceipt) return null;
+
+                return (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/80 p-2.5 rounded-lg text-xs flex items-center justify-between text-emerald-800 dark:text-emerald-300 font-semibold animate-in fade-in duration-200">
+                    <span className="flex items-center gap-1.5">
+                      <BookmarkCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>
+                        Inward Data Carried Forward from Receipt:{' '}
+                        <span className="font-mono font-bold text-slate-800 dark:text-white">{matchingReceipt.receiptNumber}</span>
+                        {' '}({matchingReceipt.consumerName})
+                      </span>
+                    </span>
+                    <span className="text-[9px] font-black uppercase bg-emerald-600 text-white px-2 py-0.5 rounded tracking-wider shrink-0 ml-2">
+                      Active Linked
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-slate-800">
                 <div>

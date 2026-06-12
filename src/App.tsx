@@ -747,6 +747,7 @@ export default function App() {
               {activePageId === 'single_phase_testing' && (
                 <TestingView 
                   meters={meters} 
+                  receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
                   currentUser={currentUser} 
                   defaultCategoryFilter="single_phase" 
@@ -757,6 +758,7 @@ export default function App() {
               {activePageId === 'three_phase_whole_testing' && (
                 <TestingView 
                   meters={meters} 
+                  receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_whole" 
@@ -767,6 +769,7 @@ export default function App() {
               {activePageId === 'three_phase_ct_testing' && (
                 <TestingView 
                   meters={meters} 
+                  receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_ct" 
@@ -777,6 +780,7 @@ export default function App() {
               {activePageId === 'three_phase_ct_pt_testing' && (
                 <TestingView 
                   meters={meters} 
+                  receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_ct_pt" 
@@ -820,7 +824,8 @@ export default function App() {
               {activePageId === 'test_check_committee' && (
                 <CommitteeView 
                   cases={cases} 
-                  onAddCase={handleAddCase} 
+                  receipts={receipts}
+                  onAddCase={handleAddCase}
                   onUpdateCaseStatus={handleUpdateCaseStatus} 
                   currentUser={currentUser} 
                 />

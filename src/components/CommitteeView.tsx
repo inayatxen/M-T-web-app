@@ -16,22 +16,31 @@ import {
   FileText,
   Clock,
   Sparkles,
-  ClipboardList
+  ClipboardList,
+  BookmarkCheck
 } from 'lucide-react';
-import { CommitteeCase } from '../types';
+import { CommitteeCase, EquipmentReceipt } from '../types';
 
 interface CommitteeViewProps {
   cases: CommitteeCase[];
+  receipts?: EquipmentReceipt[];
   onAddCase: (newCase: CommitteeCase) => void;
   onUpdateCaseStatus: (caseId: string, updatedFields: Partial<CommitteeCase>) => void;
   currentUser: any;
 }
 
-export default function CommitteeView({ cases, onAddCase, onUpdateCaseStatus, currentUser }: CommitteeViewProps) {
+export default function CommitteeView({ 
+  cases, 
+  receipts = [], 
+  onAddCase, 
+  onUpdateCaseStatus, 
+  currentUser 
+}: CommitteeViewProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   // New Case Form States
+  const [selectedInwardReceiptId, setSelectedInwardReceiptId] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [consumerName, setConsumerName] = useState('');
   const [meterNumber, setMeterNumber] = useState('');
@@ -160,6 +169,41 @@ export default function CommitteeView({ cases, onAddCase, onUpdateCaseStatus, cu
               <div className="md:col-span-3 border-b border-slate-100 pb-2">
                 <span className="text-[10px] font-black uppercase text-indigo-700 tracking-widest block">I. Basic Registry & Consumer Details</span>
               </div>
+
+              {receipts.length > 0 && (
+                <div className="md:col-span-3 bg-indigo-50/70 p-4 rounded-xl border border-indigo-100/50 space-y-2">
+                  <label className="block text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <BookmarkCheck className="w-4 h-4 text-indigo-600" />
+                    Quick Carry-Forward from Inward Intake Register
+                  </label>
+                  <select
+                    value={selectedInwardReceiptId}
+                    onChange={(e) => {
+                      const rId = e.target.value;
+                      setSelectedInwardReceiptId(rId);
+                      const match = receipts.find(r => r.id === rId);
+                      if (match) {
+                        setAccountNumber(match.consumerAccount);
+                        setConsumerName(match.consumerName);
+                        setMeterNumber(match.meterNumber);
+                        setExistingMeterDetails(`${match.make} ${match.meterType.toUpperCase().replace('_', ' ')} (SN: ${match.serialNumber})`);
+                        setReasonForCommitteeCheck(match.reasonForTesting || 'Laboratory dispute calibration check appointment.');
+                      }
+                    }}
+                    className="w-full text-xs p-3 bg-white border border-indigo-200 rounded-lg text-slate-800 font-bold cursor-pointer focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                  >
+                    <option value="">— Select an Inward Intake Record to carry forward details —</option>
+                    {receipts.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.consumerName} ({r.meterNumber}) — Receipt {r.receiptNumber}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-indigo-600/80 font-bold">
+                    Choosing a registered entry carries forward its account profile, hardware specification, and default testing notes instantly.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Consumer Account Number *</label>
