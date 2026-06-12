@@ -46,7 +46,7 @@ export default function TestingView({
   // Form Fields
   // I. Consumer Info
   const [accountNumber, setAccountNumber] = useState('');
-  const [tariff, setTariff] = useState('Domestic A1-R');
+  const [tariff, setTariff] = useState('A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)');
   const [consumerName, setConsumerName] = useState('');
   const [fatherName, setFatherName] = useState('');
   const [natureOfConnection, setNatureOfConnection] = useState('Residential Master connection');
@@ -108,7 +108,7 @@ export default function TestingView({
           setAccountNumber(matchedReceipt.consumerAccount || '');
           setConsumerName(matchedReceipt.consumerName || '');
           setNatureOfConnection(matchedReceipt.reasonForTesting || 'Routine Calibration');
-          setTariff(matchedReceipt.remarks?.includes('Commercial') ? 'Commercial B3-A' : 'Domestic A1-R');
+          setTariff(matchedReceipt.remarks?.includes('Commercial') ? 'A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)' : 'A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)');
           setFatherName('Official Utility Custody');
         } else {
           // Custom consumer mapping based on preseeded receipts (if exist)
@@ -430,12 +430,46 @@ export default function TestingView({
                   <select
                     value={tariff}
                     onChange={(e) => setTariff(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white text-slate-700 cursor-pointer"
+                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white text-slate-705 cursor-pointer font-semibold"
                   >
-                    <option value="Domestic A1-R">Domestic Residential (A1-R)</option>
-                    <option value="Commercial B3-A">Commercial B3-A (High Voltage Cap)</option>
-                    <option value="Industrial C2-P">Heavy Industrial C2-P (Substation Tie)</option>
-                    <option value="Bulk Supply TubeWell">Agricultural / TubeWell Grid</option>
+                    <optgroup label="A-1: Residential">
+                      <option value="A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)">A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)</option>
+                      <option value="A-1b Domestic ToU (Time-of-Use)">A-1b Domestic ToU (Time-of-Use)</option>
+                    </optgroup>
+                    <optgroup label="A-2: Commercial">
+                      <option value="A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)">A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)</option>
+                      <option value="A-2b Commercial Non-ToU (Sanctioned load above 5 kW)">A-2b Commercial Non-ToU (Sanctioned load above 5 kW)</option>
+                      <option value="A-2c Commercial ToU">A-2c Commercial ToU</option>
+                      <option value="A-2d Electric Vehicle Charging Station">A-2d Electric Vehicle Charging Station</option>
+                    </optgroup>
+                    <optgroup label="A-3: General Services">
+                      <option value="A-3 Mosques, Hospitals, Govt Offices, Water Pumps">A-3 Mosques, Hospitals, Govt Offices, Water Pumps</option>
+                    </optgroup>
+                    <optgroup label="B: Industrial">
+                      <option value="B-1 Sanctioned Load up to 25 kW">B-1 Sanctioned Load up to 25 kW</option>
+                      <option value="B-2 Sanctioned Load 25 - 500 kW">B-2 Sanctioned Load 25 - 500 kW</option>
+                      <option value="B-3 Sanctioned Load 500 - 5000 kW">B-3 Sanctioned Load 500 - 5000 kW</option>
+                      <option value="B-4 Sanctioned Load above 5000 kW">B-4 Sanctioned Load above 5000 kW</option>
+                    </optgroup>
+                    <optgroup label="C: Single Point">
+                      <option value="C-1 Supply at 400/230 Volts">C-1 Supply at 400/230 Volts</option>
+                      <option value="C-2 Supply at 11 kV">C-2 Supply at 11 kV</option>
+                      <option value="C-3 Supply at 33 kV and above">C-3 Supply at 33 kV and above</option>
+                    </optgroup>
+                    <optgroup label="D: Agriculture">
+                      <option value="D-1a Tubewell (Flat rate)">D-1a Tubewell (Flat rate)</option>
+                      <option value="D-1b Tubewell (ToU)">D-1b Tubewell (ToU)</option>
+                    </optgroup>
+                    <optgroup label="E: Temporary">
+                      <option value="E-1 Temporary Residential Supply">E-1 Temporary Residential Supply</option>
+                      <option value="E-2 Temporary Commercial/Industrial Supply">E-2 Temporary Commercial/Industrial Supply</option>
+                    </optgroup>
+                    <optgroup label="F: Public Lighting">
+                      <option value="F-1 Street Lights">F-1 Street Lights</option>
+                    </optgroup>
+                    <optgroup label="G: Residential Colony">
+                      <option value="G-1 Residential Colony provided with bulk supply">G-1 Residential Colony provided with bulk supply</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>

@@ -19,20 +19,282 @@ import {
   Filter,
   MapPin,
   Building2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  UploadCloud,
+  Download
 } from 'lucide-react';
+import { read, utils, write } from 'xlsx';
 import { EquipmentReceipt, MeterCategory, Meter } from '../types';
 import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
+
+const mapMeterCategory = (rawType: string): MeterCategory => {
+  const norm = rawType.toLowerCase().trim();
+  if (norm.includes('single') || norm.includes('1-phase') || norm.includes('1 phase') || norm === '1p') {
+    return 'single_phase';
+  }
+  if (norm.includes('whole') || norm.includes('wc') || norm.includes('whole current')) {
+    return 'three_phase_whole';
+  }
+  if (norm.includes('ct/pt') || norm.includes('ctpt') || norm.includes('ct-pt')) {
+    return 'three_phase_ct_pt';
+  }
+  if (norm.includes('three phase ct') || norm.includes('three_phase_ct') || norm.includes('ct operated') || norm.includes('ct-operated')) {
+    return 'three_phase_ct';
+  }
+  if (norm.includes('smart') || norm.includes('sim') || norm.includes('cellular')) {
+    return 'smart';
+  }
+  if (norm.includes('three') || norm.includes('3-phase') || norm.includes('3 phase') || norm === '3p') {
+    return 'three_phase_whole';
+  }
+  return 'single_phase';
+};
+
+interface ParsedBulkRow {
+  index: number;
+  rawText: string;
+  consumerAccount: string;
+  consumerName: string;
+  meterType: MeterCategory;
+  meterNumber: string;
+  readings: string;
+  serialNumber: string;
+  make: string;
+  reasonForTesting: string;
+  receivedFrom: string;
+  isValid: boolean;
+  errors: string[];
+}
+
+const parseBulkInput = (text: string): ParsedBulkRow[] => {
+  if (!text.trim()) return [];
+  const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+  const results: ParsedBulkRow[] = [];
+
+  lines.forEach((line, idx) => {
+    // Check if this is the header row
+    const isHeader = line.toLowerCase().includes('consumer account') || 
+                     line.toLowerCase().includes('consumer name') || 
+                     line.toLowerCase().includes('primary name') ||
+                     line.toLowerCase().includes('meter target type') ||
+                     line.toLowerCase().includes('warp') ||
+                     line.toLowerCase().includes('testing reason');
+    if (isHeader && idx === 0) {
+      return;
+    }
+
+    // Determine splitter (tab vs comma)
+    const tabCount = (line.match(/\t/g) || []).length;
+    const commaCount = (line.match(/,/g) || []).length;
+    let parts: string[] = [];
+
+    if (tabCount >= 4) {
+      parts = line.split('\t');
+    } else if (commaCount >= 4) {
+      parts = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          parts.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      parts.push(current.trim());
+    } else {
+      parts = line.split(/[,\t]/).map(p => p.trim());
+    }
+
+    const errors: string[] = [];
+    
+    const consumerAccountRaw = (parts[0] || '').trim().replace(/\D/g, '');
+    const consumerName = (parts[1] || '').trim();
+    const meterTypeRaw = (parts[2] || '').trim();
+    const meterNumber = (parts[3] || '').trim();
+    const readings = (parts[4] || '').trim();
+    const serialNumber = (parts[5] || '').trim();
+    const make = (parts[6] || '').trim();
+    const reasonForTesting = (parts[7] || '').trim();
+    const receivedFrom = (parts[8] || '').trim();
+
+    if (!consumerAccountRaw) {
+      errors.push('Account field missing');
+    } else if (consumerAccountRaw.length < 10 || consumerAccountRaw.length > 14) {
+      errors.push(`Account length ${consumerAccountRaw.length} invalid (must be 10-14 digits)`);
+    }
+
+    if (!consumerName) {
+      errors.push('Name field missing');
+    }
+    
+    if (!meterNumber) {
+      errors.push('Meter Number missing');
+    }
+
+    if (!serialNumber) {
+      errors.push('Serial Number missing');
+    }
+
+    if (!make) {
+      errors.push('Make/Manufacturer missing');
+    }
+
+    if (!reasonForTesting) {
+      errors.push('Testing Reason missing');
+    }
+
+    const meterType = mapMeterCategory(meterTypeRaw);
+
+    results.push({
+      index: idx + (isHeader ? 1 : 1),
+      rawText: line,
+      consumerAccount: consumerAccountRaw,
+      consumerName,
+      meterType,
+      meterNumber,
+      readings,
+      serialNumber,
+      make,
+      reasonForTesting,
+      receivedFrom: receivedFrom || 'Unspecified Division',
+      isValid: errors.length === 0,
+      errors
+    });
+  });
+
+  return results;
+};
 
 interface RegisterViewProps {
   receipts: EquipmentReceipt[];
   onAddReceipt: (newReceipt: EquipmentReceipt, associatedMeter: Meter) => void;
+  onAddBulkReceipts?: (newReceipts: EquipmentReceipt[], associatedMeters: Meter[]) => void;
   currentUser: any;
 }
 
-export default function RegisterView({ receipts, onAddReceipt, currentUser }: RegisterViewProps) {
+export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts, currentUser }: RegisterViewProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Intake Form Mode configuration: Single record entry vs Bulk intake sheets import
+  const [formMode, setFormMode] = useState<'single' | 'bulk'>('single');
+  const [bulkText, setBulkText] = useState('');
+
+  const downloadExcelTemplate = () => {
+    try {
+      const headers = [
+        [
+          'Consumer Account Number (14 Digits) *',
+          'Consumer Primary Name *',
+          'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / smart) *',
+          'Meter ID / Number *',
+          'Readings',
+          'Warp/Serial Number *',
+          'Manufacturer Make *',
+          'Testing Reason *',
+          'Origin Division Received From'
+        ]
+      ];
+      const sampleData = [
+        ['01263110083301', 'Blue Ridge Textiles Ltd', 'single_phase', 'MTR-102941', '12845.2', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II'],
+        ['02334881099234', 'Farhan Brothers Rice Mill', 'three_phase_whole', 'MTR-503921', '45812.9', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge High Reading', 'Peshawar Cantt Division']
+      ];
+      
+      const ws = utils.aoa_to_sheet([...headers, ...sampleData]);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, 'Inward Intake Queue');
+      
+      const wbout = write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Equipment_Intake_Bulk_Template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setSuccessMsg('Excel template generated and downloaded!');
+      setTimeout(() => setSuccessMsg(''), 3050);
+    } catch (err: any) {
+      setErrorMsg(`Failed to export template: ${err.message || err}`);
+    }
+  };
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setErrorMsg('');
+    setSuccessMsg('');
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target?.result;
+        if (!data) return;
+        
+        const workbook = read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        // Convert rows to array of arrays, defval of empty string triggers complete cell alignment
+        const rows = utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+        
+        if (rows.length === 0) {
+          setErrorMsg('The uploaded spreadsheet seems to be empty.');
+          return;
+        }
+
+        const firstRowHeader = rows[0] || [];
+        const isFirstRowHeader = firstRowHeader.some(cell => 
+          typeof cell === 'string' && (
+            cell.toLowerCase().includes('account') || 
+            cell.toLowerCase().includes('name') ||
+            cell.toLowerCase().includes('type') ||
+            cell.toLowerCase().includes('meter') ||
+            cell.toLowerCase().includes('serial')
+          )
+        );
+
+        // Filter out empty rows of all cells
+        const dataRows = isFirstRowHeader ? rows.slice(1) : rows;
+        const populatedDataRows = dataRows.filter((r: any[]) => r.some(cell => String(cell).trim() !== ''));
+
+        if (populatedDataRows.length === 0) {
+          setErrorMsg('No valid data lines found in the uploaded file.');
+          return;
+        }
+
+        const formattedLines = populatedDataRows.map((row: any[]) => {
+          return row.map(cell => {
+            const str = cell === null || cell === undefined ? '' : String(cell).trim();
+            // Wrap in double quotes if it has tricky characters
+            if (str.includes(',') || str.includes('\t') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          }).join(',');
+        });
+        
+        // We set the bulkText to the formatted CSV lines so existing review/edit works flawlessly
+        setBulkText(formattedLines.join('\n'));
+        setSuccessMsg(`Spreadsheet "${file.name}" uploaded. ${populatedDataRows.length} equipment entries successfully loaded into queue!`);
+      } catch (err: any) {
+        console.error(err);
+        setErrorMsg(`Failed to parse spreadsheet file: ${err.message || err}`);
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+    // Reset file input element target value
+    e.target.value = '';
+  };
   
   // Custom Area Input Fields Configuration State
   const [inputMode, setInputMode] = useState<'single' | 'segmented'>('single');
@@ -196,17 +458,43 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
       {showAddForm ? (
         /* Dynamic Intake Entry Form */
         <div id="new-receipt-sub-form" className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden animate-in fade-in slide-in-from-bottom-1 duration-200">
-          <div className="bg-slate-900 p-3 text-white flex items-center gap-2">
-            <div className="p-1 bg-blue-500/10 rounded text-emerald-400">
-              <Sparkles className="w-4 h-4 animate-pulse" />
+          <div className="bg-slate-900 p-3 text-white flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="p-1 bg-blue-500/10 rounded text-emerald-400">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-xs uppercase tracking-wider">Formal Inward Intake Record Form</h3>
+                <p className="text-[10px] text-slate-350">Creates legal laboratory chain of custody tags automatically.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-extrabold text-xs uppercase tracking-wider">Formal Inward Intake Record Form</h3>
-              <p className="text-[10px] text-slate-350">Creates legal laboratory chain of custody tags automatically.</p>
+
+            {/* Form Mode Selector: Single vs Bulk */}
+            <div className="flex bg-slate-850 p-0.5 rounded text-[10px] font-bold border border-slate-700/60 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setFormMode('single')}
+                className={`px-3 py-1 rounded transition-all select-none ${
+                  formMode === 'single' ? 'bg-blue-600 text-white shadow-xs font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Single Intake Log
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormMode('bulk')}
+                className={`px-3 py-1 rounded transition-all flex items-center gap-1 select-none ${
+                  formMode === 'bulk' ? 'bg-blue-600 text-white shadow-xs font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Bulk Import Paste
+              </button>
             </div>
           </div>
 
-          <form onSubmit={handleFormSubmit} className="p-4 sm:p-5 space-y-4">
+          {formMode === 'single' ? (
+            <form onSubmit={handleFormSubmit} className="p-4 sm:p-5 space-y-4">
             {errorMsg && (
               <div className="p-2 bg-rose-50 dark:bg-rose-950/20 border-l-2 border-rose-500 text-rose-800 dark:text-rose-400 text-xs font-semibold rounded flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -677,6 +965,289 @@ export default function RegisterView({ receipts, onAddReceipt, currentUser }: Re
               </button>
             </div>
           </form>
+          ) : (() => {
+            // Define handleBulkSubmit here safely inside component closure
+            const handleBulkSubmit = (e: React.FormEvent) => {
+              e.preventDefault();
+              setErrorMsg('');
+              setSuccessMsg('');
+
+              if (!bulkText.trim()) {
+                setErrorMsg('Please paste some text/entries first.');
+                return;
+              }
+
+              const parsedRows = parseBulkInput(bulkText);
+              const validRows = parsedRows.filter(r => r.isValid);
+              if (validRows.length === 0) {
+                setErrorMsg('No valid rows found to import. Verify your fields format.');
+                return;
+              }
+
+              const newReceiptsList: EquipmentReceipt[] = [];
+              const associatedMetersList: Meter[] = [];
+              const today = new Date().toISOString().split('T')[0];
+
+              validRows.forEach((row, i) => {
+                const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+                const generatedNum = `REC-2026-B${randomSuffix}-${i}`;
+
+                const newReceipt: EquipmentReceipt = {
+                  id: `r-gen-bulk-${Date.now()}-${i}`,
+                  receiptNumber: generatedNum,
+                  dateReceived: today,
+                  consumerAccount: row.consumerAccount,
+                  consumerName: row.consumerName,
+                  meterType: row.meterType,
+                  meterNumber: row.meterNumber,
+                  serialNumber: row.serialNumber,
+                  make: row.make,
+                  receivedFrom: row.receivedFrom,
+                  reasonForTesting: row.reasonForTesting,
+                  newOrUsed: 'Used',
+                  receivedBy: currentUser.name,
+                  remarks: row.readings ? `Readings: ${row.readings}` : undefined
+                };
+
+                const associatedMeter: Meter = {
+                  id: `m-gen-bulk-${Date.now()}-${i}`,
+                  meterNumber: row.meterNumber,
+                  serialNumber: row.serialNumber,
+                  manufacturer: row.make,
+                  accuracyClass: row.meterType === 'single_phase' ? 'Class 1.0' : 
+                                 row.meterType === 'three_phase_whole' ? 'Class 1.0' :
+                                 row.meterType === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
+                  category: row.meterType,
+                  status: 'received',
+                  stockStatus: 'In Store',
+                  purchaseDate: today,
+                  remarks: `Bulk intake registered via receipt ${generatedNum}.`
+                };
+
+                newReceiptsList.push(newReceipt);
+                associatedMetersList.push(associatedMeter);
+              });
+
+              if (onAddBulkReceipts) {
+                onAddBulkReceipts(newReceiptsList, associatedMetersList);
+              } else {
+                newReceiptsList.forEach((rect, idx) => {
+                  onAddReceipt(rect, associatedMetersList[idx]);
+                });
+              }
+
+              setSuccessMsg(`Bulk Import completely successful! ${validRows.length} inward records parsed, receipts registered, and hardware queued.`);
+              setBulkText('');
+
+              setTimeout(() => {
+                setShowAddForm(false);
+                setSuccessMsg('');
+              }, 2800);
+            };
+
+            return (
+              <div className="p-4 sm:p-5 space-y-4">
+                {errorMsg && (
+                  <div className="p-2 bg-rose-50 dark:bg-rose-950/20 border-l-2 border-rose-500 text-rose-800 dark:text-rose-400 text-xs font-semibold rounded flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errorMsg}
+                  </div>
+                )}
+                {successMsg && (
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/20 border-l-2 border-emerald-500 text-emerald-800 dark:text-emerald-400 text-xs font-semibold rounded flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                    {successMsg}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Excel File Drop Area */}
+                  <div className="md:col-span-2 border-2 border-dashed border-indigo-200 dark:border-indigo-900/40 hover:border-indigo-500 dark:hover:border-indigo-600 bg-indigo-50/10 dark:bg-indigo-950/5 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2 group transition-all relative">
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={handleExcelUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="p-3 bg-indigo-100 dark:bg-indigo-950/40 rounded-full text-indigo-650 group-hover:scale-110 transition-transform">
+                      <UploadCloud className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold text-indigo-950 dark:text-indigo-400 block uppercase tracking-wider">
+                        Upload Excel Sheet or CSV File
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 font-bold">
+                        Drop a spreadsheet (.xlsx, .xls, .csv) here or click to browse
+                      </span>
+                    </div>
+                    <span className="inline-block px-3 py-1 bg-white dark:bg-slate-850 border border-indigo-100 dark:border-slate-705 rounded text-[9px] font-black text-indigo-700 uppercase tracking-widest pointer-events-none group-hover:bg-indigo-600 group-hover:text-white transition-colors mt-1 shadow-xs">
+                      Choose Sheet File
+                    </span>
+                  </div>
+
+                  {/* Template Downloader */}
+                  <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5 font-extrabold text-indigo-950 dark:text-indigo-455 text-xs uppercase tracking-wide">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                        <span>Receipt Columns Sequence</span>
+                      </div>
+                      <p className="text-[10.5px] text-slate-500 leading-relaxed font-bold">
+                        Requires columns: Account No, Consumer Name, Meter Type, Meter No, Readings, Serial No, Make, Reason, Origin Division.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={downloadExcelTemplate}
+                      className="w-full mt-3 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-black tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer font-bold select-none"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Download Template (.xlsx)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Collapsible Manual Text Override */}
+                <details className="group border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
+                  <summary className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-850 font-extrabold text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none list-none">
+                    <div className="flex items-center gap-1.5">
+                      <ClipboardList className="w-3.5 h-3.5 text-slate-400" />
+                      <span>View Raw Data CSV Buffer / Manual Direct Paste override</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-650 font-bold group-open:hidden">▶ Show</span>
+                    <span className="text-[10px] text-indigo-650 font-bold hidden group-open:inline">▼ Hide</span>
+                  </summary>
+                  <div className="p-3 bg-slate-50/30 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                    <p className="text-[10px] text-slate-500 font-semibold">
+                      Uploading an Excel file fills this buffer automatically. You can also paste manually or edit entries directly below:
+                    </p>
+                    <textarea
+                      rows={5}
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                      placeholder="Consumer Account Number,Consumer Primary Name,Meter Type,Meter ID / Number,Readings,Serial Number,Make,Testing Reason,Origin Division"
+                      className="w-full font-mono text-xs p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white"
+                    />
+                  </div>
+                </details>
+
+                {bulkText.trim().length > 0 && (() => {
+                  const parsed = parseBulkInput(bulkText);
+                  const validRows = parsed.filter(r => r.isValid);
+                  const invalidRows = parsed.filter(r => !r.isValid);
+
+                  return (
+                    <div className="space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-100 dark:bg-slate-850 p-2 rounded border border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Live Import Validation Preview
+                        </span>
+                        <div className="flex gap-2 text-[9.5px] font-bold">
+                          <span className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 px-2 py-0.5 rounded">
+                            {validRows.length} Valid
+                          </span>
+                          {invalidRows.length > 0 && (
+                            <span className="bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-400 px-2 py-0.5 rounded">
+                              {invalidRows.length} Faulty
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="max-h-[220px] overflow-y-auto border border-slate-205 dark:border-slate-800/80 rounded">
+                        <table className="w-full text-[10.5px] text-left border-collapse bg-white dark:bg-slate-905">
+                          <thead className="bg-slate-50 dark:bg-slate-850 text-slate-400 dark:text-slate-550 font-black uppercase text-[8.5px] border-b border-slate-100 dark:border-slate-800 select-none">
+                            <tr>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">L#</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Account No</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Consumer Name</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Meter / Serial</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Type</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Readings / Make</th>
+                              <th className="p-2 border-r border-slate-100 dark:border-slate-800">Reason / Division</th>
+                              <th className="p-2 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-700 dark:text-slate-300">
+                            {parsed.map((row, i) => (
+                              <tr key={i} className={`hover:bg-slate-500/5 ${row.isValid ? '' : 'bg-rose-50/50 dark:bg-rose-950/5'}`}>
+                                <td className="p-2 text-center font-mono text-[9px] text-slate-400">{row.index}</td>
+                                <td className="p-2 font-mono font-bold text-slate-800 dark:text-slate-200">
+                                  {row.consumerAccount ? row.consumerAccount : <span className="text-rose-400">Missing</span>}
+                                </td>
+                                <td className="p-2 truncate max-w-[120px] font-sans" title={row.consumerName}>
+                                  {row.consumerName || <span className="text-rose-400">Missing</span>}
+                                </td>
+                                <td className="p-2 font-mono">
+                                  <div className="font-extrabold text-blue-600 dark:text-blue-400">{row.meterNumber || '—'}</div>
+                                  <div className="text-[9.5px] text-slate-400">{row.serialNumber || '—'}</div>
+                                </td>
+                                <td className="p-2 font-sans text-center">
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[8.5px] uppercase font-black tracking-wider ${
+                                    row.meterType === 'single_phase' 
+                                      ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30' 
+                                      : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'
+                                  }`}>
+                                    {row.meterType === 'single_phase' ? '1-Phase' : '3-Phase'}
+                                  </span>
+                                </td>
+                                <td className="p-2 font-mono text-[9px]">
+                                  <div className="font-black text-slate-800 dark:text-slate-200">{row.readings || '—'}</div>
+                                  <div className="text-slate-400 block truncate max-w-[80px]" title={row.make}>{row.make || '—'}</div>
+                                </td>
+                                <td className="p-2 font-medium">
+                                  <div className="truncate max-w-[90px]" title={row.reasonForTesting}>{row.reasonForTesting || '—'}</div>
+                                  <div className="text-[9.5px] text-slate-400 font-sans truncate max-w-[85px] block">{row.receivedFrom || '—'}</div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  {row.isValid ? (
+                                    <span className="text-emerald-600 font-extrabold flex items-center justify-center gap-0.5 select-none animate-pulse">
+                                      ✓ OK
+                                    </span>
+                                  ) : (
+                                    <span className="text-rose-500 font-bold text-[9px] leading-tight block select-none" title={row.errors.join(', ')}>
+                                      ⚠ {row.errors[0]}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Bulk Commit Controls Row */}
+                      <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800 gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkText('');
+                            setErrorMsg('');
+                          }}
+                          className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-850 rounded text-slate-500 dark:text-slate-400 font-extrabold text-xs transition-colors"
+                        >
+                          Clear Text
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkSubmit}
+                          disabled={validRows.length === 0}
+                          className={`px-4 py-1.5 font-extrabold text-xs tracking-wider uppercase rounded transition-all shadow-sm ${
+                            validRows.length > 0 
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 cursor-pointer' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Register {validRows.length} Valid Intake Records
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
         </div>
       ) : (
         /* Registry Log View */

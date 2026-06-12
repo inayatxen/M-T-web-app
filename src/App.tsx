@@ -195,6 +195,23 @@ export default function App() {
     );
   };
 
+  const handleAddBulkReceipts = (newReceiptsList: EquipmentReceipt[], associatedMetersList: Meter[]) => {
+    const updatedMeters = [...associatedMetersList, ...meters];
+    const updatedReceipts = [...newReceiptsList, ...receipts];
+
+    setMeters(updatedMeters);
+    saveState('meters', updatedMeters);
+
+    setReceipts(updatedReceipts);
+    saveState('receipts', updatedReceipts);
+
+    recordAuditTrail(
+      `Bulk Imported ${newReceiptsList.length} Receipts`, 
+      'N/A: Bulk Equipment Intake', 
+      `Assigned ${associatedMetersList.length} Meters to warehouse queue`
+    );
+  };
+
   // B. Inventory Dispatch Condition modifier
   const handleUpdateStockStatus = (meterId: string, status: StockStatus) => {
     const targetMeter = meters.find(m => m.id === meterId);
@@ -731,6 +748,7 @@ export default function App() {
                 <RegisterView 
                   receipts={receipts} 
                   onAddReceipt={handleAddReceipt} 
+                  onAddBulkReceipts={handleAddBulkReceipts}
                   currentUser={currentUser} 
                 />
               )}
