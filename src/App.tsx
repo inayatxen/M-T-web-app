@@ -120,6 +120,9 @@ export default function App() {
   // Active printable PDF reference preview
   const [activePdfReport, setActivePdfReport] = useState<TestReport | null>(null);
 
+  // Cloud database real-time sync status
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('offline');
+
   // 1. Initial hydration from localStorage (Offline-first persistence matching "Local Storage")
   useEffect(() => {
     try {
@@ -151,9 +154,92 @@ export default function App() {
     }
   }, []);
 
+  // 1b. Supabase Bi-directional Auto Sync on startup
+  useEffect(() => {
+    const runStartupSync = async () => {
+      setSyncStatus('syncing');
+      try {
+        // Quick connection test using a light tables check
+        const { error: testError } = await supabase.from('meters').select('id').limit(1);
+        if (testError) {
+          if (testError.code === '42P01') {
+            console.warn('[Supabase Auto-Sync] Connected but schema or tables do not exist yet in Supabase.');
+            setSyncStatus('error');
+          } else {
+            console.warn('[Supabase Auto-Sync] Supabase unreachable or wrong credentials:', testError.message);
+            setSyncStatus('offline');
+          }
+          return;
+        }
+
+        console.log('[Supabase Auto-Sync] Connected successfully. Performing startup bi-directional sync...');
+        
+        const tablesToSync = [
+          { key: 'meters', stateSetter: setMeters, localSeed: SEED_METERS },
+          { key: 'receipts', stateSetter: setReceipts, localSeed: SEED_RECEIPTS },
+          { key: 'cts', stateSetter: setCts, localSeed: SEED_CTS },
+          { key: 'pts', stateSetter: setPts, localSeed: SEED_PTS },
+          { key: 'cases', stateSetter: setCases, localSeed: SEED_COMMITTEE_CASES },
+          { key: 'reports', stateSetter: setReports, localSeed: SEED_REPORTS },
+          { key: 'auditLogs', stateSetter: setAuditLogs, localSeed: SEED_AUDIT_LOGS },
+          { key: 'standards', stateSetter: setStandards, localSeed: SEED_CALIBRATION_STANDARDS }
+        ];
+
+        for (const tbl of tablesToSync) {
+          const { data: remoteData, error } = await supabase.from(tbl.key).select('*');
+          if (error) {
+            console.warn(`[Supabase Auto-Sync] Fail pulling table [${tbl.key}]:`, error.message);
+            continue;
+          }
+
+          if (remoteData && remoteData.length > 0) {
+            tbl.stateSetter(remoteData);
+            localStorage.setItem(`mtlms_${tbl.key}`, JSON.stringify(remoteData));
+            console.log(`[Supabase Auto-Sync] Hydrated state for tbl [${tbl.key}] directly with ${remoteData.length} remote cloud entries.`);
+          } else {
+            // Postgres table was fully queryable but empty. Let's seed/push local records up so they're in sync!
+            const storedLocal = localStorage.getItem(`mtlms_${tbl.key}`);
+            const dataToInsert = storedLocal ? JSON.parse(storedLocal) : tbl.localSeed;
+            if (dataToInsert && dataToInsert.length > 0) {
+              console.log(`[Supabase Auto-Sync] Remote table [${tbl.key}] is empty. Seeding with ${dataToInsert.length} local cache entries...`);
+              await supabase.from(tbl.key).upsert(dataToInsert);
+            }
+          }
+        }
+        setSyncStatus('synced');
+      } catch (err: any) {
+        console.error('[Supabase Auto-Sync Exception]', err);
+        setSyncStatus('error');
+      }
+    };
+
+    const timeout = setTimeout(runStartupSync, 800);
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Sync back to local storage whenever Master state registers mutate
   const saveState = (key: string, val: any) => {
     localStorage.setItem(`mtlms_${key}`, JSON.stringify(val));
+    
+    // Background Real-Time Sync to Supabase
+    if (val && Array.isArray(val)) {
+      setSyncStatus('syncing');
+      (async () => {
+        try {
+          const { error } = await supabase.from(key).upsert(val);
+          if (error) {
+            console.warn(`[Supabase Auto-Sync Warning] Could not back up [${key}]:`, error.message);
+            setSyncStatus('error');
+          } else {
+            console.log(`[Supabase Auto-Sync Success] Table [${key}] successfully synchronized.`);
+            setSyncStatus('synced');
+          }
+        } catch (err) {
+          console.warn(`[Supabase Auto-Sync Error]`, err);
+          setSyncStatus('error');
+        }
+      })();
+    }
   };
 
   // Helper function to log Audit Trail actions
@@ -613,6 +699,46 @@ export default function App() {
               <p className="text-[10px] text-blue-400 font-bold tracking-wide truncate capitalize mt-0.5">
                 💼 {activeUser.role.replace(/_/g, ' ')}
               </p>
+            </div>
+          </div>
+
+          {/* Live Cloud Database Sync Status */}
+          <div className="p-2.5 rounded-lg bg-slate-950/25 border border-slate-800/40 space-y-1.5 selection:bg-indigo-950">
+            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <Database className="w-3 h-3 text-indigo-400 fill-indigo-400/20" />
+                Cloud Database
+              </span>
+              <span className={`px-1 rounded text-[8px] font-black uppercase tracking-widest ${
+                syncStatus === 'synced' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/30' :
+                syncStatus === 'syncing' ? 'bg-amber-950/40 text-amber-400 border border-amber-800/30' :
+                'bg-slate-800 text-slate-400'
+              }`}>
+                {syncStatus === 'synced' && 'Live'}
+                {syncStatus === 'syncing' && 'Sync'}
+                {syncStatus === 'offline' && 'Off'}
+                {syncStatus === 'error' && 'Check'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-300">Sync Pipeline:</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  syncStatus === 'synced' ? 'bg-emerald-500 animate-pulse' :
+                  syncStatus === 'syncing' ? 'bg-amber-500 animate-ping' :
+                  syncStatus === 'error' ? 'bg-rose-500' : 'bg-slate-500'
+                }`}></span>
+                <span className={`text-[9.5px] font-black uppercase tracking-wider ${
+                  syncStatus === 'synced' ? 'text-emerald-400 animate-pulse' :
+                  syncStatus === 'syncing' ? 'text-amber-400' :
+                  syncStatus === 'error' ? 'text-rose-400' : 'text-slate-400'
+                }`}>
+                  {syncStatus === 'synced' && 'CONNECTED'}
+                  {syncStatus === 'syncing' && 'SYNCING...'}
+                  {syncStatus === 'error' && 'ERR SCHEMA'}
+                  {syncStatus === 'offline' && 'OFFLINE'}
+                </span>
+              </div>
             </div>
           </div>
 
