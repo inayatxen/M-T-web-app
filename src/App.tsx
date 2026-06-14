@@ -682,7 +682,7 @@ export default function App() {
   const activeUser = currentUser;
 
   return (
-    <div className={`min-h-screen text-slate-800 flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50'}`}>
+    <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
       
       {/* LEFT NAVIGATION DRAWER (Utility Blue Sidebar) - Hidden during print */}
       <aside className={`w-60 border-r shrink-0 flex flex-col justify-between print:hidden h-screen sticky top-0 overflow-y-auto ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300'}`}>
