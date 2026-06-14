@@ -415,13 +415,13 @@ export default function TestingView({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-slate-800">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Account Number * (14 Digits)</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Account Number *</label>
                   <input
                     type="text"
-                    maxLength={14}
+                    maxLength={30}
                     placeholder="e.g. 14221190281726"
                     value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => setAccountNumber(e.target.value)}
                     className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white transition-all text-slate-900"
                     required
                   />

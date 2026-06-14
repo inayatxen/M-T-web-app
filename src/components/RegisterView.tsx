@@ -113,7 +113,7 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
 
     const errors: string[] = [];
     
-    const consumerAccountRaw = (parts[0] || '').trim().replace(/\D/g, '');
+    const consumerAccountRaw = (parts[0] || '').trim();
     const consumerName = (parts[1] || '').trim();
     const meterTypeRaw = (parts[2] || '').trim();
     const meterNumber = (parts[3] || '').trim();
@@ -123,10 +123,11 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
     const reasonForTesting = (parts[7] || '').trim();
     const receivedFrom = (parts[8] || '').trim();
 
+    const digitsOnlyObj = consumerAccountRaw.replace(/\D/g, '');
     if (!consumerAccountRaw) {
       errors.push('Account field missing');
-    } else if (consumerAccountRaw.length < 10 || consumerAccountRaw.length > 14) {
-      errors.push(`Account length ${consumerAccountRaw.length} invalid (must be 10-14 digits)`);
+    } else if (digitsOnlyObj.length < 10 || digitsOnlyObj.length > 15) {
+      errors.push(`Account layout is invalid (needs 10-14 digits internally)`);
     }
 
     if (!consumerName) {
@@ -336,8 +337,9 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
     setSuccessMsg('');
 
     // Validations
-    if (!consumerAccount || consumerAccount.length < 10) {
-      setErrorMsg('Consumer Account Number is required and should be valid (10-14 digits).');
+    const digitsOnlyVal = consumerAccount.replace(/\D/g, '');
+    if (!consumerAccount || digitsOnlyVal.length < 10) {
+      setErrorMsg('Consumer Account Number is required and should contain 10-14 digits.');
       return;
     }
     if (!consumerName.trim()) {
@@ -548,13 +550,13 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
 
               {inputMode === 'single' ? (
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Account Number (14 Digits) *</label>
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Account Number *</label>
                   <input
                     type="text"
-                    maxLength={14}
+                    maxLength={30}
                     placeholder="e.g. 01263110083300"
                     value={consumerAccount}
-                    onChange={(e) => setConsumerAccount(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => setConsumerAccount(e.target.value)}
                     className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-bold tracking-wider"
                     required
                   />

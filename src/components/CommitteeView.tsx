@@ -211,9 +211,9 @@ export default function CommitteeView({
                 <input
                   type="text"
                   placeholder="e.g. 120938472109"
-                  maxLength={14}
+                  maxLength={30}
                   value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => setAccountNumber(e.target.value)}
                   className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg"
                   required
                 />
