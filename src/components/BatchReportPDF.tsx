@@ -15,6 +15,14 @@ interface BatchReportPDFProps {
 }
 
 export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps) {
+  React.useEffect(() => {
+    const originalTitle = document.title;
+    document.title = 'Batch-test-results';
+    return () => {
+      document.title = originalTitle;
+    };
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };

@@ -15,6 +15,16 @@ interface ReportPDFProps {
 }
 
 export default function ReportPDF({ report, onBack }: ReportPDFProps) {
+  React.useEffect(() => {
+    const originalTitle = document.title;
+    if (report && report.accountNumber) {
+      document.title = `${report.accountNumber.trim()}-test result`;
+    }
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [report]);
+
   const handlePrint = () => {
     window.print();
   };
