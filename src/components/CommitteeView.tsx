@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { getPKTDateString } from '../utils';
 import { 
   UserCheck, 
   Search, 
@@ -48,7 +49,7 @@ export default function CommitteeView({
   const [newMeterDetails, setNewMeterDetails] = useState('');
   const [reasonForCommitteeCheck, setReasonForCommitteeCheck] = useState('');
   const [committeeMembers, setCommitteeMembers] = useState('');
-  const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [inspectionDate, setInspectionDate] = useState(getPKTDateString());
 
   // Case Editing State
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);

@@ -7,6 +7,7 @@ import React from 'react';
 import { ShieldCheck, Download, Printer, ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
 import { TestReport, MeterCategory } from '../types';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
+import { formatPKTDate } from '../utils';
 
 interface ReportPDFProps {
   report: TestReport;
@@ -29,12 +30,8 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
     }
   };
 
-  // Human-readable timestamp
-  const generatedTimeStr = new Date(report.testDate).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Human-readable timestamp in Pakistan Standard Time (PKT)
+  const generatedTimeStr = formatPKTDate(report.testDate);
 
   return (
     <div className="space-y-6">
@@ -371,7 +368,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
             <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">{report.counterSignedBy}</p>
             <p className="text-[9px] text-slate-400">{report.counterSignedByDesignation}</p>
             <p className="text-[9px] text-indigo-600 font-bold mt-1 uppercase tracking-wider">
-              Approved Date: {new Date(report.approvalDate).toLocaleDateString()}
+              Approved Date: {formatPKTDate(report.approvalDate)}
             </p>
           </div>
         </div>

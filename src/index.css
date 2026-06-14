@@ -25,7 +25,8 @@
   }
 
   /* Make target canvas occupy full print screen */
-  #printable-certificate-canvas {
+  #printable-certificate-canvas,
+  .printable-batch-canvas {
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
@@ -33,6 +34,11 @@
     width: 100% !important;
     max-width: 100% !important;
     position: static !important;
+  }
+
+  .print-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 }
 

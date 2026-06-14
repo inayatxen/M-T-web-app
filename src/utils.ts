@@ -162,65 +162,525 @@ export function parseAccountNumber(accountNum: string): ParsedAccount {
   };
 }
 
-export function getCircleName(circleCode: string | number): string {
+export interface PescoSubdivision {
+  code: string;
+  name: string;
+}
+
+export interface PescoDivision {
+  code: string;
+  name: string;
+  subdivisions: PescoSubdivision[];
+}
+
+export interface PescoCircle {
+  code: string;
+  name: string;
+  divisions: PescoDivision[];
+}
+
+const DEFAULT_HIERARCHY: PescoCircle[] = [
+  {
+    code: '261',
+    name: 'PESHAWAR',
+    divisions: [
+      {
+        code: '2611',
+        name: 'CITY RURAL',
+        subdivisions: [
+          { code: '26111', name: 'NISHTRABAD' },
+          { code: '26112', name: 'CHAMKANI' },
+          { code: '26113', name: 'HASHTNAGRI' },
+          { code: '26114', name: 'REHMAN BABA' },
+          { code: '26115', name: 'LALA' },
+          { code: '26116', name: 'FAQIR ABAD' },
+          { code: '26117', name: 'SETHI TOWN' }
+        ]
+      },
+      {
+        code: '2612',
+        name: 'CITY DIVISION',
+        subdivisions: [
+          { code: '26121', name: 'GUL BAHAR' },
+          { code: '26122', name: 'SIKANDAR PURA' },
+          { code: '26123', name: 'CHOWK YADGAR' },
+          { code: '26124', name: 'QISSA KHANI' },
+          { code: '26125', name: 'DABGARI' },
+          { code: '26126', name: 'GUL BAHAR NO-2' },
+          { code: '26127', name: 'WAZIR BAGH' },
+          { code: '26128', name: 'RASHID GHARI' }
+        ]
+      },
+      {
+        code: '2613',
+        name: 'CANTT',
+        subdivisions: [
+          { code: '26131', name: 'PESHAWAR CANTT.' },
+          { code: '6131', name: 'PESHAWAR CANTT.' },
+          { code: '26132', name: 'GULBERG' },
+          { code: '26133', name: 'U.TOWN NO-I' },
+          { code: '26134', name: 'U.TOWN NO-II' },
+          { code: '26135', name: 'KOHAT ROAD' }
+        ]
+      },
+      {
+        code: '2614',
+        name: 'CHARSADDA',
+        subdivisions: [
+          { code: '26141', name: 'CHARSADDA TOWN' },
+          { code: '26142', name: 'SARDHERI' },
+          { code: '26143', name: 'UTMANZAI-I' },
+          { code: '26144', name: 'UMERZAI' },
+          { code: '26145', name: 'NISATTA' },
+          { code: '26146', name: 'RAJJAR' },
+          { code: '26147', name: 'HARICHAND CHD' }
+        ]
+      },
+      {
+        code: '2615',
+        name: 'SHABQADAR',
+        subdivisions: [
+          { code: '26151', name: 'SHABQADAR' },
+          { code: '26152', name: 'DOABA' },
+          { code: '26153', name: 'MATTA' },
+          { code: '26154', name: 'TANGI' }
+        ]
+      },
+      {
+        code: '2616',
+        name: 'PSH RURAL',
+        subdivisions: [
+          { code: '26161', name: 'WARSAK-I' },
+          { code: '26162', name: 'DAUD ZAI' },
+          { code: '26163', name: 'GUL BELA' },
+          { code: '26164', name: 'WARSAK-II' },
+          { code: '26165', name: 'SHAHI BAGH' },
+          { code: '26166', name: 'NAGUMAN' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '262',
+    name: 'Khyber',
+    divisions: [
+      {
+        code: '2621',
+        name: 'KHYBER',
+        subdivisions: [
+          { code: '26211', name: 'DEH BAHADER' },
+          { code: '26212', name: 'MATTANI' },
+          { code: '26213', name: 'BADABER' },
+          { code: '26214', name: 'HAYATABAD' },
+          { code: '26215', name: 'LANDI ARBAB' },
+          { code: '26216', name: 'HAYAT ABAD II' },
+          { code: '26217', name: 'TAJ ABAD' }
+        ]
+      },
+      {
+        code: '2622',
+        name: 'NOWSHEHRA DIV NO.2',
+        subdivisions: [
+          { code: '26221', name: 'PABBI-I' },
+          { code: '26222', name: 'PABBI-II' },
+          { code: '26223', name: 'PABBI-III' },
+          { code: '26224', name: 'NOWSHERA CITY' },
+          { code: '26225', name: 'RISALPUR' },
+          { code: '26226', name: 'PIR PAI' }
+        ]
+      },
+      {
+        code: '2623',
+        name: 'NOWSHERA CANTT',
+        subdivisions: [
+          { code: '26231', name: 'NOWSHERA CANTT-I' },
+          { code: '26232', name: 'NOWSHERA CANTT-II' },
+          { code: '26233', name: 'JEHANGIRA' },
+          { code: '26234', name: 'AKORA KHATTAK' }
+        ]
+      },
+      {
+        code: '2624',
+        name: 'KOHAT',
+        subdivisions: [
+          { code: '26241', name: 'KOHAT URBAN' },
+          { code: '26242', name: 'COLLEGE TOWN' },
+          { code: '26243', name: 'GUMBAT' },
+          { code: '26247', name: 'KOTAL TOWN' },
+          { code: '26248', name: 'BABARI BANDA' }
+        ]
+      },
+      {
+        code: '2625',
+        name: 'HANGU',
+        subdivisions: [
+          { code: '26251', name: 'HANGU' },
+          { code: '26252', name: 'USTERZAI' },
+          { code: '26253', name: 'TALL' }
+        ]
+      },
+      {
+        code: '2626',
+        name: 'KOHAT RURAL',
+        subdivisions: [
+          { code: '26261', name: 'URBAN-II' },
+          { code: '26262', name: 'RURAL' },
+          { code: '26263', name: 'LACHI-I' },
+          { code: '26264', name: 'LACHI-II' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '263',
+    name: 'Mardan',
+    divisions: [
+      {
+        code: '2631',
+        name: 'Mardan-1',
+        subdivisions: [
+          { code: '26311', name: 'MARDAN CITY-I' },
+          { code: '26312', name: 'MARDAN CITY-II' },
+          { code: '26313', name: 'MARDAN CANTT.' },
+          { code: '26314', name: 'PAR HOTI' },
+          { code: '26315', name: 'TORU' },
+          { code: '26316', name: 'GUJAR GHARI' },
+          { code: '26317', name: 'SHIEKH MALTON' }
+        ]
+      },
+      {
+        code: '2632',
+        name: 'Mardan-2',
+        subdivisions: [
+          { code: '26321', name: 'RUSTAM' },
+          { code: '26322', name: 'SAWAL DHER' },
+          { code: '26323', name: 'BAKHSHALI' },
+          { code: '26324', name: 'GARHI KAPURA' },
+          { code: '26328', name: 'KATLANG' },
+          { code: '26329', name: 'SHAH DHAND' }
+        ]
+      },
+      {
+        code: '2635',
+        name: 'Takhtbai',
+        subdivisions: [
+          { code: '26351', name: 'TAKHT BHAI-I' },
+          { code: '26352', name: 'TAKHT BHAI-II' },
+          { code: '26354', name: 'SHER GARH' },
+          { code: '26355', name: 'LUND KHUWAR' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '265',
+    name: 'Swat',
+    divisions: [
+      {
+        code: '2651',
+        name: 'Dargai',
+        subdivisions: [
+          { code: '26511', name: 'DARGAI-I' },
+          { code: '26512', name: 'DARGAI-II' },
+          { code: '26513', name: 'BATKHELA' },
+          { code: '26514', name: 'THANA' },
+          { code: '26515', name: 'BATKHALA-2' },
+          { code: '26516', name: 'SKHAKOT' },
+          { code: '26517', name: 'City Batkhela' }
+        ]
+      },
+      {
+        code: '2652',
+        name: 'Swat 1',
+        subdivisions: [
+          { code: '26521', name: 'MINGORA URBAN' },
+          { code: '26522', name: 'AMANKOT' },
+          { code: '26523', name: 'BRIKOT' },
+          { code: '26524', name: 'MIGORA-2' },
+          { code: '26525', name: 'CHARBAGH' },
+          { code: '26526', name: 'KANGU' },
+          { code: '26527', name: 'KABAL' },
+          { code: '26528', name: 'MINGORA' },
+          { code: '26529', name: 'DEVLIAS' }
+        ]
+      },
+      {
+        code: '2653',
+        name: 'Timargara',
+        subdivisions: [
+          { code: '26531', name: 'TAMERGARA' },
+          { code: '26532', name: 'SAMARBAGH' },
+          { code: '26533', name: 'CHEKDARA' },
+          { code: '26534', name: 'GUL ABAD' },
+          { code: '26536', name: 'TIMERGARA-II' },
+          { code: '26538', name: 'TALASH' },
+          { code: '26539', name: 'LAL QALLA' }
+        ]
+      },
+      {
+        code: '2654',
+        name: 'Buner',
+        subdivisions: [
+          { code: '26541', name: 'DAGGAR-I' },
+          { code: '26542', name: 'DAGGAR-II' }
+        ]
+      },
+      {
+        code: '2655',
+        name: 'Dir',
+        subdivisions: [
+          { code: '26551', name: 'DIR' },
+          { code: '26552', name: 'CHITRAL' },
+          { code: '26553', name: 'WARI' }
+        ]
+      },
+      {
+        code: '2656',
+        name: 'Swat 2',
+        subdivisions: [
+          { code: '26561', name: 'KHAWAZA KHELA' },
+          { code: '26562', name: 'MADYAN' },
+          { code: '26563', name: 'MATTA' }
+        ]
+      },
+      {
+        code: '2657',
+        name: 'Shangla',
+        subdivisions: [
+          { code: '26571', name: 'Alpuri' },
+          { code: '26572', name: 'Besham' },
+          { code: '26573', name: 'Puran' },
+          { code: '26574', name: 'Chakesar Sub Office' },
+          { code: '26576', name: 'Martung Sub Office' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '266',
+    name: 'BANNU',
+    divisions: [
+      {
+        code: '2661',
+        name: 'BANNU',
+        subdivisions: [
+          { code: '26611', name: 'URBAN' },
+          { code: '26612', name: 'BANNU CANTT' },
+          { code: '26615', name: 'DOMEL' },
+          { code: '26617', name: 'SURRANI' }
+        ]
+      },
+      {
+        code: '2662',
+        name: 'LAKKI',
+        subdivisions: [
+          { code: '26621', name: 'LAKKI' },
+          { code: '26622', name: 'SERAI NAURANG' },
+          { code: '26623', name: 'PEAZU' },
+          { code: '26624', name: 'GAMBILA' }
+        ]
+      },
+      {
+        code: '2665',
+        name: 'KARAK',
+        subdivisions: [
+          { code: '26651', name: 'KARAK' },
+          { code: '26652', name: 'LATAMBER' },
+          { code: '26653', name: 'TAKHTI NASRATI' }
+        ]
+      },
+      {
+        code: '2667',
+        name: 'BANNU-II',
+        subdivisions: [
+          { code: '26671', name: 'RURAL-I' },
+          { code: '26672', name: 'RURAL-II' },
+          { code: '26673', name: 'GHORIWALA' },
+          { code: '26674', name: 'KAKKI' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '268',
+    name: 'SWABI',
+    divisions: [
+      {
+        code: '2681',
+        name: 'SWABI-I',
+        subdivisions: [
+          { code: '26811', name: 'SWABI-I' },
+          { code: '26812', name: 'SWABI-II' },
+          { code: '26813', name: 'KHADO KHEL' }
+        ]
+      },
+      {
+        code: '2682',
+        name: 'RAZAR',
+        subdivisions: [
+          { code: '26821', name: 'YAR HUSSAIN-I' },
+          { code: '26822', name: 'ISMAILIA' },
+          { code: '26823', name: 'YAR HUSSAIN-II' },
+          { code: '26824', name: 'NAWA KALI' },
+          { code: '26825', name: 'SHAWA' }
+        ]
+      },
+      {
+        code: '2683',
+        name: 'SWABI-II',
+        subdivisions: [
+          { code: '26831', name: 'LAHORE SWABI' },
+          { code: '26832', name: 'ZAIDA' },
+          { code: '26833', name: 'TORDHER' },
+          { code: '26834', name: 'MARGHUZ' }
+        ]
+      },
+      {
+        code: '2684',
+        name: 'TOPI',
+        subdivisions: [
+          { code: '26841', name: 'TOPI' },
+          { code: '26842', name: 'GADOON' },
+          { code: '26843', name: 'KALABAT' }
+        ]
+      }
+    ]
+  },
+  {
+    code: '269',
+    name: 'DI KHAN',
+    divisions: [
+      {
+        code: '2691',
+        name: 'CITY DIV DIK',
+        subdivisions: [
+          { code: '26911', name: 'CITY-1 DIK' },
+          { code: '26912', name: 'CITY-II DIK' },
+          { code: '26913', name: 'RURAL DIK' },
+          { code: '26914', name: 'DRABAN DIK' }
+        ]
+      },
+      {
+        code: '2692',
+        name: 'TANK DIV',
+        subdivisions: [
+          { code: '26921', name: 'TANK-I' },
+          { code: '26922', name: 'TANK-II' },
+          { code: '26923', name: 'KULACHI' }
+        ]
+      },
+      {
+        code: '2693',
+        name: 'RURAL DIV DIK',
+        subdivisions: [
+          { code: '26931', name: 'CANTT DIK' },
+          { code: '26932', name: 'PAHARPUR' },
+          { code: '26933', name: 'MANDHRA' },
+          { code: '26934', name: 'PANYALA' }
+        ]
+      }
+    ]
+  }
+];
+
+export const PESCO_HIERARCHY: PescoCircle[] = [];
+
+// Initialize hierarchy
+const savedHierarchyStr = typeof window !== 'undefined' ? localStorage.getItem('pesco_hierarchy') : null;
+if (savedHierarchyStr) {
+  try {
+    const parsed = JSON.parse(savedHierarchyStr);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      PESCO_HIERARCHY.push(...parsed);
+    } else {
+      PESCO_HIERARCHY.push(...DEFAULT_HIERARCHY);
+    }
+  } catch {
+    PESCO_HIERARCHY.push(...DEFAULT_HIERARCHY);
+  }
+} else {
+  PESCO_HIERARCHY.push(...DEFAULT_HIERARCHY);
+}
+
+export function updatePescoHierarchy(newHierarchy: PescoCircle[]) {
+  PESCO_HIERARCHY.length = 0;
+  PESCO_HIERARCHY.push(...JSON.parse(JSON.stringify(newHierarchy))); // deep clone
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('pesco_hierarchy', JSON.stringify(newHierarchy));
+    window.dispatchEvent(new Event('pesco-hierarchy-updated'));
+  }
+}
+
+export function getMappedCircle(circleCode: string | number): PescoCircle | undefined {
   const code = String(circleCode);
   switch (code) {
     case '1':
     case '261':
     case '26100':
-      return 'Peshawar';
+      return PESCO_HIERARCHY.find(c => c.code === '261');
     case '2':
     case '262':
     case '26200':
-      return 'Khyber';
+      return PESCO_HIERARCHY.find(c => c.code === '262');
     case '3':
     case '263':
     case '26300':
-      return 'Mardan';
+      return PESCO_HIERARCHY.find(c => c.code === '263');
     case '5':
     case '265':
     case '26500':
-      return 'Swat';
+    case '2665':
+      return PESCO_HIERARCHY.find(c => c.code === '265');
     case '6':
     case '266':
     case '26600':
-      return 'Bannu';
+      return PESCO_HIERARCHY.find(c => c.code === '266');
     case '8':
     case '268':
     case '26800':
-      return 'Swabi';
+      return PESCO_HIERARCHY.find(c => c.code === '268');
     case '9':
     case '269':
     case '26900':
-      return 'DI Khan';
+      return PESCO_HIERARCHY.find(c => c.code === '269');
     default:
-      return `Circle ${code}`;
+      return PESCO_HIERARCHY.find(c => c.code === code || c.code.endsWith(code));
   }
+}
+
+export function getCircleName(circleCode: string | number): string {
+  const code = String(circleCode);
+  const circle = getMappedCircle(code);
+  return circle ? circle.name : `Circle ${code}`;
 }
 
 export function getDivisionName(divisionCode: string | number, circleCode?: string | number): string {
   const divStr = String(divisionCode);
-  const circleStr = circleCode ? String(circleCode) : '3';
+  const circleStr = circleCode ? String(circleCode) : '';
   
-  let code = divStr;
-  if (divStr.startsWith('263')) {
-    code = divStr.substring(4, 5);
-  }
-
-  if (circleStr === '3' || circleStr === '263' || circleStr === '26300' || circleStr === 'all') {
-    switch (code) {
-      case '1':
-        return 'Division-I (26310)';
-      case '2':
-        return 'Division-II (26320)';
-      case '5':
-        return 'Division-III (26350)';
-      default:
-        return `Division ${code}`;
+  if (circleStr) {
+    const mappedCircle = getMappedCircle(circleStr);
+    if (mappedCircle) {
+      const div = mappedCircle.divisions.find(d => 
+        d.code === divStr || 
+        d.code.endsWith(divStr) ||
+        (divStr.length === 1 && d.code === mappedCircle.code + divStr)
+      );
+      if (div) return div.name;
     }
   }
-
-  return `Division ${code}`;
+  
+  // Backwards compatibility global search
+  for (const c of PESCO_HIERARCHY) {
+    const div = c.divisions.find(d => 
+      d.code === divStr || 
+      d.code.endsWith(divStr) ||
+      (divStr.length === 1 && d.code === c.code + divStr)
+    );
+    if (div) return div.name;
+  }
+  
+  return `Division ${divStr}`;
 }
 
 export function getSubdivisionName(
@@ -229,54 +689,137 @@ export function getSubdivisionName(
   circleCode?: string | number
 ): string {
   const subStr = String(subdivCode);
-  const divStr = divisionCode ? String(divisionCode) : '1';
-  const circleStr = circleCode ? String(circleCode) : '3';
-  
-  let sCode = subStr;
-  let dCode = divStr;
+  const divStr = divisionCode ? String(divisionCode) : '';
+  const circleStr = circleCode ? String(circleCode) : '';
 
-  if (subStr.startsWith('263')) {
-    dCode = subStr.substring(3, 4);
-    sCode = subStr.substring(4, 5);
-  } else if (divStr.startsWith('263')) {
-    dCode = divStr.substring(4, 5);
-  }
-
-  if (circleStr === '3' || circleStr === '263' || circleStr === '26300' || circleStr === 'all') {
-    const prefix = `263${dCode}${sCode}`;
-    
-    if (dCode === '1') { // 26310
-      switch (sCode) {
-        case '1': return `Subdivision-I (26311)`;
-        case '2': return `Subdivision-II (26312)`;
-        case '3': return `Subdivision-III (26313)`;
-        case '4': return `Subdivision-IV (26314)`;
-        case '5': return `Subdivision-V (26315)`;
-        case '6': return `Subdivision-VI (26316)`;
-        case '7': return `Subdivision-VII (26317)`;
-        default: return `Sub-Div ${sCode} (2631${sCode})`;
+  if (circleStr) {
+    const mappedCircle = getMappedCircle(circleStr);
+    if (mappedCircle) {
+      const mappedDiv = mappedCircle.divisions.find(d => 
+        d.code === divStr || 
+        d.code.endsWith(divStr) ||
+        (divStr.length === 1 && d.code === mappedCircle.code + divStr)
+      );
+      if (mappedDiv) {
+        const sub = mappedDiv.subdivisions.find(s => 
+          s.code === subStr || 
+          s.code.endsWith(subStr) ||
+          (subStr.length === 1 && s.code === mappedDiv.code + subStr)
+        );
+        if (sub) return sub.name;
       }
-    } else if (dCode === '2') { // 26320
-      switch (sCode) {
-        case '1': return `Subdivision-I (26321)`;
-        case '2': return `Subdivision-II (26322)`;
-        case '3': return `Subdivision-III (26323)`;
-        case '4': return `Subdivision-IV (26324)`;
-        case '8': return `Subdivision-VIII (26328)`;
-        case '9': return `Subdivision-IX (26329)`;
-        default: return `Sub-Div ${sCode} (2632${sCode})`;
-      }
-    } else if (dCode === '5') { // 26350
-      switch (sCode) {
-        case '1': return `Subdivision-I (26351)`;
-        case '2': return `Subdivision-II (26352)`;
-        case '4': return `Subdivision-IV (26354)`;
-        case '5': return `Subdivision-V (26355)`;
-        default: return `Sub-Div ${sCode} (2635${sCode})`;
+      
+      for (const d of mappedCircle.divisions) {
+        const sub = d.subdivisions.find(s => 
+          s.code === subStr || 
+          s.code.endsWith(subStr) ||
+          (subStr.length === 1 && s.code === d.code + subStr)
+        );
+        if (sub) return sub.name;
       }
     }
   }
 
-  return `Sub-Div ${sCode}`;
+  // Backwards compatibility global search
+  for (const c of PESCO_HIERARCHY) {
+    for (const d of c.divisions) {
+      const sub = d.subdivisions.find(s => 
+        s.code === subStr || 
+        s.code.endsWith(subStr) ||
+        (subStr.length === 1 && s.code === d.code + subStr)
+      );
+      if (sub) return sub.name;
+    }
+  }
+
+  return `Sub-Div ${subStr}`;
 }
+
+/**
+ * Formats a Date or timestamp string in Pakistan Standard Time (PKT) (UTC+5).
+ */
+export function formatPKTDateTime(dateInput?: Date | string | number): string {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return String(dateInput);
+  return date.toLocaleString('en-US', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }) + ' PKT';
+}
+
+/**
+ * Formats a Date as human-readable in Pakistan Standard Time (PKT).
+ */
+export function formatPKTDate(dateInput?: Date | string | number): string {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return String(dateInput);
+  return date.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+/**
+ * Formats a time portion in Pakistan Standard Time (PKT).
+ */
+export function formatPKTTime(dateInput?: Date | string | number): string {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return String(dateInput);
+  return date.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Karachi',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }) + ' PKT';
+}
+
+/**
+ * Returns current Date in Pakistan Standard Time (PKT) as a ISO-like string
+ */
+export function getPKTISOString(dateInput?: Date | string | number): string {
+  const date = dateInput ? new Date(dateInput) : new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  });
+  const parts = formatter.formatToParts(date);
+  const find = (type: string) => parts.find(p => p.type === type)?.value || '00';
+  return `${find('year')}-${find('month')}-${find('day')}T${find('hour')}:${find('minute')}:${find('second')}+05:00`;
+}
+
+/**
+ * Returns current Date string yyyy-mm-dd in Pakistan Standard Time (PKT)
+ */
+export function getPKTDateString(dateInput?: Date | string | number): string {
+  const date = dateInput ? new Date(dateInput) : new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(date);
+  const find = (type: string) => parts.find(p => p.type === type)?.value || '01';
+  return `${find('year')}-${find('month')}-${find('day')}`;
+}
+
+
 

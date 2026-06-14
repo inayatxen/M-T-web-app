@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { getPKTDateString } from '../utils';
 import { 
   Building, 
   Search, 
@@ -71,7 +72,7 @@ export default function TransformersView({
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPKTDateString();
 
     if (activeTab === 'ct') {
       const newCT: CTRecord = {

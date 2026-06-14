@@ -63,6 +63,7 @@ import {
 // Modular children sub-views
 import Notifications from './components/Notifications';
 import ReportPDF from './components/ReportPDF';
+import BatchReportPDF from './components/BatchReportPDF';
 import DashboardView from './components/DashboardView';
 import RegisterView from './components/RegisterView';
 import InventoryView from './components/InventoryView';
@@ -75,10 +76,22 @@ import ManagementView from './components/ManagementView';
 import SupabaseSyncView from './components/SupabaseSyncView';
 import LoginView from './components/LoginView';
 import { supabase } from './utils/supabase';
+import { getPKTISOString, getPKTDateString, formatPKTDateTime } from './utils';
 import SupabaseTodosView from './components/SupabaseTodosView';
 import pescoLogo from './assets/images/pesco_logo.jpg';
 
 export default function App() {
+  // Live PKT clock state
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  useEffect(() => {
+    setCurrentTime(formatPKTDateTime(new Date()));
+    const timer = setInterval(() => {
+      setCurrentTime(formatPKTDateTime(new Date()));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [activePageId, setActivePageId] = useState<string>('dashboard');
@@ -119,6 +132,7 @@ export default function App() {
 
   // Active printable PDF reference preview
   const [activePdfReport, setActivePdfReport] = useState<TestReport | null>(null);
+  const [batchPdfReports, setBatchPdfReports] = useState<TestReport[] | null>(null);
 
   // Cloud database real-time sync status
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('offline');
@@ -248,7 +262,7 @@ export default function App() {
       id: `log-gen-${Date.now()}`,
       user: currentUser ? currentUser.name : 'System Gateway',
       role: currentUser ? currentUser.role : 'data_entry_operator',
-      timestamp: new Date().toISOString(),
+      timestamp: getPKTISOString(),
       action,
       oldValue: oldVal,
       newValue: newVal
@@ -391,7 +405,7 @@ export default function App() {
 
   const handleTestCT = (id: string, testResult: 'passed' | 'failed', remarks: string) => {
     const target = cts.find(c => c.id === id);
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPKTDateString();
 
     const updated = cts.map(c => {
       if (c.id === id) {
@@ -412,7 +426,7 @@ export default function App() {
 
   const handleTestPT = (id: string, testResult: 'passed' | 'failed', remarks: string) => {
     const target = pts.find(p => p.id === id);
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPKTDateString();
 
     const updated = pts.map(p => {
       if (p.id === id) {
@@ -516,7 +530,7 @@ export default function App() {
     
     const tempLink = document.createElement('a');
     tempLink.href = url;
-    tempLink.download = `mtlms-backup-db-${new Date().toISOString().split('T')[0]}.json`;
+    tempLink.download = `mtlms-backup-db-${getPKTDateString()}.json`;
     document.body.appendChild(tempLink);
     tempLink.click();
     
@@ -840,7 +854,7 @@ export default function App() {
             />
             <div className="h-3 w-px bg-slate-200 dark:bg-slate-800" />
             <div className="text-[10px] font-bold text-slate-500 hidden sm:block">
-              Time UTC: <span className="font-mono text-blue-600 font-black">2026-06-11 08:01</span>
+              Time PKT: <span className="font-mono text-blue-600 font-black">{currentTime}</span>
             </div>
           </div>
         </header>
@@ -849,7 +863,12 @@ export default function App() {
         <div className={`p-4 flex-grow overflow-y-auto print:p-0 print:bg-white relative ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
           
           {/* Certificate PDF View Cover Overlay */}
-          {activePdfReport ? (
+          {batchPdfReports && batchPdfReports.length > 0 ? (
+            <BatchReportPDF 
+              reports={batchPdfReports} 
+              onBack={() => setBatchPdfReports(null)} 
+            />
+          ) : activePdfReport ? (
             <ReportPDF 
               report={activePdfReport} 
               onBack={() => setActivePdfReport(null)} 
@@ -985,6 +1004,7 @@ export default function App() {
                   cases={cases}
                   onOpenReportPDF={(rep) => setActivePdfReport(rep)} 
                   onCompileReportForMeter={handleDirectCompileRedirect} 
+                  onOpenBatchReportPDF={(selectedReps) => setBatchPdfReports(selectedReps)}
                 />
               )}
 
@@ -1000,6 +1020,7 @@ export default function App() {
                   onUpdateStandard={handleUpdateStandard}
                   onBackupState={handleBackupState} 
                   onRestoreState={handleRestoreState} 
+                  onRecordAudit={recordAuditTrail}
                 />
               )}
 
@@ -1014,6 +1035,7 @@ export default function App() {
                   onUpdateStandard={handleUpdateStandard}
                   onBackupState={handleBackupState} 
                   onRestoreState={handleRestoreState} 
+                  onRecordAudit={recordAuditTrail}
                 />
               )}
 

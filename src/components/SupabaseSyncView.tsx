@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { formatPKTTime } from '../utils';
 import { 
   Database, 
   RefreshCw, 
@@ -88,18 +89,18 @@ export default function SupabaseSyncView({
 
   const checkConnection = async () => {
     setDbStatus('checking');
-    setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Testing connection to Supabase endpoint...`]);
+    setProgressLog(prev => [...prev, `[${formatPKTTime()}] Testing connection to Supabase endpoint...`]);
     const res = await testSupabaseConnection();
     if (res.success) {
       setDbStatus('connected');
       setDbMessage(res.message);
-      setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Connected structure verified!`]);
+      setProgressLog(prev => [...prev, `[${formatPKTTime()}] Connected structure verified!`]);
       // Query individual table row counts
       fetchSupabaseCounts();
     } else {
       setDbStatus('error');
       setDbMessage(res.message);
-      setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] CONNECTION FAILED: ${res.message}`]);
+      setProgressLog(prev => [...prev, `[${formatPKTTime()}] CONNECTION FAILED: ${res.message}`]);
     }
   };
 
@@ -325,7 +326,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
   const pushStateToSupabase = async () => {
     setSyncing(true);
     setSyncDirection('push');
-    setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Beginning high-speed remote cloud push backup...`]);
+    setProgressLog(prev => [...prev, `[${formatPKTTime()}] Beginning high-speed remote cloud push backup...`]);
 
     const items = [
       { name: 'meters', data: meters },
@@ -357,7 +358,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
       }
     }
 
-    setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Supabase cloud direct push completed.`]);
+    setProgressLog(prev => [...prev, `[${formatPKTTime()}] Supabase cloud direct push completed.`]);
     setSyncing(false);
     fetchSupabaseCounts();
   };
@@ -366,7 +367,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
   const pullStateFromSupabase = async () => {
     setSyncing(true);
     setSyncDirection('pull');
-    setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Fetching state indexes from Supabase...`]);
+    setProgressLog(prev => [...prev, `[${formatPKTTime()}] Fetching state indexes from Supabase...`]);
 
     const pullingJobs = [
       { name: 'meters', stateSetter: setMeters },
@@ -397,7 +398,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
       }
     }
 
-    setProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Supabase cloud direct pull completed.`]);
+    setProgressLog(prev => [...prev, `[${formatPKTTime()}] Supabase cloud direct pull completed.`]);
     setSyncing(false);
     fetchSupabaseCounts();
   };

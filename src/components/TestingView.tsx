@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { getPKTDateString } from '../utils';
 import { 
   Cpu, 
   User, 
@@ -56,7 +57,7 @@ export default function TestingView({
   const [serialNumber, setSerialNumber] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [installationDate, setInstallationDate] = useState('2025-01-01');
-  const [removalDate, setRemovalDate] = useState(new Date().toISOString().split('T')[0]);
+  const [removalDate, setRemovalDate] = useState(getPKTDateString());
 
   // III. Meter Reading Details
   const [kwhPeak, setKwhPeak] = useState('1024.1');
@@ -85,7 +86,7 @@ export default function TestingView({
   const [checkedByDesignation, setCheckedByDesignation] = useState(currentUser.designation);
   const [counterSignedBy, setCounterSignedBy] = useState('Sarah Rahman');
   const [counterSignedByDesignation, setCounterSignedByDesignation] = useState('Laboratory Executive & Manager');
-  const [approvalDate, setApprovalDate] = useState(new Date().toISOString().split('T')[0]);
+  const [approvalDate, setApprovalDate] = useState(getPKTDateString());
 
   const [formSuccess, setFormSuccess] = useState('');
 

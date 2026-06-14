@@ -21,7 +21,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { TestReport, Meter, CTRecord, PTRecord, CommitteeCase } from '../types';
-import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
+import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY, formatPKTDateTime, getPKTDateString, parseAccountNumber } from '../utils';
 
 interface ReportsArchiveViewProps {
   reports: TestReport[];
@@ -31,6 +31,7 @@ interface ReportsArchiveViewProps {
   cases: CommitteeCase[];
   onOpenReportPDF: (report: TestReport) => void;
   onCompileReportForMeter: (meter: Meter) => void; // redirect to corresponding testing page
+  onOpenBatchReportPDF: (reports: TestReport[]) => void;
 }
 
 export default function ReportsArchiveView({ 
@@ -40,10 +41,13 @@ export default function ReportsArchiveView({
   pts, 
   cases,
   onOpenReportPDF,
-  onCompileReportForMeter 
+  onCompileReportForMeter,
+  onOpenBatchReportPDF
 }: ReportsArchiveViewProps) {
   
   const [activeSubTab, setActiveSubTab] = useState<'compilation' | 'archive' | 'search' | 'qr'>('archive');
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+
   
   // Advanced search parameters
   const [globalQuery, setGlobalQuery] = useState('');
@@ -63,16 +67,25 @@ export default function ReportsArchiveView({
 
   // 14-digit Account Number Regional Analysis Filter states
   const [regBatch, setRegBatch] = useState('all');
-  const [regCompany, setRegCompany] = useState('all');
+  const [regCompany, setRegCompany] = useState('26');
   const [regCircle, setRegCircle] = useState('all');
   const [regDivision, setRegDivision] = useState('all');
   const [regSubdivision, setRegSubdivision] = useState('all');
 
   // Parse all reports for options and metrics calculation
-  const reportsWithRegInfo = reports.map(r => ({
-    report: r,
-    reg: parseRegionalAccountNumber(r.accountNumber)
-  }));
+  const reportsWithRegInfo = reports.map(r => {
+    const parsed = parseAccountNumber(r.accountNumber);
+    return {
+      report: r,
+      reg: {
+        batch: parsed.batchNumber,
+        company: parsed.companyCode,
+        circle: parsed.circleCode,
+        division: parsed.companyCode + parsed.circleCode + parsed.divisionCode,
+        subdivision: parsed.companyCode + parsed.circleCode + parsed.divisionCode + parsed.subdivisionCode,
+      }
+    };
+  });
 
   // Dynamic values based on scanned logs
   const dynamicBatches = Array.from(new Set(reportsWithRegInfo.map(ri => ri.reg.batch))).filter(Boolean).sort();
@@ -146,7 +159,7 @@ export default function ReportsArchiveView({
       ['WAPDA / PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO)'],
       ['METERS TESTING LABORATORY & GRID COMPLIANCE SYSTEM'],
       [`REGIONAL PERFORMANCE AUDIT REPORT - ${areaLabel.toUpperCase()}`],
-      ['Exported On', new Date().toLocaleString()],
+      ['Exported On', formatPKTDateTime()],
       ['Circle Jurisdiction', regCircle !== 'all' ? `Circle ${regCircle}` : 'All Circles'],
       ['Division Code', regDivision !== 'all' ? `Division ${regDivision}` : 'All Divisions'],
       ['Batch Code', regBatch !== 'all' ? `Batch ${regBatch}` : 'All Batches'],
@@ -214,7 +227,7 @@ export default function ReportsArchiveView({
       type: 'text/csv;charset=utf-8;'
     });
 
-    const filename = `PESCO_MTLMS_Area_${areaLabel.replace(/[\s-:]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `PESCO_MTLMS_Area_${areaLabel.replace(/[\s-:]+/g, '_')}_${getPKTDateString()}.csv`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -264,12 +277,17 @@ export default function ReportsArchiveView({
     }
 
     // 5. Regional Filters
-    const reg = parseRegionalAccountNumber(r.accountNumber);
-    if (regBatch !== 'all' && reg.batch !== regBatch) return false;
-    if (regCompany !== 'all' && reg.company !== regCompany) return false;
-    if (regCircle !== 'all' && reg.circle !== regCircle) return false;
-    if (regDivision !== 'all' && reg.division !== regDivision) return false;
-    if (regSubdivision !== 'all' && reg.subdivision !== regSubdivision) return false;
+    const parsedReg = parseAccountNumber(r.accountNumber);
+    const absCompany = parsedReg.companyCode;
+    const absCircle = parsedReg.circleCode;
+    const absDivision = parsedReg.companyCode + parsedReg.circleCode + parsedReg.divisionCode;
+    const absSubdivision = parsedReg.companyCode + parsedReg.circleCode + parsedReg.divisionCode + parsedReg.subdivisionCode;
+
+    if (regBatch !== 'all' && parsedReg.batchNumber !== regBatch) return false;
+    if (regCompany !== 'all' && absCompany !== regCompany) return false;
+    if (regCircle !== 'all' && absCircle !== regCircle) return false;
+    if (regDivision !== 'all' && absDivision !== regDivision) return false;
+    if (regSubdivision !== 'all' && absSubdivision !== regSubdivision) return false;
 
     return true;
   });
@@ -515,12 +533,11 @@ export default function ReportsArchiveView({
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
                   <option value="all">All Batches</option>
-                  {dynamicBatches.map(b => (
-                    <option key={b} value={b}>Batch {b}</option>
+                  {['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','24','26','27','30','31','41','42','43'].map(b => (
+                    <option key={b} value={b}>
+                      Batch {b}
+                    </option>
                   ))}
-                  {!dynamicBatches.includes('01') && <option value="01">Batch 01</option>}
-                  {!dynamicBatches.includes('02') && <option value="02">Batch 02</option>}
-                  {!dynamicBatches.includes('11') && <option value="11">Batch 11</option>}
                 </select>
               </div>
 
@@ -534,14 +551,7 @@ export default function ReportsArchiveView({
                   onChange={(e) => setRegCompany(e.target.value)}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="all">All Companies</option>
-                  {dynamicCompanies.map(c => (
-                    <option key={c} value={c}>Co {c === '26000' || c === '26311' ? `${c} (PESCO)` : c}</option>
-                  ))}
-                  {!dynamicCompanies.includes('26000') && <option value="26000">26000 (PESCO)</option>}
-                  {!dynamicCompanies.includes('26311') && <option value="26311">26311 (PESCO)</option>}
-                  {!dynamicCompanies.includes('11000') && <option value="11000">11000 (LESCO)</option>}
-                  {!dynamicCompanies.includes('22000') && <option value="22000">22000 (FESCO)</option>}
+                  <option value="26">PESCO (26)</option>
                 </select>
               </div>
 
@@ -552,20 +562,19 @@ export default function ReportsArchiveView({
                 </label>
                 <select
                   value={regCircle}
-                  onChange={(e) => setRegCircle(e.target.value)}
+                  onChange={(e) => {
+                    setRegCircle(e.target.value);
+                    setRegDivision('all');
+                    setRegSubdivision('all');
+                  }}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
                   <option value="all">All Circles</option>
-                  {dynamicCircles.map(c => (
-                    <option key={c} value={c}>{getCircleName(c)} ({c})</option>
+                  {PESCO_HIERARCHY.map(c => (
+                    <option key={c.code} value={c.code.substring(2)}>
+                      {c.name} ({c.code.substring(2)})
+                    </option>
                   ))}
-                  {!dynamicCircles.includes('1') && <option value="1">Peshawar (1)</option>}
-                  {!dynamicCircles.includes('2') && <option value="2">Khyber (2)</option>}
-                  {!dynamicCircles.includes('3') && <option value="3">Mardan (3)</option>}
-                  {!dynamicCircles.includes('5') && <option value="5">Swat (5)</option>}
-                  {!dynamicCircles.includes('6') && <option value="6">Bannu (6)</option>}
-                  {!dynamicCircles.includes('8') && <option value="8">Swabi (8)</option>}
-                  {!dynamicCircles.includes('9') && <option value="9">DI Khan (9)</option>}
                 </select>
               </div>
 
@@ -577,22 +586,29 @@ export default function ReportsArchiveView({
                 <select
                   value={regDivision}
                   onChange={(e) => {
-                    setRegDivision(e.target.value);
+                    const val = e.target.value;
+                    setRegDivision(val);
+                    if (val !== 'all') {
+                      setRegCircle(val.substring(2, 3));
+                    }
                     setRegSubdivision('all');
                   }}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="all">All Divisions</option>
-                  {dynamicDivisions.map(d => (
-                    <option key={d} value={d}>{getDivisionName(d, regCircle)} (Div {d})</option>
-                  ))}
-                  {(regCircle === 'all' || regCircle === '3') && (
-                    <>
-                      {!dynamicDivisions.includes('1') && <option value="1">Division-I (26310)</option>}
-                      {!dynamicDivisions.includes('2') && <option value="2">Division-II (26320)</option>}
-                      {!dynamicDivisions.includes('5') && <option value="5">Division-III (26350)</option>}
-                    </>
-                  )}
+                  <option value="all">All Divisions (33)</option>
+                  {(() => {
+                    const seen = new Set();
+                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions);
+                    return list.filter(d => {
+                      if (seen.has(d.code)) return false;
+                      seen.add(d.code);
+                      return true;
+                    }).map(d => (
+                      <option key={d.code} value={d.code}>
+                        {d.name} ({d.code})
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
 
@@ -603,43 +619,30 @@ export default function ReportsArchiveView({
                 </label>
                 <select
                   value={regSubdivision}
-                  onChange={(e) => setRegSubdivision(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRegSubdivision(val);
+                    if (val !== 'all') {
+                      setRegDivision(val.substring(0, 4));
+                      setRegCircle(val.substring(2, 3));
+                    }
+                  }}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="all">All Sub-Divs</option>
-                  {dynamicSubdivisions.map(s => {
-                    if (regDivision !== 'all') {
-                      if (regDivision === '1' && !['1', '2', '3', '4', '5', '6', '7'].includes(String(s))) return null;
-                      if (regDivision === '2' && !['1', '2', '3', '4', '8', '9'].includes(String(s))) return null;
-                      if (regDivision === '5' && !['1', '2', '4', '5'].includes(String(s))) return null;
-                    }
-                    return (
-                      <option key={s} value={s}>{getSubdivisionName(s, regDivision, regCircle)}</option>
-                    );
-                  })}
-                  {(regCircle === 'all' || regCircle === '3') && (
-                    <>
-                      {regDivision === '1' && (
-                        <>
-                          <option value="1">Subdivision-I (26311)</option>
-                          <option value="2">Subdivision-II (26312)</option>
-                          <option value="3">Subdivision-III (26313)</option>
-                        </>
-                      )}
-                      {regDivision === '2' && (
-                        <>
-                          <option value="8">Subdivision-VIII (26328)</option>
-                          <option value="9">Subdivision-IX (26329)</option>
-                        </>
-                      )}
-                      {regDivision === '5' && (
-                        <>
-                          <option value="4">Subdivision-IV (26354)</option>
-                          <option value="5">Subdivision-V (26355)</option>
-                        </>
-                      )}
-                    </>
-                  )}
+                  <option value="all">All Sub-Divisions (160)</option>
+                  {(() => {
+                    const seen = new Set();
+                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    return list.filter(s => {
+                      if (seen.has(s.code)) return false;
+                      seen.add(s.code);
+                      return true;
+                    }).map(s => (
+                      <option key={s.code} value={s.code}>
+                        {s.name} ({s.code})
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
             </div>
@@ -753,6 +756,7 @@ export default function ReportsArchiveView({
             {/* Reset Controls */}
             <div className="md:col-span-1">
               <button
+                type="button"
                 onClick={() => {
                   setFilterStartDate('');
                   setFilterEndDate('');
@@ -768,10 +772,59 @@ export default function ReportsArchiveView({
             </div>
           </div>
 
+          {/* Batch Print Active Panel Bar */}
+          {selectedReportIds.length > 0 && (
+            <div className="mx-3 my-2 p-3 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-2 animate-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 bg-indigo-600 rounded-full animate-ping shrink-0" />
+                <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300">
+                  Batch Print Selected Mode Active: <strong className="font-extrabold">{selectedReportIds.length}</strong> certificates selected.
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 select-none">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selectedReports = reports.filter(r => selectedReportIds.includes(r.id));
+                    onOpenBatchReportPDF(selectedReports);
+                  }}
+                  className="px-3.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] rounded transition active:scale-95 cursor-pointer shadow-xs flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print All Selected ({selectedReportIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportIds([])}
+                  className="px-2.5 py-1 text-[10px] font-bold bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-800 transition cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto text-[11px] sm:text-xs">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-850/60 text-slate-600 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-805 uppercase text-[9px] tracking-wider select-none">
+                  <th className="p-3 w-10 text-center">
+                    <input 
+                      type="checkbox"
+                      onChange={() => {
+                        const allFilteredIds = filteredReports.map(r => r.id);
+                        const allAreSelected = allFilteredIds.every(id => selectedReportIds.includes(id));
+                        if (allAreSelected) {
+                          setSelectedReportIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+                        } else {
+                          setSelectedReportIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+                        }
+                      }}
+                      checked={filteredReports.length > 0 && filteredReports.map(r => r.id).every(id => selectedReportIds.includes(id))}
+                      className="cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      title="Select / Deselect all filtered items"
+                    />
+                  </th>
                   <th className="p-3">Report Number</th>
                   <th className="p-3">Approved Date</th>
                   <th className="p-3">Consumer Details</th>
@@ -784,11 +837,12 @@ export default function ReportsArchiveView({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-300">
                 {filteredReports.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-10 text-center text-slate-450 dark:text-slate-500">
+                    <td colSpan={8} className="p-10 text-center text-slate-450 dark:text-slate-500">
                       <HelpCircle className="w-7 h-7 text-slate-300 dark:text-slate-700 mx-auto mb-1.5" />
                       <p className="font-bold text-slate-700 dark:text-slate-300">No Matching Archives Found</p>
                       <p className="text-[11px] mt-0.5 text-slate-500 dark:text-slate-450">Try checking selection parameters or reset values to display all logs.</p>
                       <button
+                        type="button"
                         onClick={() => {
                           setFilterStartDate('');
                           setFilterEndDate('');
@@ -796,7 +850,7 @@ export default function ReportsArchiveView({
                           setFilterStatus('all');
                           setFilterSearchQuery('');
                         }}
-                        className="mt-3.5 inline-flex items-center gap-1 py-1 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-[10px] rounded transition"
+                        className="mt-3.5 inline-flex items-center gap-1 py-1 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-[10px] rounded transition cursor-pointer"
                       >
                         Reset All Filters
                       </button>
@@ -805,6 +859,18 @@ export default function ReportsArchiveView({
                 ) : (
                   filteredReports.map(r => (
                     <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/40 transition-colors">
+                      <td className="p-3 text-center">
+                        <input 
+                          type="checkbox"
+                          onChange={() => {
+                            setSelectedReportIds(prev => 
+                              prev.includes(r.id) ? prev.filter(item => item !== r.id) : [...prev, r.id]
+                            );
+                          }}
+                          checked={selectedReportIds.includes(r.id)}
+                          className="cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                        />
+                      </td>
                       <td className="p-3 font-bold font-mono text-slate-900 dark:text-white flex items-center gap-1.5">
                         <FileCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         {r.reportNumber}
@@ -832,8 +898,9 @@ export default function ReportsArchiveView({
                       </td>
                       <td className="p-3 text-right">
                         <button
+                          type="button"
                           onClick={() => onOpenReportPDF(r)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-[10px] rounded transition"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-[10px] rounded transition cursor-pointer"
                         >
                           <Printer className="w-3 h-3" />
                           View PDF

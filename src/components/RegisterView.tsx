@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { getPKTDateString } from '../utils';
 import { 
   PlusCircle, 
   Search, 
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react';
 import { read, utils, write } from 'xlsx';
 import { EquipmentReceipt, MeterCategory, Meter } from '../types';
-import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
+import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY } from '../utils';
 
 const mapMeterCategory = (rawType: string): MeterCategory => {
   const norm = rawType.toLowerCase().trim();
@@ -314,7 +315,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
   const [successMsg, setSuccessMsg] = useState('');
 
   // Registry List Category Area Filters
-  const [filterCompany, setFilterCompany] = useState<string>('all');
+  const [filterCompany, setFilterCompany] = useState<string>('26');
   const [filterCircle, setFilterCircle] = useState<string>('all');
   const [filterDivision, setFilterDivision] = useState<string>('all');
   const [filterSubdivision, setFilterSubdivision] = useState<string>('all');
@@ -357,7 +358,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
     }
 
     const generatedNum = generateReceiptNumber();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPKTDateString();
 
     // Create the Receipt Record
     const newReceipt: EquipmentReceipt = {
@@ -426,10 +427,15 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
 
     // Extract area details for categorization
     const parsed = parseAccountNumber(r.consumerAccount);
-    if (filterCompany !== 'all' && parsed.companyCode !== filterCompany) return false;
-    if (filterCircle !== 'all' && parsed.circleCode !== filterCircle) return false;
-    if (filterDivision !== 'all' && parsed.divisionCode !== filterDivision) return false;
-    if (filterSubdivision !== 'all' && parsed.subdivisionCode !== filterSubdivision) return false;
+    const absCompany = parsed.companyCode;
+    const absCircle = parsed.circleCode;
+    const absDivision = parsed.companyCode + parsed.circleCode + parsed.divisionCode;
+    const absSubdivision = parsed.companyCode + parsed.circleCode + parsed.divisionCode + parsed.subdivisionCode;
+
+    if (filterCompany !== 'all' && absCompany !== filterCompany) return false;
+    if (filterCircle !== 'all' && absCircle !== filterCircle) return false;
+    if (filterDivision !== 'all' && absDivision !== filterDivision) return false;
+    if (filterSubdivision !== 'all' && absSubdivision !== filterSubdivision) return false;
     if (filterBatch !== 'all' && parsed.batchNumber !== filterBatch) return false;
 
     return true;
@@ -616,7 +622,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       }}
                       className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
                     >
-                      <option value="26">GEPCO (26)</option>
+                      <option value="26">PESCO (26)</option>
                       <option value="11">LESCO (11)</option>
                       <option value="22">FESCO (22)</option>
                       <option value="14">IESCO (14)</option>
@@ -636,15 +642,25 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                     <select
                       value={consumerAccount.substring(4, 5)}
                       onChange={(e) => {
+                        const newCircleCode = e.target.value;
+                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(newCircleCode));
+                        let defaultDiv = '1';
+                        let defaultSub = '1';
+                        if (activeCircle && activeCircle.divisions.length > 0) {
+                          const firstDiv = activeCircle.divisions[0];
+                          defaultDiv = firstDiv.code.slice(-1) || '1';
+                          if (firstDiv.subdivisions.length > 0) {
+                            defaultSub = firstDiv.subdivisions[0].code.slice(-1) || '1';
+                          }
+                        }
                         const accParts = {
                           batch: consumerAccount.substring(0, 2) || '',
                           company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
+                          circle: newCircleCode,
+                          division: defaultDiv,
+                          subdivision: defaultSub,
                           consumer: consumerAccount.substring(7, 14) || '',
                         };
-                        accParts.circle = e.target.value;
                         const joined = [
                           accParts.batch.padEnd(2, '0').substring(0, 2),
                           accParts.company.padEnd(2, '0').substring(0, 2),
@@ -657,36 +673,39 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       }}
                       className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
                     >
-                      <option value="3">3</option>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="5">5</option>
-                      <option value="6">6</option>
-                      <option value="7">7</option>
-                      <option value="8">8</option>
-                      <option value="0">0</option>
-                      <option value="4">4</option>
-                      <option value="9">9</option>
+                      {PESCO_HIERARCHY.map(c => {
+                        const val = c.code.substring(2) || '3';
+                        return (
+                          <option key={c.code} value={val}>
+                            {c.name} ({val})
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Division (1d) *</label>
-                    <input
-                      type="text"
-                      maxLength={1}
-                      placeholder="1"
+                    <select
                       value={consumerAccount.substring(5, 6)}
                       onChange={(e) => {
+                        const newDivCodeSuffix = e.target.value;
+                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(consumerAccount.substring(4, 5)));
+                        let defaultSub = '1';
+                        if (activeCircle) {
+                          const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(newDivCodeSuffix));
+                          if (activeDiv && activeDiv.subdivisions.length > 0) {
+                            defaultSub = activeDiv.subdivisions[0].code.slice(-1) || '1';
+                          }
+                        }
                         const accParts = {
                           batch: consumerAccount.substring(0, 2) || '',
                           company: consumerAccount.substring(2, 4) || '',
                           circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
+                          division: newDivCodeSuffix,
+                          subdivision: defaultSub,
                           consumer: consumerAccount.substring(7, 14) || '',
                         };
-                        accParts.division = e.target.value.replace(/\D/g, '');
                         const joined = [
                           accParts.batch.padEnd(2, '0').substring(0, 2),
                           accParts.company.padEnd(2, '0').substring(0, 2),
@@ -697,17 +716,37 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         ].join('');
                         setConsumerAccount(joined);
                       }}
-                      className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
-                      required
-                    />
+                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                    >
+                      {(() => {
+                        const currentCircleSuffix = consumerAccount.substring(4, 5);
+                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
+                        const divisionsList = activeCircle ? activeCircle.divisions : PESCO_HIERARCHY.flatMap(c => c.divisions);
+                        const seen = new Set();
+                        const filteredDivs = divisionsList.filter(d => {
+                          const val = d.code.slice(-1) || '1';
+                          if (seen.has(val)) return false;
+                          seen.add(val);
+                          return true;
+                        });
+                        if (filteredDivs.length === 0) {
+                          return <option value="1">Division 1</option>;
+                        }
+                        return filteredDivs.map(d => {
+                          const val = d.code.slice(-1) || '1';
+                          return (
+                            <option key={d.code} value={val}>
+                              {d.name} ({val})
+                            </option>
+                          );
+                        });
+                      })()}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Sub-Div (1d) *</label>
-                    <input
-                      type="text"
-                      maxLength={1}
-                      placeholder="1"
+                    <select
                       value={consumerAccount.substring(6, 7)}
                       onChange={(e) => {
                         const accParts = {
@@ -715,10 +754,9 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                           company: consumerAccount.substring(2, 4) || '',
                           circle: consumerAccount.substring(4, 5) || '',
                           division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
+                          subdivision: e.target.value,
                           consumer: consumerAccount.substring(7, 14) || '',
                         };
-                        accParts.subdivision = e.target.value.replace(/\D/g, '');
                         const joined = [
                           accParts.batch.padEnd(2, '0').substring(0, 2),
                           accParts.company.padEnd(2, '0').substring(0, 2),
@@ -729,9 +767,43 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         ].join('');
                         setConsumerAccount(joined);
                       }}
-                      className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
-                      required
-                    />
+                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                    >
+                      {(() => {
+                        const currentCircleSuffix = consumerAccount.substring(4, 5);
+                        const currentDivisionSuffix = consumerAccount.substring(5, 6);
+                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
+                        let subsList: any[] = [];
+                        if (activeCircle) {
+                          const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(currentDivisionSuffix));
+                          if (activeDiv) {
+                            subsList = activeDiv.subdivisions;
+                          } else {
+                            subsList = activeCircle.divisions.flatMap(d => d.subdivisions);
+                          }
+                        } else {
+                          subsList = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                        }
+                        const seen = new Set();
+                        const filteredSubs = subsList.filter(s => {
+                          const val = s.code.slice(-1) || '1';
+                          if (seen.has(val)) return false;
+                          seen.add(val);
+                          return true;
+                        });
+                        if (filteredSubs.length === 0) {
+                          return <option value="1">Sub-Div 1</option>;
+                        }
+                        return filteredSubs.map(s => {
+                          const val = s.code.slice(-1) || '1';
+                          return (
+                            <option key={s.code} value={val}>
+                              {s.name} ({val})
+                            </option>
+                          );
+                        });
+                      })()}
+                    </select>
                   </div>
 
                   <div>
@@ -986,7 +1058,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
 
               const newReceiptsList: EquipmentReceipt[] = [];
               const associatedMetersList: Meter[] = [];
-              const today = new Date().toISOString().split('T')[0];
+              const today = getPKTDateString();
 
               validRows.forEach((row, i) => {
                 const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -1280,18 +1352,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   onChange={(e) => setFilterCompany(e.target.value)}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="all">All Companies</option>
                   <option value="26">PESCO (26)</option>
-                  <option value="11">LESCO (11)</option>
-                  <option value="22">FESCO (22)</option>
-                  <option value="14">IESCO (14)</option>
-                  <option value="15">MEPCO (15)</option>
-                  <option value="25">HESCO (25)</option>
-                  <option value="18">PESCO (18)</option>
-                  <option value="31">SEPCO (31)</option>
-                  <option value="24">QESCO (24)</option>
-                  <option value="35">TESCO (35)</option>
-                  <option value="09">PESCO (09)</option>
                 </select>
               </div>
 
@@ -1299,20 +1360,19 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 <label className="block text-[8.5px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Filter Circle</label>
                 <select
                   value={filterCircle}
-                  onChange={(e) => setFilterCircle(e.target.value)}
+                  onChange={(e) => {
+                    setFilterCircle(e.target.value);
+                    setFilterDivision('all');
+                    setFilterSubdivision('all');
+                  }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
                   <option value="all">All Circles</option>
-                  <option value="1">Peshawar (1)</option>
-                  <option value="2">Khyber (2)</option>
-                  <option value="3">Mardan (3)</option>
-                  <option value="5">Swat (5)</option>
-                  <option value="6">Bannu (6)</option>
-                  <option value="8">Swabi (8)</option>
-                  <option value="9">DI Khan (9)</option>
-                  <option value="7">Circle 7</option>
-                  <option value="0">Circle 0</option>
-                  <option value="4">Circle 4</option>
+                  {PESCO_HIERARCHY.map(c => (
+                    <option key={c.code} value={c.code.substring(2)}>
+                      {c.name} ({c.code.substring(2)})
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1321,32 +1381,29 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 <select
                   value={filterDivision}
                   onChange={(e) => {
-                    setFilterDivision(e.target.value);
+                    const val = e.target.value;
+                    setFilterDivision(val);
+                    if (val !== 'all') {
+                      setFilterCircle(val.substring(2, 3));
+                    }
                     setFilterSubdivision('all');
                   }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="all">All Divisions</option>
-                  {(filterCircle === 'all' || filterCircle === '3') ? (
-                    <>
-                      <option value="1">Division-I (26310)</option>
-                      <option value="2">Division-II (26320)</option>
-                      <option value="5">Division-III (26350)</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="1">Division 1</option>
-                      <option value="2">Division 2</option>
-                      <option value="3">Division 3</option>
-                      <option value="4">Division 4</option>
-                      <option value="5">Division 5</option>
-                      <option value="6">Division 6</option>
-                      <option value="7">Division 7</option>
-                      <option value="8">Division 8</option>
-                      <option value="9">Division 9</option>
-                      <option value="0">Division 0</option>
-                    </>
-                  )}
+                  <option value="all">All Divisions (33)</option>
+                  {(() => {
+                    const seen = new Set();
+                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions);
+                    return list.filter(d => {
+                      if (seen.has(d.code)) return false;
+                      seen.add(d.code);
+                      return true;
+                    }).map(d => (
+                      <option key={d.code} value={d.code}>
+                        {d.name} ({d.code})
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
 
@@ -1354,70 +1411,30 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 <label className="block text-[8.5px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Filter Sub-Division</label>
                 <select
                   value={filterSubdivision}
-                  onChange={(e) => setFilterSubdivision(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFilterSubdivision(val);
+                    if (val !== 'all') {
+                      setFilterDivision(val.substring(0, 4));
+                      setFilterCircle(val.substring(2, 3));
+                    }
+                  }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="all">All Sub-Divisions</option>
-                  {(filterCircle === 'all' || filterCircle === '3') ? (
-                    <>
-                      {filterDivision === '1' && (
-                        <>
-                          <option value="1">Subdivision-I (26311)</option>
-                          <option value="2">Subdivision-II (26312)</option>
-                          <option value="3">Subdivision-III (26313)</option>
-                          <option value="4">Subdivision-IV (26314)</option>
-                          <option value="5">Subdivision-V (26315)</option>
-                          <option value="6">Subdivision-VI (26316)</option>
-                          <option value="7">Subdivision-VII (26317)</option>
-                        </>
-                      )}
-                      {filterDivision === '2' && (
-                        <>
-                          <option value="1">Subdivision-I (26321)</option>
-                          <option value="2">Subdivision-II (26322)</option>
-                          <option value="3">Subdivision-III (26323)</option>
-                          <option value="4">Subdivision-IV (26324)</option>
-                          <option value="8">Subdivision-VIII (26328)</option>
-                          <option value="9">Subdivision-IX (26329)</option>
-                        </>
-                      )}
-                      {filterDivision === '5' && (
-                        <>
-                          <option value="1">Subdivision-I (26351)</option>
-                          <option value="2">Subdivision-II (26352)</option>
-                          <option value="4">Subdivision-IV (26354)</option>
-                          <option value="5">Subdivision-V (26355)</option>
-                        </>
-                      )}
-                      {filterDivision === 'all' && (
-                        <>
-                          <option disabled className="text-slate-400">— Set Division first —</option>
-                          <option value="1">Subdivision 1</option>
-                          <option value="2">Subdivision 2</option>
-                          <option value="3">Subdivision 3</option>
-                          <option value="4">Subdivision 4</option>
-                          <option value="5">Subdivision 5</option>
-                          <option value="6">Subdivision 6</option>
-                          <option value="7">Subdivision 7</option>
-                          <option value="8">Subdivision 8</option>
-                          <option value="9">Subdivision 9</option>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <option value="1">Sub-Division 1</option>
-                      <option value="2">Sub-Division 2</option>
-                      <option value="3">Sub-Division 3</option>
-                      <option value="4">Sub-Division 4</option>
-                      <option value="5">Sub-Division 5</option>
-                      <option value="6">Sub-Division 6</option>
-                      <option value="7">Sub-Division 7</option>
-                      <option value="8">Sub-Division 8</option>
-                      <option value="9">Sub-Division 9</option>
-                      <option value="0">Sub-Division 0</option>
-                    </>
-                  )}
+                  <option value="all">All Sub-Divisions (160)</option>
+                  {(() => {
+                    const seen = new Set();
+                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    return list.filter(s => {
+                      if (seen.has(s.code)) return false;
+                      seen.add(s.code);
+                      return true;
+                    }).map(s => (
+                      <option key={s.code} value={s.code}>
+                        {s.name} ({s.code})
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
 
@@ -1429,26 +1446,21 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
                   <option value="all">All Batches</option>
-                  <option value="01">Batch 01</option>
-                  <option value="11">Batch 11</option>
-                  <option value="12">Batch 12</option>
-                  <option value="14">Batch 14</option>
-                  <option value="02">Batch 02</option>
-                  <option value="03">Batch 03</option>
-                  <option value="05">Batch 05</option>
-                  <option value="15">Batch 15</option>
-                  <option value="22">Batch 22</option>
-                  <option value="26">Batch 26</option>
+                  {['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','24','26','27','30','31','41','42','43'].map(b => (
+                    <option key={b} value={b}>
+                      Batch {b}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             {/* Clear Filters helper button */}
-            {(filterCompany !== 'all' || filterCircle !== 'all' || filterDivision !== 'all' || filterSubdivision !== 'all' || filterBatch !== 'all') && (
+            {(filterCompany !== '26' || filterCircle !== 'all' || filterDivision !== 'all' || filterSubdivision !== 'all' || filterBatch !== 'all') && (
               <div className="flex justify-end pt-0.5">
                 <button
                   onClick={() => {
-                    setFilterCompany('all');
+                    setFilterCompany('26');
                     setFilterCircle('all');
                     setFilterDivision('all');
                     setFilterSubdivision('all');

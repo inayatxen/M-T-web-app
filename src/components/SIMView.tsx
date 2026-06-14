@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { getPKTDateString } from '../utils';
 import { 
   Radio, 
   Search, 
@@ -65,7 +66,7 @@ export default function SIMView({ meters, onUpdateSIMDetails, currentUser }: SIM
     e.preventDefault();
     if (!selectedMeterId) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPKTDateString();
 
     onUpdateSIMDetails(selectedMeterId, {
       imei,

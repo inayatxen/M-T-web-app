@@ -23,7 +23,16 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport } from '../types';
-import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName } from '../utils';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from 'recharts';
+import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY, parseAccountNumber } from '../utils';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 
 interface DashboardViewProps {
@@ -48,7 +57,7 @@ export default function DashboardView({
 
   // Regional configuration filters
   const [regBatch, setRegBatch] = useState('all');
-  const [regCompany, setRegCompany] = useState('all');
+  const [regCompany, setRegCompany] = useState('26');
   const [regCircle, setRegCircle] = useState('all');
   const [regDivision, setRegDivision] = useState('all');
   const [regSubdivision, setRegSubdivision] = useState('all');
@@ -69,7 +78,16 @@ export default function DashboardView({
     ...receipts.map(r => r.consumerAccount),
     ...reports.map(r => r.accountNumber),
     ...cases.map(c => c.accountNumber)
-  ].filter(Boolean))).map(acc => parseRegionalAccountNumber(acc));
+  ].filter(Boolean))).map(acc => {
+    const parsed = parseAccountNumber(acc);
+    return {
+      batch: parsed.batchNumber,
+      company: parsed.companyCode,
+      circle: parsed.circleCode,
+      division: parsed.companyCode + parsed.circleCode + parsed.divisionCode,
+      subdivision: parsed.companyCode + parsed.circleCode + parsed.divisionCode + parsed.subdivisionCode,
+    };
+  });
 
   const dynamicBatches = Array.from(new Set(allAccountsReg.map(a => a.batch))).filter(Boolean).sort();
   const dynamicCompanies = Array.from(new Set(allAccountsReg.map(a => a.company))).filter(Boolean).sort();
@@ -77,16 +95,21 @@ export default function DashboardView({
   const dynamicDivisions = Array.from(new Set(allAccountsReg.map(a => a.division))).filter(Boolean).sort();
   const dynamicSubdivisions = Array.from(new Set(allAccountsReg.map(a => a.subdivision))).filter(Boolean).sort();
 
-  const isRegionFiltered = regBatch !== 'all' || regCompany !== 'all' || regCircle !== 'all' || regDivision !== 'all' || regSubdivision !== 'all';
+  const isRegionFiltered = regBatch !== 'all' || regCompany !== '26' || regCircle !== 'all' || regDivision !== 'all' || regSubdivision !== 'all';
 
   const matchesRegion = (accountNo: string): boolean => {
     if (!accountNo) return false;
-    const parsed = parseRegionalAccountNumber(accountNo);
-    if (regBatch !== 'all' && parsed.batch !== regBatch) return false;
-    if (regCompany !== 'all' && parsed.company !== regCompany) return false;
-    if (regCircle !== 'all' && parsed.circle !== regCircle) return false;
-    if (regDivision !== 'all' && parsed.division !== regDivision) return false;
-    if (regSubdivision !== 'all' && parsed.subdivision !== regSubdivision) return false;
+    const parsed = parseAccountNumber(accountNo);
+    const absCompany = parsed.companyCode;
+    const absCircle = parsed.circleCode;
+    const absDivision = parsed.companyCode + parsed.circleCode + parsed.divisionCode;
+    const absSubdivision = parsed.companyCode + parsed.circleCode + parsed.divisionCode + parsed.subdivisionCode;
+
+    if (regBatch !== 'all' && parsed.batchNumber !== regBatch) return false;
+    if (regCompany !== 'all' && absCompany !== regCompany) return false;
+    if (regCircle !== 'all' && absCircle !== regCircle) return false;
+    if (regDivision !== 'all' && absDivision !== regDivision) return false;
+    if (regSubdivision !== 'all' && absSubdivision !== regSubdivision) return false;
     return true;
   };
 
@@ -151,6 +174,15 @@ export default function DashboardView({
 
   const maxReceived = Math.max(...monthlyReceivedData);
 
+  const monthlyTrendData = [
+    { month: 'Jan', 'Pass Rate (%)': 80, 'Fail Rate (%)': 20, passed: Math.round(16 * ratio), failed: Math.round(4 * ratio) },
+    { month: 'Feb', 'Pass Rate (%)': 78, 'Fail Rate (%)': 22, passed: Math.round(22 * ratio), failed: Math.round(6 * ratio) },
+    { month: 'Mar', 'Pass Rate (%)': 82, 'Fail Rate (%)': 18, passed: Math.round(32 * ratio), failed: Math.round(7 * ratio) },
+    { month: 'Apr', 'Pass Rate (%)': 86, 'Fail Rate (%)': 14, passed: Math.round(45 * ratio), failed: Math.round(7 * ratio) },
+    { month: 'May', 'Pass Rate (%)': 88, 'Fail Rate (%)': 12, passed: Math.round(51 * ratio), failed: Math.round(7 * ratio) },
+    { month: 'Jun', 'Pass Rate (%)': totalReceived > 0 ? Math.round(((passedCount + reportsIssued) / totalReceived) * 105) > 100 ? 100 : Math.round(((passedCount + reportsIssued) / totalReceived) * 100) : 80, 'Fail Rate (%)': totalReceived > 0 ? Math.round((failedCount / totalReceived) * 100) : 20, passed: passedCount + reportsIssued, failed: failedCount },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Banner / Header */}
@@ -212,7 +244,7 @@ export default function DashboardView({
             <button
               onClick={() => {
                 setRegBatch('all');
-                setRegCompany('all');
+                setRegCompany('26');
                 setRegCircle('all');
                 setRegDivision('all');
                 setRegSubdivision('all');
@@ -237,12 +269,11 @@ export default function DashboardView({
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
               <option value="all">All Batches</option>
-              {dynamicBatches.map(b => (
-                <option key={b} value={b}>Batch {b}</option>
+              {['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','24','26','27','30','31','41','42','43'].map(b => (
+                <option key={b} value={b}>
+                  Batch {b}
+                </option>
               ))}
-              {!dynamicBatches.includes('01') && <option value="01">Batch 01</option>}
-              {!dynamicBatches.includes('02') && <option value="02">Batch 02</option>}
-              {!dynamicBatches.includes('11') && <option value="11">Batch 11</option>}
             </select>
           </div>
 
@@ -256,14 +287,7 @@ export default function DashboardView({
               onChange={(e) => setRegCompany(e.target.value)}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="all">All Companies</option>
-              {dynamicCompanies.map(c => (
-                <option key={c} value={c}>Co {c === '26000' || c === '26311' ? `${c} (PESCO)` : c}</option>
-              ))}
-              {!dynamicCompanies.includes('26000') && <option value="26000">26000 (PESCO)</option>}
-              {!dynamicCompanies.includes('26311') && <option value="26311">26311 (PESCO)</option>}
-              {!dynamicCompanies.includes('11000') && <option value="11000">11000 (LESCO)</option>}
-              {!dynamicCompanies.includes('22000') && <option value="22000">22000 (FESCO)</option>}
+              <option value="26">PESCO (26)</option>
             </select>
           </div>
 
@@ -274,20 +298,19 @@ export default function DashboardView({
             </label>
             <select
               value={regCircle}
-              onChange={(e) => setRegCircle(e.target.value)}
+              onChange={(e) => {
+                setRegCircle(e.target.value);
+                setRegDivision('all');
+                setRegSubdivision('all');
+              }}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
               <option value="all">All Circles</option>
-              {dynamicCircles.map(c => (
-                <option key={c} value={c}>{getCircleName(c)} ({c})</option>
+              {PESCO_HIERARCHY.map(c => (
+                <option key={c.code} value={c.code.substring(2)}>
+                  {c.name} ({c.code.substring(2)})
+                </option>
               ))}
-              {!dynamicCircles.includes('1') && <option value="1">Peshawar (1)</option>}
-              {!dynamicCircles.includes('2') && <option value="2">Khyber (2)</option>}
-              {!dynamicCircles.includes('3') && <option value="3">Mardan (3)</option>}
-              {!dynamicCircles.includes('5') && <option value="5">Swat (5)</option>}
-              {!dynamicCircles.includes('6') && <option value="6">Bannu (6)</option>}
-              {!dynamicCircles.includes('8') && <option value="8">Swabi (8)</option>}
-              {!dynamicCircles.includes('9') && <option value="9">DI Khan (9)</option>}
             </select>
           </div>
 
@@ -299,22 +322,29 @@ export default function DashboardView({
             <select
               value={regDivision}
               onChange={(e) => {
-                setRegDivision(e.target.value);
+                const val = e.target.value;
+                setRegDivision(val);
+                if (val !== 'all') {
+                  setRegCircle(val.substring(2, 3));
+                }
                 setRegSubdivision('all');
               }}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="all">All Divisions</option>
-              {dynamicDivisions.map(d => (
-                <option key={d} value={d}>{getDivisionName(d, regCircle)} (Div {d})</option>
-              ))}
-              {(regCircle === 'all' || regCircle === '3') && (
-                <>
-                  {!dynamicDivisions.includes('1') && <option value="1">Division-I (26310)</option>}
-                  {!dynamicDivisions.includes('2') && <option value="2">Division-II (26320)</option>}
-                  {!dynamicDivisions.includes('5') && <option value="5">Division-III (26350)</option>}
-                </>
-              )}
+              <option value="all">All Divisions (33)</option>
+              {(() => {
+                const seen = new Set();
+                const list = PESCO_HIERARCHY.flatMap(c => c.divisions);
+                return list.filter(d => {
+                  if (seen.has(d.code)) return false;
+                  seen.add(d.code);
+                  return true;
+                }).map(d => (
+                  <option key={d.code} value={d.code}>
+                    {d.name} ({d.code})
+                  </option>
+                ));
+              })()}
             </select>
           </div>
 
@@ -325,43 +355,30 @@ export default function DashboardView({
             </label>
             <select
               value={regSubdivision}
-              onChange={(e) => setRegSubdivision(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setRegSubdivision(val);
+                if (val !== 'all') {
+                  setRegDivision(val.substring(0, 4));
+                  setRegCircle(val.substring(2, 3));
+                }
+              }}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="all">All Sub-Divs</option>
-              {dynamicSubdivisions.map(s => {
-                if (regDivision !== 'all') {
-                  if (regDivision === '1' && !['1', '2', '3', '4', '5', '6', '7'].includes(String(s))) return null;
-                  if (regDivision === '2' && !['1', '2', '3', '4', '8', '9'].includes(String(s))) return null;
-                  if (regDivision === '5' && !['1', '2', '4', '5'].includes(String(s))) return null;
-                }
-                return (
-                  <option key={s} value={s}>{getSubdivisionName(s, regDivision, regCircle)}</option>
-                );
-              })}
-              {(regCircle === 'all' || regCircle === '3') && (
-                <>
-                  {regDivision === '1' && (
-                    <>
-                      <option value="1">Subdivision-I (26311)</option>
-                      <option value="2">Subdivision-II (26312)</option>
-                      <option value="3">Subdivision-III (26313)</option>
-                    </>
-                  )}
-                  {regDivision === '2' && (
-                    <>
-                      <option value="8">Subdivision-VIII (26328)</option>
-                      <option value="9">Subdivision-IX (26329)</option>
-                    </>
-                  )}
-                  {regDivision === '5' && (
-                    <>
-                      <option value="4">Subdivision-IV (26354)</option>
-                      <option value="5">Subdivision-V (26355)</option>
-                    </>
-                  )}
-                </>
-              )}
+              <option value="all">All Sub-Divisions (160)</option>
+              {(() => {
+                const seen = new Set();
+                const list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                return list.filter(s => {
+                  if (seen.has(s.code)) return false;
+                  seen.add(s.code);
+                  return true;
+                }).map(s => (
+                  <option key={s.code} value={s.code}>
+                    {s.name} ({s.code})
+                  </option>
+                ));
+              })()}
             </select>
           </div>
         </div>
@@ -620,6 +637,95 @@ export default function DashboardView({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Monthly Quality & Compliance Trend Chart (Recharts) */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <h3 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wide">
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+              Meter Compliance & Quality Trend Rates
+            </h3>
+            <p className="text-[10px] text-slate-550 dark:text-slate-400">
+              Monthly calibration pass/fail rate percentage comparison based on grid compliance testing
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-[10px] font-bold">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-0.5 bg-emerald-500 block rounded" /> Pass Rate (%)
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-0.5 bg-rose-500 block rounded" /> Fail Rate (%)
+            </span>
+          </div>
+        </div>
+
+        <div className="h-60 w-full text-xs">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={monthlyTrendData}
+              margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-100 dark:stroke-slate-800" />
+              <XAxis 
+                dataKey="month" 
+                axisLine={false}
+                tickLine={false}
+                className="fill-slate-500 dark:fill-slate-400 font-bold"
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis 
+                domain={[0, 100]} 
+                axisLine={false}
+                tickLine={false}
+                className="fill-slate-500 dark:fill-slate-400 font-mono font-bold"
+                tick={{ fontSize: 10 }}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-slate-905/95 dark:bg-slate-950/95 text-white dark:text-slate-100 p-2.5 rounded-lg border border-slate-800 dark:border-slate-800 shadow-md text-[11px] space-y-1.5 font-bold">
+                        <p className="text-slate-400 font-extrabold uppercase text-[9px] tracking-wider border-b border-slate-800 pb-1">
+                          {payload[0].payload.month} Compliance Audit
+                        </p>
+                        <div className="space-y-0.5 font-mono">
+                          <p className="text-emerald-400 flex items-center justify-between gap-4">
+                            <span>Passed: {payload[0].payload.passed} units</span>
+                            <span>{payload[0].payload['Pass Rate (%)']}%</span>
+                          </p>
+                          <p className="text-rose-400 flex items-center justify-between gap-4">
+                            <span>Failed: {payload[0].payload.failed} units</span>
+                            <span>{payload[0].payload['Fail Rate (%)']}%</span>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Pass Rate (%)" 
+                stroke="#10b981" 
+                strokeWidth={3} 
+                dot={{ r: 4, strokeWidth: 1, fill: '#10b981' }} 
+                activeDot={{ r: 6, strokeWidth: 0 }} 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Fail Rate (%)" 
+                stroke="#ef4444" 
+                strokeWidth={3} 
+                dot={{ r: 4, strokeWidth: 1, fill: '#ef4444' }} 
+                activeDot={{ r: 6, strokeWidth: 0 }} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

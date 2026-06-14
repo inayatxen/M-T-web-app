@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { User as UserType, UserRole } from '../types';
 import { SEED_USERS } from '../data/seedData';
+import { PESCO_HIERARCHY } from '../utils';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 
 interface LoginViewProps {
@@ -72,15 +73,16 @@ export default function LoginView({ onLoginSuccess, isDarkMode }: LoginViewProps
     }
   });
 
-  const PESCO_CIRCLES = [
-    { code: '261', name: 'Peshawar Circle' },
-    { code: '262', name: 'Khyber Circle' },
-    { code: '263', name: 'Mardan Circle' },
-    { code: '265', name: 'Swat Circle' },
-    { code: '266', name: 'Bannu Circle' },
-    { code: '268', name: 'Swabi Circle' },
-    { code: '269', name: 'DI Khan Circle' },
-  ];
+  const PESCO_CIRCLES = PESCO_HIERARCHY.map(c => {
+    // Keep display names clean (Capitalizing properly instead of ALL CAPS)
+    const formattedName = c.name.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+    return {
+      code: c.code,
+      name: `${formattedName} Circle`
+    };
+  });
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
