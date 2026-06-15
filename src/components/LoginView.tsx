@@ -26,9 +26,10 @@ import pescoLogo from '../assets/images/pesco_logo.jpg';
 interface LoginViewProps {
   onLoginSuccess: (user: UserType) => void;
   isDarkMode: boolean;
+  users?: UserType[];
 }
 
-export default function LoginView({ onLoginSuccess, isDarkMode }: LoginViewProps) {
+export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USERS }: LoginViewProps) {
   // Currently selected active role
   const [activeRole, setActiveRole] = useState<UserRole>('lab_manager');
   
@@ -149,7 +150,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode }: LoginViewProps
             return;
           }
 
-          const matchedStaff = SEED_USERS.find(u => u.id === option.seedId);
+          const matchedStaff = users.find(u => u.id === option.seedId) || SEED_USERS.find(u => u.id === option.seedId);
           if (matchedStaff) {
             onLoginSuccess(matchedStaff);
           } else {
@@ -166,7 +167,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode }: LoginViewProps
 
   const currentRoleConfig = roleOptions.find(o => o.role === activeRole);
   const currentSeedUser = currentRoleConfig?.seedId 
-    ? SEED_USERS.find(u => u.id === currentRoleConfig.seedId) 
+    ? (users.find(u => u.id === currentRoleConfig.seedId) || SEED_USERS.find(u => u.id === currentRoleConfig.seedId)) 
     : null;
 
   return (

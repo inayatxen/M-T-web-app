@@ -114,6 +114,49 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [standards, setStandards] = useState<CalibrationStandard[]>([]);
   const [todos, setTodos] = useState<any[]>([]);
+  
+  // Real-time dynamic Users directory synchronized from Supabase
+  const [users, setUsers] = useState<UserType[]>(() => {
+    try {
+      const stored = localStorage.getItem('mtlms_users');
+      return stored ? JSON.parse(stored) : SEED_USERS;
+    } catch {
+      return SEED_USERS;
+    }
+  });
+
+  // Fetch users from Supabase database
+  useEffect(() => {
+    async function loadUsersFromSupabase() {
+      try {
+        setSyncStatus('syncing');
+        const { data: dbUsers, error } = await supabase.from('users').select('*');
+        if (error) {
+          throw error;
+        }
+        if (dbUsers && dbUsers.length > 0) {
+          const mapped: UserType[] = dbUsers.map(u => ({
+            id: u.id,
+            name: u.name || '',
+            email: u.email || '',
+            role: u.role as UserRole,
+            designation: u.designation || '',
+            circleCode: u.circleCode || undefined
+          }));
+          setUsers(mapped);
+          localStorage.setItem('mtlms_users', JSON.stringify(mapped));
+          setSyncStatus('synced');
+        } else {
+          // If remote users is empty, let's push SEED_USERS to it!
+          setSyncStatus('synced');
+        }
+      } catch (err) {
+        console.warn("Could not fetch users from Supabase:", err);
+        setSyncStatus('error');
+      }
+    }
+    loadUsersFromSupabase();
+  }, []);
 
   // Satisfy Supabase Todos check in App.tsx
   useEffect(() => {
@@ -604,7 +647,7 @@ export default function App() {
       return;
     }
 
-    const matchedUser = SEED_USERS.find(u => u.role === role);
+    const matchedUser = users.find(u => u.role === role) || SEED_USERS.find(u => u.role === role);
     if (matchedUser) {
       const oldRole = currentUser ? currentUser.role : 'None';
       setCurrentUser(matchedUser);
@@ -675,6 +718,7 @@ export default function App() {
           localStorage.setItem('mtlms_currentUser', JSON.stringify(user));
         }} 
         isDarkMode={isDarkMode} 
+        users={users}
       />
     );
   }
@@ -1011,7 +1055,7 @@ export default function App() {
               {/* Simulating profiles & Calibration benchmarks */}
               {activePageId === 'user_management' && (
                 <ManagementView 
-                  users={SEED_USERS} 
+                  users={users} 
                   onUpdateRole={handleUpdateRole} 
                   currentUser={currentUser} 
                   auditLogs={auditLogs} 
@@ -1026,7 +1070,7 @@ export default function App() {
 
               {activePageId === 'system_settings' && (
                 <ManagementView 
-                  users={SEED_USERS} 
+                  users={users} 
                   onUpdateRole={handleUpdateRole} 
                   currentUser={currentUser} 
                   auditLogs={auditLogs} 
@@ -1041,6 +1085,8 @@ export default function App() {
 
               {activePageId === 'supabase_sync' && (
                 <SupabaseSyncView
+                  users={users}
+                  setUsers={setUsers}
                   meters={meters}
                   setMeters={setMeters}
                   receipts={receipts}

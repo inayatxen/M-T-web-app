@@ -24,6 +24,7 @@ import {
 import { motion } from 'motion/react';
 import { supabase, testSupabaseConnection } from '../supabaseClient';
 import { 
+  User,
   Meter, 
   EquipmentReceipt, 
   CTRecord, 
@@ -35,6 +36,8 @@ import {
 } from '../types';
 
 interface SupabaseSyncViewProps {
+  users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   meters: Meter[];
   setMeters: React.Dispatch<React.SetStateAction<Meter[]>>;
   receipts: EquipmentReceipt[];
@@ -56,6 +59,7 @@ interface SupabaseSyncViewProps {
 }
 
 export default function SupabaseSyncView({
+  users, setUsers,
   meters, setMeters,
   receipts, setReceipts,
   cts, setCts,
@@ -76,6 +80,7 @@ export default function SupabaseSyncView({
 
   // Stats table sizes
   const [supabaseCounts, setSupabaseCounts] = useState<{ [key: string]: number | string }>({
+    users: 'Click test',
     meters: 'Click test',
     receipts: 'Click test',
     cts: 'Click test',
@@ -105,7 +110,7 @@ export default function SupabaseSyncView({
   };
 
   const fetchSupabaseCounts = async () => {
-    const tables = ['meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos'];
+    const tables = ['users', 'meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos'];
     const updated: { [key: string]: number | string } = {};
 
     for (const t of tables) {
@@ -131,7 +136,17 @@ export default function SupabaseSyncView({
   }, []);
 
   // PostgreSQL copy-paste tables definition DDL queries
-  const postgresDDL = `-- 1. Create meters Table
+  const postgresDDL = `-- 0. Create users Table
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  role TEXT,
+  designation TEXT,
+  "circleCode" TEXT
+);
+
+-- 1. Create meters Table
 CREATE TABLE IF NOT EXISTS meters (
   id TEXT PRIMARY KEY,
   "meterNumber" TEXT UNIQUE,
@@ -275,6 +290,7 @@ CREATE TABLE IF NOT EXISTS todos (
 -- ==========================================
 -- DISABLE ROW LEVEL SECURITY (RLS) FOR PIPELINE BYPASS
 -- ==========================================
+ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meters DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS receipts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS cts DISABLE ROW LEVEL SECURITY;
@@ -314,6 +330,9 @@ CREATE POLICY "allow_anon_standards" ON standards FOR ALL TO anon USING (true) W
 
 DROP POLICY IF EXISTS "allow_anon_todos" ON todos;
 CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_users" ON users;
+CREATE POLICY "allow_anon_users" ON users FOR ALL TO anon USING (true) WITH CHECK (true);
 `;
 
   const copySqlToClipboard = () => {
@@ -329,6 +348,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
     setProgressLog(prev => [...prev, `[${formatPKTTime()}] Beginning high-speed remote cloud push backup...`]);
 
     const items = [
+      { name: 'users', data: users },
       { name: 'meters', data: meters },
       { name: 'receipts', data: receipts },
       { name: 'cts', data: cts },
@@ -370,6 +390,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
     setProgressLog(prev => [...prev, `[${formatPKTTime()}] Fetching state indexes from Supabase...`]);
 
     const pullingJobs = [
+      { name: 'users', stateSetter: setUsers },
       { name: 'meters', stateSetter: setMeters },
       { name: 'receipts', stateSetter: setReceipts },
       { name: 'cts', stateSetter: setCts },
@@ -548,7 +569,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
             <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
               <h3 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">Database Registers Concordance</h3>
-              <p className="text-[10px] font-mono text-slate-450">Active Sync Keys: 8 registers</p>
+              <p className="text-[10px] font-mono text-slate-450">Active Sync Keys: 10 registers</p>
             </div>
             
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-[11.5px]">
@@ -562,6 +583,7 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
               </div>
 
               {[
+                { label: 'Active User Directory', name: 'users', localCount: users.length },
                 { label: 'Meter Registry', name: 'meters', localCount: meters.length },
                 { label: 'Inward Receipts', name: 'receipts', localCount: receipts.length },
                 { label: 'Current Transformers (CT)', name: 'cts', localCount: cts.length },
