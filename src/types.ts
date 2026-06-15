@@ -13,6 +13,7 @@ export interface User {
   role: UserRole;
   designation: string;
   circleCode?: string;
+  password?: string;
 }
 
 // Meter Categories and Statuses

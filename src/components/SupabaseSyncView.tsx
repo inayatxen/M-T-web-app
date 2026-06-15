@@ -143,7 +143,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   role TEXT,
   designation TEXT,
-  "circleCode" TEXT
+  "circleCode" TEXT,
+  password TEXT
 );
 
 -- 1. Create meters Table

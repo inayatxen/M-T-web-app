@@ -135,14 +135,18 @@ export default function App() {
           throw error;
         }
         if (dbUsers && dbUsers.length > 0) {
-          const mapped: UserType[] = dbUsers.map(u => ({
-            id: u.id,
-            name: u.name || '',
-            email: u.email || '',
-            role: u.role as UserRole,
-            designation: u.designation || '',
-            circleCode: u.circleCode || undefined
-          }));
+          const mapped: UserType[] = dbUsers.map(u => {
+            const seedUser = SEED_USERS.find(su => su.id === u.id);
+            return {
+              id: u.id,
+              name: u.name || '',
+              email: u.email || '',
+              role: u.role as UserRole,
+              designation: u.designation || '',
+              circleCode: u.circleCode || undefined,
+              password: u.password || seedUser?.password || 'password123'
+            };
+          });
           setUsers(mapped);
           localStorage.setItem('mtlms_users', JSON.stringify(mapped));
           setSyncStatus('synced');
@@ -662,6 +666,21 @@ export default function App() {
     }
   };
 
+  // Update specific security password for lab portal members
+  const handleUpdateUserPassword = (userId: string, newPass: string) => {
+    const updated = users.map(u => u.id === userId ? { ...u, password: newPass } : u);
+    setUsers(updated);
+    localStorage.setItem('mtlms_users', JSON.stringify(updated));
+    const userToUpdate = users.find(u => u.id === userId);
+    if (userToUpdate) {
+      recordAuditTrail(
+        `Updated security password for ${userToUpdate.name}`,
+        '••••••••',
+        'Confidential PIN updated successfully'
+      );
+    }
+  };
+
   // Trigger page displacement from any link shortcut
   const handleNavigateToPage = (pageId: string) => {
     setActivePageId(pageId);
@@ -1065,6 +1084,7 @@ export default function App() {
                   onBackupState={handleBackupState} 
                   onRestoreState={handleRestoreState} 
                   onRecordAudit={recordAuditTrail}
+                  onUpdateUserPassword={handleUpdateUserPassword}
                 />
               )}
 
@@ -1080,6 +1100,7 @@ export default function App() {
                   onBackupState={handleBackupState} 
                   onRestoreState={handleRestoreState} 
                   onRecordAudit={recordAuditTrail}
+                  onUpdateUserPassword={handleUpdateUserPassword}
                 />
               )}
 

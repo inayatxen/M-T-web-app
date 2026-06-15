@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   role TEXT,
   designation TEXT,
   "circleCode" TEXT,
+  password TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

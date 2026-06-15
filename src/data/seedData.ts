@@ -21,28 +21,32 @@ export const SEED_USERS: User[] = [
     name: 'Sarah Rahman',
     email: 'sarah.rahman@powercorp.com',
     role: 'lab_manager',
-    designation: 'Laboratory Executive & Manager'
+    designation: 'Laboratory Executive & Manager',
+    password: 'manager123'
   },
   {
     id: 'u-2',
     name: 'Amit Kumar',
     email: 'amit.kumar@powercorp.com',
     role: 'testing_engineer',
-    designation: 'Senior Testing Field Engineer'
+    designation: 'Senior Testing Field Engineer',
+    password: 'engineer123'
   },
   {
     id: 'u-3',
     name: 'Devon Miller',
     email: 'devon.miller@powercorp.com',
     role: 'administrator',
-    designation: 'System Administrator'
+    designation: 'System Administrator',
+    password: 'admin123'
   },
   {
     id: 'u-4',
     name: 'Priya Sharma',
     email: 'priya.sharma@powercorp.com',
     role: 'data_entry_operator',
-    designation: 'Laboratory Intake Officer'
+    designation: 'Laboratory Intake Officer',
+    password: 'operator123'
   }
 ];
 

@@ -44,6 +44,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
   // Authentication loading state
   const [errorMsg, setErrorMsg] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showCredsGuide, setShowCredsGuide] = useState(false);
 
   // Parse Pesco Circles for display
   const PESCO_CIRCLES = PESCO_HIERARCHY.map(c => {
@@ -129,6 +130,12 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
             return;
           }
 
+          if (password !== 'supervisor123') {
+            setErrorMsg('Invalid security passcode PIN for Circle Supervisor (default: supervisor123).');
+            setIsAuthenticating(false);
+            return;
+          }
+
           const resolvedName = supervisorName.trim() || `Circle Supervisor (${matchedCircle.name})`;
 
           const loggedInUser: UserType = {
@@ -137,7 +144,8 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
             email: trimmedEmail.toLowerCase(),
             role: 'circle_supervisor',
             designation: `PESCO Circle Officer (${matchedCircle.code})`,
-            circleCode: matchedCircle.code
+            circleCode: matchedCircle.code,
+            password: 'supervisor123'
           };
 
           onLoginSuccess(loggedInUser);
@@ -152,6 +160,12 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
 
           const matchedStaff = users.find(u => u.id === option.seedId) || SEED_USERS.find(u => u.id === option.seedId);
           if (matchedStaff) {
+            const expectedPassword = matchedStaff.password || 'password123';
+            if (password !== expectedPassword) {
+              setErrorMsg(`Invalid security password entered for ${matchedStaff.name}.`);
+              setIsAuthenticating(false);
+              return;
+            }
             onLoginSuccess(matchedStaff);
           } else {
             setErrorMsg('Standard laboratory staff seed profile not found.');
@@ -219,6 +233,45 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
           </div>
         )}
 
+        {/* Toggleable credentials guide */}
+        <div className="mx-6 mt-4 border border-blue-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowCredsGuide(!showCredsGuide)}
+            className="w-full px-4 py-2 text-left text-[11px] font-extrabold uppercase tracking-wide text-blue-600 dark:text-blue-405 hover:bg-slate-100/50 dark:hover:bg-slate-900/40 flex justify-between items-center transition cursor-pointer"
+          >
+            <span className="flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-blue-500" />
+              Toggle Access Credentials Guide
+            </span>
+            <span className="text-[10px] bg-blue-100 dark:bg-slate-800 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded font-black">
+              {showCredsGuide ? 'HIDE' : 'SHOW'}
+            </span>
+          </button>
+          {showCredsGuide && (
+            <div className="p-3.5 bg-white dark:bg-slate-950 border-t border-slate-150 dark:border-slate-900 text-[11.5px] space-y-2.5 animate-in slide-in-from-top-2 duration-200">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+                Active Member Security Passwords
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                {roleOptions.map(opt => {
+                  const matchingU = users.find(u => u.id === opt.seedId) || SEED_USERS.find(s => s.id === opt.seedId);
+                  const pass = matchingU ? (matchingU.password || 'password123') : 'supervisor123';
+                  return (
+                    <div key={opt.role} className="p-2 rounded bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-850 flex flex-col justify-between">
+                      <span className="font-bold text-slate-700 dark:text-slate-350">{opt.title}</span>
+                      <span className="font-mono text-[9px] mt-1 text-slate-500 break-all">{matchingU?.name || 'Assigned Supervisor'}</span>
+                      <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-[10px] tracking-wider mt-1.5 bg-slate-100 dark:bg-slate-850 p-1 rounded block text-center">
+                        PIN: {pass}
+                      </strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="p-6 space-y-6">
           
           {/* SECURE TERMINAL ROLE SELECTOR */}
@@ -237,6 +290,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
                     onClick={() => {
                       setActiveRole(opt.role);
                       setErrorMsg('');
+                      setPassword('');
                     }}
                     className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-200 flex items-start gap-3 relative ${
                       isActive 
@@ -413,22 +467,28 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
 
                     <div className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono grid grid-cols-1 gap-1 border-t border-slate-100 dark:border-slate-800 pt-2.5">
                       <div><strong className="text-slate-400">CORP EMAIL:</strong> {currentSeedUser.email}</div>
-                      <div><strong className="text-slate-400">SECURITY TOKEN:</strong> BYPASS_SEC_HANDSHAKE_GRANTED_OK</div>
                     </div>
                   </div>
                 )}
 
-                {/* Simulated security credentials lock */}
+                {/* Secure password input */}
                 <div className="space-y-1">
-                  <label className="block text-[9.5px] font-black uppercase text-slate-500 dark:text-slate-450 tracking-wider">
-                    Global Bypass Handshake Token
+                  <label className="block text-[9.5px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Enter Personal Security Password
                   </label>
-                  <input
-                    type="text"
-                    disabled
-                    value="BYPASS_SEC_HANDSHAKE_GRANTED_OK"
-                    className="w-full px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg text-slate-400 dark:text-slate-600 font-mono text-center tracking-wider font-black select-all"
-                  />
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Lock className="w-3.5 h-3.5" />
+                    </span>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
                 </div>
               </div>
             )}
