@@ -8,11 +8,32 @@
 
 /* Print styling to isolate the certificate page cleanest */
 @media print {
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Ensure all layout containers don't restrict layout height or overflow in print view */
+  #root, main, [class*="overflow-y-auto"], [class*="overflow-auto"] {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Suppress scrollbars globally during printing */
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
   
   /* Hide sidebars, headers, action buttons, notifications */
