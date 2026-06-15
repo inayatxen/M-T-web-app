@@ -8,53 +8,13 @@
 
 /* Print styling to isolate the certificate page cleanest */
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 0 !important;
-  }
-
   body {
     background-color: #ffffff !important;
-    background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
   }
   
-  /* Reset outer layout containers to prevent truncation and allow pages to split properly */
-  html, 
-  body, 
-  #root, 
-  .min-h-screen, 
-  main, 
-  #active-dynamic-view-viewport,
-  div[class*="flex-grow"],
-  div[class*="overflow-y-auto"],
-  div[class*="overflow-x-hidden"],
-  div[class*="h-screen"] {
-    display: block !important;
-    overflow: visible !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    position: static !important;
-    width: 100% !important;
-    float: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Force light colors on print regardless of active dark mode class */
-  .dark, 
-  .dark * {
-    background-color: transparent !important;
-    background: transparent !important;
-    color: #020617 !important;
-    border-color: #cbd5e1 !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
-
   /* Hide sidebars, headers, action buttons, notifications */
   aside, 
   header, 
@@ -64,109 +24,16 @@
     display: none !important;
   }
 
-  /* Premium Page Layout for each Certificate */
+  /* Make target canvas occupy full print screen */
   #printable-certificate-canvas,
   .printable-batch-canvas {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    box-sizing: border-box !important;
-    width: 210mm !important; /* Standard A4 Width */
-    height: 296mm !important; /* Standard A4 Height (slightly dynamic to avoid extra empty pages) */
-    max-width: 210mm !important;
-    min-height: 296mm !important;
-    
-    padding-top: var(--print-padding-top, 18mm) !important;
-    padding-right: var(--print-padding-right, 20mm) !important;
-    padding-bottom: var(--print-padding-bottom, 15mm) !important;
-    padding-left: var(--print-padding-left, 20mm) !important;
-    margin: 0 auto !important;
-    background-color: #ffffff !important;
-    background: #ffffff !important;
     border: none !important;
     box-shadow: none !important;
-    border-radius: 0 !important;
-    position: relative !important;
-    
-    page-break-after: always !important;
-    break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    font-size: var(--print-font-scale, 100%) !important;
-  }
-
-  /* Exclude last item from extra page blank spillover in some browsers */
-  .printable-batch-canvas:last-child {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-  }
-
-  /* High fidelity print-rendered borders with dynamic inset and visibility controls */
-  #printable-certificate-canvas::before,
-  .printable-batch-canvas::before {
-    display: var(--print-border-display, block) !important;
-    content: "" !important;
-    position: absolute !important;
-    inset: var(--print-border-inset-1, 6mm) !important;
-    border: 1px solid rgba(67, 56, 202, 0.25) !important;
-    pointer-events: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  #printable-certificate-canvas::after,
-  .printable-batch-canvas::after {
-    display: var(--print-border-display, block) !important;
-    content: "" !important;
-    position: absolute !important;
-    inset: var(--print-border-inset-2, 7mm) !important;
-    border: 2px solid rgba(67, 56, 202, 0.4) !important;
-    pointer-events: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Force beautiful header background tints on paper */
-  .bg-indigo-900\/5,
-  .bg-indigo-50,
-  .bg-slate-50,
-  tr.bg-slate-50\/50 {
-    background-color: #f1f5f9 !important; /* elegant soft slate shading */
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Ensure deep navy color for core structural text on paper */
-  .text-indigo-950, 
-  .text-indigo-905, 
-  .text-indigo-900, 
-  .text-indigo-800, 
-  .text-indigo-700, 
-  .text-slate-950, 
-  .text-slate-900, 
-  .text-slate-800 {
-    color: #1e1b4b !important;
-  }
-
-  .text-emerald-800, 
-  .text-emerald-700, 
-  .text-emerald-600 {
-    color: #166534 !important;
-  }
-
-  .text-rose-800, 
-  .text-rose-700, 
-  .text-rose-600 {
-    color: #991b1b !important;
-  }
-
-  .text-slate-505, 
-  .text-slate-500, 
-  .text-slate-400 {
-    color: #334155 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    position: static !important;
   }
 
   .print-page-break {

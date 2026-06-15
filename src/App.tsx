@@ -134,18 +134,6 @@ export default function App() {
   const [activePdfReport, setActivePdfReport] = useState<TestReport | null>(null);
   const [batchPdfReports, setBatchPdfReports] = useState<TestReport[] | null>(null);
 
-  // Escape key overlay close listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setActivePdfReport(null);
-        setBatchPdfReports(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   // Cloud database real-time sync status
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('offline');
 
@@ -843,7 +831,7 @@ export default function App() {
       </aside>
 
       {/* RIGHT VIEWPORT VIEW CANVAS CONTAINER */}
-      <main className={`flex-grow flex flex-col min-h-screen overflow-x-hidden relative ${((batchPdfReports && batchPdfReports.length > 0) || activePdfReport) ? 'print:hidden' : ''}`}>
+      <main className="flex-grow flex flex-col min-h-screen overflow-x-hidden relative">
         
         {/* TOP STATUS HEADER PANEL - Hidden during print */}
         <header className={`h-11 px-4 border-b flex items-center justify-between shrink-0 print:hidden z-10 sticky top-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'}`}>
@@ -874,8 +862,20 @@ export default function App() {
         {/* WORKSPACE VIEW CONTENT AREA PAGE LAYOUT */}
         <div className={`p-4 flex-grow overflow-y-auto print:p-0 print:bg-white relative ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
           
-          {/* Standard page dispatcher */}
-          <div id="active-dynamic-view-viewport" className="animate-in fade-in slide-in-from-bottom-2 duration-150">
+          {/* Certificate PDF View Cover Overlay */}
+          {batchPdfReports && batchPdfReports.length > 0 ? (
+            <BatchReportPDF 
+              reports={batchPdfReports} 
+              onBack={() => setBatchPdfReports(null)} 
+            />
+          ) : activePdfReport ? (
+            <ReportPDF 
+              report={activePdfReport} 
+              onBack={() => setActivePdfReport(null)} 
+            />
+          ) : (
+            /* Standard page dispatcher */
+            <div id="active-dynamic-view-viewport" className="animate-in fade-in slide-in-from-bottom-2 duration-150">
               
               {activePageId === 'dashboard' && (
                 <DashboardView 
@@ -1067,6 +1067,7 @@ export default function App() {
               )}
 
             </div>
+          )}
 
         </div>
 
@@ -1077,35 +1078,6 @@ export default function App() {
         </footer>
 
       </main>
-
-      {/* Modern High-Fidelity 'Print Preview' Modal Overlay */}
-      {((batchPdfReports && batchPdfReports.length > 0) || activePdfReport) && (
-        <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex justify-center items-start p-4 sm:p-6 md:p-8 select-none print:static print:p-0 print:m-0 print:bg-white print:block print:w-full print:overflow-visible"
-          onClick={() => {
-            setActivePdfReport(null);
-            setBatchPdfReports(null);
-          }}
-        >
-          {/* Modal Container Wrapper - prevents click propagation and scales/centers the preview */}
-          <div 
-            className="w-full max-w-4xl relative z-10 select-text animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white print:transform-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {batchPdfReports && batchPdfReports.length > 0 ? (
-              <BatchReportPDF 
-                reports={batchPdfReports} 
-                onBack={() => setBatchPdfReports(null)} 
-              />
-            ) : activePdfReport ? (
-              <ReportPDF 
-                report={activePdfReport} 
-                onBack={() => setActivePdfReport(null)} 
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
 
     </div>
   );
