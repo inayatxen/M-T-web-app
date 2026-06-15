@@ -384,6 +384,13 @@ CREATE POLICY "allow_anon_users" ON users FOR ALL TO anon USING (true) WITH CHEC
     fetchSupabaseCounts();
   };
 
+  // Trigger instant push backup when database status becomes connected
+  useEffect(() => {
+    if (dbStatus === 'connected') {
+      pushStateToSupabase();
+    }
+  }, [dbStatus]);
+
   // Pull remote data from Supabase
   const pullStateFromSupabase = async () => {
     setSyncing(true);
