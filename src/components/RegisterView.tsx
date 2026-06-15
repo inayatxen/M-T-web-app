@@ -1395,7 +1395,9 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   <option value="all">All Divisions (33)</option>
                   {(() => {
                     const seen = new Set();
-                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions);
+                    const list = filterCircle === 'all'
+                      ? PESCO_HIERARCHY.flatMap(c => c.divisions)
+                      : PESCO_HIERARCHY.filter(c => c.code.endsWith(filterCircle)).flatMap(c => c.divisions);
                     return list.filter(d => {
                       if (seen.has(d.code)) return false;
                       seen.add(d.code);
@@ -1426,7 +1428,18 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   <option value="all">All Sub-Divisions (160)</option>
                   {(() => {
                     const seen = new Set();
-                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    let list = [];
+                    if (filterDivision !== 'all') {
+                      list = PESCO_HIERARCHY.flatMap(c => c.divisions)
+                        .filter(d => d.code === filterDivision)
+                        .flatMap(d => d.subdivisions);
+                    } else if (filterCircle !== 'all') {
+                      list = PESCO_HIERARCHY.filter(c => c.code.endsWith(filterCircle))
+                        .flatMap(c => c.divisions)
+                        .flatMap(d => d.subdivisions);
+                    } else {
+                      list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    }
                     return list.filter(s => {
                       if (seen.has(s.code)) return false;
                       seen.add(s.code);

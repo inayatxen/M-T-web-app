@@ -18,8 +18,29 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  FileSpreadsheet
+  FileSpreadsheet,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  MapPin,
+  Building2,
+  Info,
+  Layers,
+  ChevronDown,
+  RefreshCw,
+  FileDown
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  Cell 
+} from 'recharts';
 import { TestReport, Meter, CTRecord, PTRecord, CommitteeCase } from '../types';
 import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY, formatPKTDateTime, getPKTDateString, parseAccountNumber } from '../utils';
 
@@ -45,8 +66,20 @@ export default function ReportsArchiveView({
   onOpenBatchReportPDF
 }: ReportsArchiveViewProps) {
   
-  const [activeSubTab, setActiveSubTab] = useState<'compilation' | 'archive' | 'search' | 'qr'>('archive');
+  const [activeSubTab, setActiveSubTab] = useState<'compilation' | 'archive' | 'search' | 'qr' | 'periodicLogs'>('archive');
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+
+  // Periodic and Jurisdictional Report states
+  const [repLevel, setRepLevel] = useState<'pesco' | 'circle' | 'division' | 'subdivision'>('pesco');
+  const [repInterval, setRepInterval] = useState<'monthly' | 'quarterly' | 'half_annual' | 'annual'>('monthly');
+  const [repFilterYear, setRepFilterYear] = useState<string>('2026');
+  const [repFilterMonth, setRepFilterMonth] = useState<string>('06'); // Default to June (corresponds to current local time)
+  const [repFilterQuarter, setRepFilterQuarter] = useState<string>('Q2'); // April-June
+  const [repFilterHalf, setRepFilterHalf] = useState<string>('H1'); // Jan-Jun
+  const [repFilterCircle, setRepFilterCircle] = useState<string>('all');
+  const [repFilterDivision, setRepFilterDivision] = useState<string>('all');
+  const [repFilterSubdivision, setRepFilterSubdivision] = useState<string>('all');
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   
   // Advanced search parameters
@@ -463,6 +496,15 @@ export default function ReportsArchiveView({
           >
             QR Verify
           </button>
+          <button
+            onClick={() => setActiveSubTab('periodicLogs')}
+            className={`px-3 py-1 text-xs font-bold rounded transition-all flex items-center gap-1 ${
+              activeSubTab === 'periodicLogs' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-3 h-3 text-blue-500" />
+            <span>Periodic Reports</span>
+          </button>
         </div>
       </div>
 
@@ -598,7 +640,9 @@ export default function ReportsArchiveView({
                   <option value="all">All Divisions (33)</option>
                   {(() => {
                     const seen = new Set();
-                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions);
+                    const list = regCircle === 'all'
+                      ? PESCO_HIERARCHY.flatMap(c => c.divisions)
+                      : PESCO_HIERARCHY.filter(c => c.code.endsWith(regCircle)).flatMap(c => c.divisions);
                     return list.filter(d => {
                       if (seen.has(d.code)) return false;
                       seen.add(d.code);
@@ -632,7 +676,18 @@ export default function ReportsArchiveView({
                   <option value="all">All Sub-Divisions (160)</option>
                   {(() => {
                     const seen = new Set();
-                    const list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    let list = [];
+                    if (regDivision !== 'all') {
+                      list = PESCO_HIERARCHY.flatMap(c => c.divisions)
+                        .filter(d => d.code === regDivision)
+                        .flatMap(d => d.subdivisions);
+                    } else if (regCircle !== 'all') {
+                      list = PESCO_HIERARCHY.filter(c => c.code.endsWith(regCircle))
+                        .flatMap(c => c.divisions)
+                        .flatMap(d => d.subdivisions);
+                    } else {
+                      list = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                    }
                     return list.filter(s => {
                       if (seen.has(s.code)) return false;
                       seen.add(s.code);
@@ -1106,6 +1161,995 @@ export default function ReportsArchiveView({
           )}
         </div>
       )}
+
+      {/* PERIODIC & REGIONAL REPORT COMPONENT TAB */}
+      {activeSubTab === 'periodicLogs' && (() => {
+        // Dynamic helpers to filter available areas based on selected circle
+        const availableDivsForReports = (() => {
+          if (repFilterCircle === 'all') return [];
+          const circleMatch = PESCO_HIERARCHY.find(c => c.code.endsWith(repFilterCircle));
+          return circleMatch ? circleMatch.divisions : [];
+        })();
+
+        const availableSubsForReports = (() => {
+          if (repFilterDivision === 'all') return [];
+          const circleMatch = PESCO_HIERARCHY.find(c => c.code.endsWith(repFilterCircle));
+          if (!circleMatch) return [];
+          const divMatch = circleMatch.divisions.find(d => d.code === repFilterDivision);
+          return divMatch ? divMatch.subdivisions : [];
+        })();
+
+        // Periodic and Jurisdictional Filter Logic
+        const periodicFilteredReports = (() => {
+          return reports.filter(r => {
+            const dateStr = r.testDate || r.approvalDate || '';
+            const parts = dateStr.split('-');
+            if (parts.length < 2) return false;
+            const rYear = parts[0];
+            const rMonth = parts[1]; // '01' to '12'
+
+            // Year match
+            if (rYear !== repFilterYear) return false;
+
+            // Interval temporal match
+            if (repInterval === 'monthly') {
+              if (rMonth !== repFilterMonth) return false;
+            } else if (repInterval === 'quarterly') {
+              const qMap: Record<string, string[]> = {
+                'Q1': ['01', '02', '03'],
+                'Q2': ['04', '05', '06'],
+                'Q3': ['07', '08', '09'],
+                'Q4': ['10', '11', '12'],
+              };
+              if (!qMap[repFilterQuarter]?.includes(rMonth)) return false;
+            } else if (repInterval === 'half_annual') {
+              if (repFilterHalf === 'H1') {
+                if (rMonth > '06') return false;
+              } else {
+                if (rMonth < '07') return false;
+              }
+            }
+            return true;
+          });
+        })();
+
+        // Matched detailed reports
+        const detailMatchedReports = (() => {
+          return periodicFilteredReports.filter(r => {
+            const parsedDef = parseAccountNumber(r.accountNumber);
+            const cIdTail = parsedDef.circleCode;
+            const dCodeChar = parsedDef.divisionCode;
+            const sCodeChar = parsedDef.subdivisionCode;
+
+            if (repFilterCircle !== 'all' && cIdTail !== repFilterCircle) return false;
+            
+            if (repFilterDivision !== 'all') {
+              const activeDivChar = repFilterDivision.substring(3);
+              if (dCodeChar !== activeDivChar) return false;
+            }
+
+            if (repFilterSubdivision !== 'all') {
+              const activeSubChar = repFilterSubdivision.substring(4);
+              if (sCodeChar !== activeSubChar) return false;
+            }
+
+            return true;
+          });
+        })();
+
+        // Summary breakdown values grouped dynamically
+        const summaryBreakdown = (() => {
+          const parseErrorVal = (pctStr: string): number => {
+            const cleaned = pctStr.replace(/[^\d.-]/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+          };
+
+          if (repLevel === 'pesco') {
+            return PESCO_HIERARCHY.map(circle => {
+              const cIdTail = circle.code.substring(2);
+              const subreps = periodicFilteredReports.filter(r => {
+                const p = parseAccountNumber(r.accountNumber);
+                return p.circleCode === cIdTail;
+              });
+
+              const total = subreps.length;
+              const passed = subreps.filter(r => r.accuracyTest.passFail === 'Pass').length;
+              const failed = total - passed;
+              const errors = subreps.map(r => Math.abs(parseErrorVal(r.accuracyTest.errorPercentage)));
+              const avgError = errors.length > 0 ? (errors.reduce((sum, v) => sum + v, 0) / errors.length) : 0;
+
+              return {
+                code: circle.code,
+                name: circle.name + ' Circle',
+                levelLabel: 'Circle',
+                total,
+                passed,
+                failed,
+                avgError,
+              };
+            });
+          } else if (repLevel === 'circle') {
+            let activeCircles = PESCO_HIERARCHY;
+            if (repFilterCircle !== 'all') {
+              activeCircles = PESCO_HIERARCHY.filter(c => c.code.endsWith(repFilterCircle));
+            }
+
+            return activeCircles.flatMap(circle => {
+              const circleIdTail = circle.code.substring(2);
+              return circle.divisions.map(div => {
+                const divChar = div.code.substring(3);
+                const subreps = periodicFilteredReports.filter(r => {
+                  const p = parseAccountNumber(r.accountNumber);
+                  return p.circleCode === circleIdTail && p.divisionCode === divChar;
+                });
+
+                const total = subreps.length;
+                const passed = subreps.filter(r => r.accuracyTest.passFail === 'Pass').length;
+                const failed = total - passed;
+                const errors = subreps.map(r => Math.abs(parseErrorVal(r.accuracyTest.errorPercentage)));
+                const avgError = errors.length > 0 ? (errors.reduce((sum, v) => sum + v, 0) / errors.length) : 0;
+
+                return {
+                  code: div.code,
+                  name: `${div.name} Div (${circle.name})`,
+                  levelLabel: 'Division',
+                  total,
+                  passed,
+                  failed,
+                  avgError,
+                };
+              });
+            });
+          } else if (repLevel === 'division') {
+            let entries: Array<{ circleName: string; circleCodeTail: string; divCodeChar: string; div: any }> = [];
+            
+            PESCO_HIERARCHY.forEach(circle => {
+              const circleCodeTail = circle.code.substring(2);
+              if (repFilterCircle !== 'all' && circleCodeTail !== repFilterCircle) return;
+
+              circle.divisions.forEach(div => {
+                if (repFilterDivision !== 'all' && div.code !== repFilterDivision) return;
+                entries.push({
+                  circleName: circle.name,
+                  circleCodeTail,
+                  divCodeChar: div.code.substring(3),
+                  div,
+                });
+              });
+            });
+
+            return entries.flatMap(({ circleName, circleCodeTail, divCodeChar, div }) => {
+              return div.subdivisions.map((sub: any) => {
+                const subCodeChar = sub.code.substring(4);
+                const subreps = periodicFilteredReports.filter(r => {
+                  const p = parseAccountNumber(r.accountNumber);
+                  return p.circleCode === circleCodeTail && 
+                         p.divisionCode === divCodeChar && 
+                         p.subdivisionCode === subCodeChar;
+                });
+
+                const total = subreps.length;
+                const passed = subreps.filter(r => r.accuracyTest.passFail === 'Pass').length;
+                const failed = total - passed;
+                const errors = subreps.map(r => Math.abs(parseErrorVal(r.accuracyTest.errorPercentage)));
+                const avgError = errors.length > 0 ? (errors.reduce((sum, v) => sum + v, 0) / errors.length) : 0;
+
+                return {
+                  code: sub.code,
+                  name: `${sub.name} Subdivision`,
+                  levelLabel: 'Sub-Division',
+                  total,
+                  passed,
+                  failed,
+                  avgError,
+                };
+              });
+            });
+          } else {
+            let entries: Array<{ circleName: string; circleCodeTail: string; divCodeChar: string; sub: any }> = [];
+            
+            PESCO_HIERARCHY.forEach(circle => {
+              const circleCodeTail = circle.code.substring(2);
+              if (repFilterCircle !== 'all' && circleCodeTail !== repFilterCircle) return;
+
+              circle.divisions.forEach(div => {
+                if (repFilterDivision !== 'all' && div.code !== repFilterDivision) return;
+                div.subdivisions.forEach(sub => {
+                  if (repFilterSubdivision !== 'all' && sub.code !== repFilterSubdivision) return;
+                  entries.push({
+                    circleName: circle.name,
+                    circleCodeTail,
+                    divCodeChar: div.code.substring(3),
+                    sub,
+                  });
+                });
+              });
+            });
+
+            return entries.map(({ circleName, circleCodeTail, divCodeChar, sub }) => {
+              const subCodeChar = sub.code.substring(4);
+              const subreps = periodicFilteredReports.filter(r => {
+                const p = parseAccountNumber(r.accountNumber);
+                return p.circleCode === circleCodeTail && 
+                       p.divisionCode === divCodeChar && 
+                       p.subdivisionCode === subCodeChar;
+              });
+
+              const total = subreps.length;
+              const passed = subreps.filter(r => r.accuracyTest.passFail === 'Pass').length;
+              const failed = total - passed;
+              const errors = subreps.map(r => Math.abs(parseErrorVal(r.accuracyTest.errorPercentage)));
+              const avgError = errors.length > 0 ? (errors.reduce((sum, v) => sum + v, 0) / errors.length) : 0;
+
+              return {
+                code: sub.code,
+                name: `${sub.name} Subdivision`,
+                levelLabel: 'Consumer Records',
+                total,
+                passed,
+                failed,
+                avgError,
+              };
+            });
+          }
+        })();
+
+        // Overall sums and weighted averages
+        const summaryTotal = summaryBreakdown.reduce((acc, curr) => acc + curr.total, 0);
+        const summaryPassed = summaryBreakdown.reduce((acc, curr) => acc + curr.passed, 0);
+        const summaryFailed = summaryBreakdown.reduce((acc, curr) => acc + curr.failed, 0);
+        const summaryPassRate = summaryTotal > 0 ? Math.round((summaryPassed / summaryTotal) * 100) : 0;
+        const summaryAvgError = summaryTotal > 0
+          ? (summaryBreakdown.reduce((acc, curr) => acc + (curr.avgError * curr.total), 0) / summaryTotal).toFixed(3)
+          : '0.000';
+
+        // CSV Export formulation
+        const handleExportPeriodicCSV = () => {
+          const levelLabels = {
+            pesco: 'PESCO Wide',
+            circle: 'Circle Wise',
+            division: 'Division Wise',
+            subdivision: 'Sub-Division Wise'
+          };
+          const title = `PESCO MTLMS ${levelLabels[repLevel]} ${repInterval.toUpperCase()} REPORT - ${repFilterYear}`;
+          
+          const rows: string[][] = [
+            ['PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO)'],
+            ['METERS TESTING LABORATORY & GRID COMPLIANCE SYSTEM'],
+            [title],
+            ['Exported On', formatPKTDateTime()],
+            ['Parameters', `Year: ${repFilterYear} | Interval: ${repInterval.toUpperCase()} | Level: ${repLevel.toUpperCase()}`],
+            [],
+            ['SUMMARY KEY PERFORMANCE METRICS'],
+            ['Metric', 'Value', 'Reference Info'],
+            ['Total Inspected Units', String(summaryTotal), 'Approved utility assets'],
+            ['Approved Pass Qty', String(summaryPassed), `${summaryPassRate}% Compliance Threshold`],
+            ['Defective Fail Qty', String(summaryFailed), `${100 - summaryPassRate}% Defect rate`],
+            ['Average Calibration Drift', `±${summaryAvgError}%`, 'Limit Trace Class 0.05 standard'],
+            [],
+            ['REGIONAL JURISDICTIONAL BREAKDOWN'],
+            ['Code', 'Jurisdiction Name', 'Total Inspected', 'Passed Qty', 'Failed Qty', 'Pass Rate (%)', 'Avg Error (%)']
+          ];
+
+          summaryBreakdown.forEach(b => {
+            const rate = b.total > 0 ? Math.round((b.passed / b.total) * 100) : 0;
+            rows.push([
+              b.code,
+              b.name,
+              String(b.total),
+              String(b.passed),
+              String(b.failed),
+              `${rate}%`,
+              `${b.avgError.toFixed(3)}%`
+            ]);
+          });
+
+          if (detailMatchedReports.length > 0) {
+            rows.push([]);
+            rows.push(['DETAILED COMPLIANCE LEDGER LOGS']);
+            rows.push(['Certificate No', 'Test Date', 'Account Number', 'Consumer Name', 'Meter Serial', 'Manufacturer', 'Type', 'Calibration Error', 'Verdict']);
+            detailMatchedReports.forEach(r => {
+              rows.push([
+                r.reportNumber,
+                r.testDate || r.approvalDate,
+                r.accountNumber,
+                r.consumerName,
+                r.meterNumber,
+                r.meterMake || 'PESCO Spec',
+                r.meterType.toUpperCase().replace(/_/g, ' '),
+                r.accuracyTest.errorPercentage,
+                r.accuracyTest.passFail
+              ]);
+            });
+          }
+
+          const csvContent = rows
+            .map(row => row.map(escapeCsvCell).join(','))
+            .join('\r\n');
+
+          const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], {
+            type: 'text/csv;charset=utf-8;'
+          });
+
+          const filename = `PESCO_Periodic_${repLevel}_${repInterval}_${repFilterYear}_${getPKTDateString()}.csv`;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', filename);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        };
+
+        const getActivePeriodLabel = () => {
+          if (repInterval === 'monthly') {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            return `${months[parseInt(repFilterMonth) - 1]} ${repFilterYear}`;
+          } else if (repInterval === 'quarterly') {
+            return `${repFilterQuarter} ${repFilterYear}`;
+          } else if (repInterval === 'half_annual') {
+            return `${repFilterHalf === 'H1' ? 'First Half (H1)' : 'Second Half (H2)'} ${repFilterYear}`;
+          }
+          return `Annual ${repFilterYear}`;
+        };
+
+        const chartData = summaryBreakdown.map(b => ({
+          code: b.code,
+          name: b.name.replace(/ Subdivision| Div| Circle/g, ''),
+          'Passed': b.passed,
+          'Failed': b.failed,
+          'Total': b.total,
+        }));
+
+        return (
+          <div className="space-y-4">
+            
+            {/* Filter Dashboard Card */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-4">
+              <div className="flex border-b border-slate-100 dark:border-slate-800/80 pb-3 justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                    <Calendar className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase text-slate-850 dark:text-white tracking-wider flex items-center gap-1.5">
+                      Periodic Report Parameters Setup
+                    </h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-none">Assemble custom temporal compliance and failure rates audit sheets.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportPeriodicCSV}
+                    disabled={summaryTotal === 0}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-650 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export the filtered periodic regional breakdown and trace log directly to spreadsheet format"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                  <button
+                    onClick={() => setIsPrintModalOpen(true)}
+                    disabled={summaryTotal === 0}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-extrabold text-[10.5px] rounded border border-slate-750 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Sheet</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Main filter fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {/* 1. Report Level */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                    1. Reporting Level
+                  </label>
+                  <select
+                    value={repLevel}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setRepLevel(val);
+                      if (val === 'pesco') {
+                        setRepFilterCircle('all');
+                        setRepFilterDivision('all');
+                        setRepFilterSubdivision('all');
+                      } else if (val === 'circle') {
+                        setRepFilterDivision('all');
+                        setRepFilterSubdivision('all');
+                      } else if (val === 'division') {
+                        setRepFilterSubdivision('all');
+                      }
+                    }}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-bold"
+                  >
+                    <option value="pesco">🏢 PESCO Wide (Circles)</option>
+                    <option value="circle">📍 Circle Wise (Divisions)</option>
+                    <option value="division">🏘️ Division Wise (Sub-Divs)</option>
+                    <option value="subdivision">🏠 Sub-Division Wise</option>
+                  </select>
+                </div>
+
+                {/* 2. Temporal Periodicity */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                    2. Periodicity Range
+                  </label>
+                  <select
+                    value={repInterval}
+                    onChange={(e) => setRepInterval(e.target.value as any)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-bold"
+                  >
+                    <option value="monthly">📅 Monthly Report</option>
+                    <option value="quarterly">📊 Quarterly Report</option>
+                    <option value="half_annual">⚖️ Half-Annual Report</option>
+                    <option value="annual">⭐ Annual Report</option>
+                  </select>
+                </div>
+
+                {/* 3. Year */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                    3. Target Year
+                  </label>
+                  <select
+                    value={repFilterYear}
+                    onChange={(e) => setRepFilterYear(e.target.value)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
+                  >
+                    <option value="2026">2026 (Operational)</option>
+                    <option value="2025">2025 (Archived)</option>
+                    <option value="2024">2024 (Archived)</option>
+                  </select>
+                </div>
+
+                {/* 4. Sub Intervals */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                    4. Active Range Interval
+                  </label>
+                  
+                  {repInterval === 'monthly' && (
+                    <select
+                      value={repFilterMonth}
+                      onChange={(e) => setRepFilterMonth(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
+                    >
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07">July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                  )}
+
+                  {repInterval === 'quarterly' && (
+                    <select
+                      value={repFilterQuarter}
+                      onChange={(e) => setRepFilterQuarter(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
+                    >
+                      <option value="Q1">Q1 (Jan - Mar)</option>
+                      <option value="Q2">Q2 (Apr - Jun)</option>
+                      <option value="Q3">Q3 (Jul - Sep)</option>
+                      <option value="Q4">Q4 (Oct - Dec)</option>
+                    </select>
+                  )}
+
+                  {repInterval === 'half_annual' && (
+                    <select
+                      value={repFilterHalf}
+                      onChange={(e) => setRepFilterHalf(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
+                    >
+                      <option value="H1">H1: First Half (Jan - Jun)</option>
+                      <option value="H2">H2: Second Half (Jul - Dec)</option>
+                    </select>
+                  )}
+
+                  {repInterval === 'annual' && (
+                    <div className="text-xs p-2 bg-slate-100 dark:bg-slate-800/60 rounded text-slate-500 font-bold select-none text-center">
+                      Full Year Selected
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dependent Regional Selectors Row */}
+              {repLevel !== 'pesco' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800/70 pt-3 animate-in slide-in-from-top-2 duration-150">
+                  {/* Circle selector */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                      Target PESCO Circle
+                    </label>
+                    <select
+                      value={repFilterCircle}
+                      onChange={(e) => {
+                        setRepFilterCircle(e.target.value);
+                        setRepFilterDivision('all');
+                        setRepFilterSubdivision('all');
+                      }}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
+                    >
+                      <option value="all">All PESCO Circles</option>
+                      {PESCO_HIERARCHY.map(c => (
+                        <option key={c.code} value={c.code.substring(2)}>
+                          {c.name} Circle ({c.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Division selector */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                      Target PESCO Division
+                    </label>
+                    <select
+                      value={repFilterDivision}
+                      disabled={repFilterCircle === 'all' || repLevel === 'circle'}
+                      onChange={(e) => {
+                        setRepFilterDivision(e.target.value);
+                        setRepFilterSubdivision('all');
+                      }}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                    >
+                      <option value="all">All Divisions (Full Circle)</option>
+                      {availableDivsForReports.map(d => (
+                        <option key={d.code} value={d.code}>
+                          {d.name} Division
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subdivision Selector */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
+                      Target PESCO Subdivision
+                    </label>
+                    <select
+                      value={repFilterSubdivision}
+                      disabled={repFilterDivision === 'all' || repLevel === 'division' || repLevel === 'circle'}
+                      onChange={(e) => setRepFilterSubdivision(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                    >
+                      <option value="all">All Sub-divisions</option>
+                      {availableSubsForReports.map(s => (
+                        <option key={s.code} value={s.code}>
+                          {s.name} Sub-division
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {summaryTotal === 0 ? (
+              <div className="bg-white dark:bg-slate-900 p-12 text-center rounded border border-slate-200 dark:border-slate-800 max-w-2xl mx-auto space-y-3">
+                <Info className="w-10 h-10 text-slate-355 dark:text-slate-700 mx-auto animate-bounce" />
+                <h4 className="font-extrabold text-sm uppercase text-slate-850 dark:text-white">
+                  No Calibration Records for the Selected Range
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  There are no compiled laboratory reports matching your temporal criteria ({getActivePeriodLabel()}). Try shifting parameters to Q2/April/May/June 2026 to load active demo registries.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      setRepLevel('pesco');
+                      setRepInterval('monthly');
+                      setRepFilterYear('2026');
+                      setRepFilterMonth('05'); // May 2026 has active records in database!
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded transition active:scale-95 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Load Active Testing Space (May 2026)</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                
+                {/* Statistics Cards */}
+                <div className="md:col-span-1 space-y-3">
+                  {/* Total Card */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded text-center">
+                    <span className="text-[10px] font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">
+                      Inspected Equipment
+                    </span>
+                    <p className="text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">
+                      {summaryTotal} <span className="text-xs text-slate-400">Units</span>
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-none mt-1">
+                      Calibration logs loaded
+                    </p>
+                  </div>
+
+                  {/* Compliance Rate progress */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded space-y-3 text-center">
+                    <span className="text-[10px] font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">
+                      Pass Compliance Threshold
+                    </span>
+                    
+                    <div className="relative flex items-center justify-center h-24">
+                      {/* SVG Circle Progress bar */}
+                      <svg className="w-20 h-20 transform -rotate-90">
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="32"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="transparent"
+                          className="text-slate-100 dark:text-slate-800"
+                        />
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="32"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 32}
+                          strokeDashoffset={2 * Math.PI * 32 * (1 - summaryPassRate / 100)}
+                          className="text-emerald-500 transition-all duration-300"
+                        />
+                      </svg>
+                      <span className="absolute font-mono text-lg font-black text-slate-900 dark:text-white">
+                        {summaryPassRate}%
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-[11px] font-mono font-bold px-2">
+                      <span className="text-emerald-500">Passed: {summaryPassed}</span>
+                      <span className="text-rose-500">Failed: {summaryFailed}</span>
+                    </div>
+                  </div>
+
+                  {/* Median error deviation percentage */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded text-center">
+                    <span className="text-[10px] font-black uppercase text-slate-450 dark:text-slate-500 tracking-wider">
+                      Mean Bench Performance Error
+                    </span>
+                    <p className="text-xl font-mono font-black text-blue-600 dark:text-blue-400 mt-1">
+                      &plusmn;{summaryAvgError}%
+                    </p>
+                    <p className="text-[10px] text-slate-450 dark:text-slate-500 leading-none mt-1.5">
+                      Relative to Class 0.05 primary meters
+                    </p>
+                  </div>
+                </div>
+
+                {/* Analytical Breakdown Charts & Detailed Tables */}
+                <div className="md:col-span-3 space-y-4">
+                  
+                  {/* Recharts Jurisdictional Breakdown bar chart */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+                    <h4 className="text-xs font-bold uppercase text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
+                      <BarChart3 className="w-4 h-4 text-blue-500" />
+                      Regional Compliance Breakdown
+                    </h4>
+
+                    <div className="h-44 w-full text-[10px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-100 dark:stroke-slate-800/60" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} className="fill-slate-500 dark:fill-slate-400 font-bold" />
+                          <YAxis axisLine={false} tickLine={false} className="fill-slate-500 dark:fill-slate-400 font-mono" />
+                          <Tooltip content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-slate-900 text-white p-2.5 rounded-lg border border-slate-800 shadow-md text-[11px] font-bold space-y-1">
+                                  <p className="text-slate-400 text-[10px]">{payload[0].payload.name}</p>
+                                  <p className="text-emerald-400">Approved: {payload[0].payload.Passed} Units</p>
+                                  <p className="text-rose-400">Defective: {payload[0].payload.Failed} Units</p>
+                                  <p className="text-slate-200 pt-0.5 border-t border-slate-800">Total: {payload[0].payload.Total} Units</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }} />
+                          <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                          <Bar dataKey="Passed" fill="#10b981" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="Failed" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Regional Breakdown Grid Table */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
+                    <div className="p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-850/40">
+                      <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-300 tracking-wider block">
+                        Jurisdictional Breakdown: {repLevel.toUpperCase()} LEVEL (May / June Active Ledger)
+                      </span>
+                    </div>
+
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/80 dark:bg-slate-850/20 text-slate-450 dark:text-slate-500 uppercase text-[9px] font-extrabold border-b border-slate-200/50 dark:border-slate-800/70">
+                          <th className="p-2.5">Code</th>
+                          <th className="p-2.5">Area / Region Name</th>
+                          <th className="p-2.5 text-center">Inspected</th>
+                          <th className="p-2.5 text-center text-emerald-600 dark:text-emerald-500">Passed</th>
+                          <th className="p-2.5 text-center text-rose-600 dark:text-rose-500">Failed</th>
+                          <th className="p-2.5 text-center">Pass Rate</th>
+                          <th className="p-2.5 text-right font-mono">Avg Calibration Error</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-805 text-slate-800 dark:text-slate-350">
+                        {summaryBreakdown.map((row, idx) => {
+                          const rate = row.total > 0 ? Math.round((row.passed / row.total) * 100) : 0;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
+                              <td className="p-2.5 font-bold font-mono text-slate-900 dark:text-white">{row.code}</td>
+                              <td className="p-2.5 font-bold text-slate-700 dark:text-slate-300 uppercase">{row.name}</td>
+                              <td className="p-2.5 text-center font-mono font-semibold">{row.total}</td>
+                              <td className="p-2.5 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">{row.passed}</td>
+                              <td className="p-2.5 text-center font-mono font-semibold text-rose-600 dark:text-rose-400">{row.failed}</td>
+                              <td className="p-2.5 text-center">
+                                <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                  rate >= 90 ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650' : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600'
+                                }`}>
+                                  {rate}%
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-bold text-slate-705 dark:text-slate-400">
+                                &plusmn;{row.avgError.toFixed(3)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Detailed Consumers Logs matching scope */}
+                  {detailMatchedReports.length > 0 && (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
+                      <div className="p-3 border-b border-slate-100 dark:border-slate-800/85 bg-slate-50/50 dark:bg-slate-850/40">
+                        <span className="text-[10px] font-black uppercase text-slate-850 dark:text-slate-300 tracking-wider block">
+                          Consolidated Testing Ledger ({detailMatchedReports.length} Active Records matched)
+                        </span>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto">
+                        <table className="w-full text-left border-collapse text-[11px] font-semibold">
+                          <thead className="bg-slate-50 dark:bg-slate-850/40 text-slate-450 dark:text-slate-500 uppercase text-[9px] font-black border-b border-slate-200 dark:border-slate-800 sticky top-0">
+                            <tr>
+                              <th className="p-2">Report No.</th>
+                              <th className="p-2">Test Date</th>
+                              <th className="p-2">Account No.</th>
+                              <th className="p-2">Consumer</th>
+                              <th className="p-2">Meter Serial</th>
+                              <th className="p-2 text-center">Error %</th>
+                              <th className="p-2 text-right">Verdict</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-805 text-slate-750 dark:text-slate-350 font-medium">
+                            {detailMatchedReports.map((r) => (
+                              <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/15 transition">
+                                <td className="p-2 font-mono font-bold text-slate-900 dark:text-white">{r.reportNumber}</td>
+                                <td className="p-2 font-mono">{r.testDate || r.approvalDate}</td>
+                                <td className="p-2 font-mono text-[10px]">{r.accountNumber}</td>
+                                <td className="p-2 text-slate-905 dark:text-slate-205 truncate max-w-[120px] font-bold">{r.consumerName}</td>
+                                <td className="p-2 font-mono">{r.meterNumber}</td>
+                                <td className="p-2 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{r.accuracyTest.errorPercentage}</td>
+                                <td className="p-2 text-right">
+                                  <span className={`text-[9px] font-black rounded px-1.5 py-0.2 ${
+                                    r.accuracyTest.passFail === 'Pass' 
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700' 
+                                      : 'bg-rose-50 dark:bg-rose-955/20 text-rose-700'
+                                  }`}>
+                                    {r.accuracyTest.passFail.toUpperCase()}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
+
+            {/* Print Letterhead Modal Dialog */}
+            {isPrintModalOpen && (
+              <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                <div className="bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-4xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
+                  
+                  {/* Action Buttons inside modal (hidden on print) */}
+                  <div className="absolute top-4 right-4 flex gap-2 print:hidden">
+                    <button
+                      onClick={() => window.print()}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded transition flex items-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Send to Printer</span>
+                    </button>
+                    <button
+                      onClick={() => setIsPrintModalOpen(false)}
+                      className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded transition border border-slate-300"
+                    >
+                      Close Preview
+                    </button>
+                  </div>
+
+                  {/* Printable Executive Letterhead */}
+                  <div className="space-y-6 text-slate-850 font-serif p-2">
+                    
+                    {/* Header Seal Banner */}
+                    <div className="flex justify-between items-center border-b-4 border-double border-slate-800 pb-3">
+                      <div>
+                        <h1 className="text-xl font-black font-serif tracking-tight text-slate-900 uppercase">
+                          Peshawar Electric Supply Company
+                        </h1>
+                        <p className="text-[11px] tracking-wide uppercase font-sans font-bold text-slate-650">
+                          Meters Testing Laboratory &amp; Grid Compliance Division
+                        </p>
+                        <p className="text-[9.5px] text-slate-455 font-mono">
+                          Trace Reference: WAPDA-MTL-26-REGULATORY
+                        </p>
+                      </div>
+
+                      <div className="text-right font-sans">
+                        <span className="text-[9px] font-black uppercase text-slate-500 border border-slate-300 px-2 py-0.5 rounded leading-none block">
+                          Official Regulatory Dispatch
+                        </span>
+                        <p className="text-[10px] font-bold text-slate-700 mt-1 font-mono">
+                          Date: {getPKTDateString()}
+                        </p>
+                        <p className="text-[9.5px] text-slate-500 font-mono">
+                          Time: {formatPKTDateTime()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Report Metadata Title Block */}
+                    <div className="bg-slate-50 p-3.5 border border-slate-200/80 rounded space-y-1.5 font-sans">
+                      <h2 className="text-sm font-black uppercase text-slate-900 tracking-wider">
+                        Executive Compliance Audit Sheet: {repLevel.toUpperCase()} LEVEL
+                      </h2>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px] font-medium text-slate-600">
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-extrabold">Jurisdictional Level</span>
+                          <span className="font-bold text-slate-805 uppercase">{repLevel}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-extrabold">Active Period</span>
+                          <span className="font-bold text-slate-805">{getActivePeriodLabel()}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-extrabold">PESCO Circle</span>
+                          <span className="font-bold text-slate-805 uppercase">{repFilterCircle === 'all' ? 'All Circles' : `Circle ${repFilterCircle}`}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase tracking-wider font-extrabold">Division Context</span>
+                          <span className="font-bold text-slate-805 uppercase">{repFilterDivision === 'all' ? 'All Divisions' : `Div ${repFilterDivision.substring(3)}`}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Report Executive Narrative text */}
+                    <div className="text-xs leading-relaxed space-y-2 select-text font-sans">
+                      <p>
+                        This regulatory compliance report registers the calibration verdicts and accuracy outcomes of consumer electricity metering devices calibrated inside PESCO&apos;s primary laboratory space during the active temporal interval <strong className="font-bold">{getActivePeriodLabel()}</strong>. Calibration has been verified using standard three-phase and single-phase comparator test boards traceable back to national metrology references under <strong className="font-bold">Accuracy Class Class 0.05</strong>.
+                      </p>
+                    </div>
+
+                    {/* Summary Metrics in Print Style */}
+                    <div className="grid grid-cols-4 gap-2 border border-slate-300 rounded font-sans text-center bg-slate-50/50 py-3">
+                      <div>
+                        <span className="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block">Inspected</span>
+                        <span className="text-lg font-mono font-bold text-slate-900">{summaryTotal}</span>
+                      </div>
+                      <div className="border-l border-slate-250">
+                        <span className="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block">Passed</span>
+                        <span className="text-lg font-mono font-bold text-emerald-650">{summaryPassed}</span>
+                      </div>
+                      <div className="border-l border-slate-250">
+                        <span className="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block">Defective</span>
+                        <span className="text-lg font-mono font-bold text-rose-600">{summaryFailed}</span>
+                      </div>
+                      <div className="border-l border-slate-250">
+                        <span className="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block">Defect Rate</span>
+                        <span className="text-lg font-mono font-bold text-slate-900">{100 - summaryPassRate}%</span>
+                      </div>
+                    </div>
+
+                    {/* Breakdown table printed clearly */}
+                    <div className="space-y-1 font-sans">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-455">
+                        Breakdown of Juridical Areas for period:
+                      </span>
+                      <table className="w-full text-left text-[10.5px] border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-slate-400 text-[9px] font-extrabold uppercase text-slate-500 bg-slate-100">
+                            <th className="p-1 px-2">Code</th>
+                            <th className="p-1 px-2">Jurisdiction Name</th>
+                            <th className="p-1 px-2 text-center">Inspected</th>
+                            <th className="p-1 px-2 text-center">Passed</th>
+                            <th className="p-1 px-2 text-center">Failed</th>
+                            <th className="p-1 px-2 text-center">Pass Rate</th>
+                            <th className="p-1 px-2 text-right">Avg Error</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {summaryBreakdown.map((row, idx) => {
+                            const rate = row.total > 0 ? Math.round((row.passed / row.total) * 100) : 0;
+                            return (
+                              <tr key={idx}>
+                                <td className="p-1.5 px-2 font-mono font-bold">{row.code}</td>
+                                <td className="p-1.5 px-2 uppercase font-semibold">{row.name}</td>
+                                <td className="p-1.5 px-2 text-center font-mono">{row.total}</td>
+                                <td className="p-1.5 px-2 text-center font-mono text-emerald-700">{row.passed}</td>
+                                <td className="p-1.5 px-2 text-center font-mono text-rose-700">{row.failed}</td>
+                                <td className="p-1.5 px-2 text-center font-mono">{rate}%</td>
+                                <td className="p-1.5 px-2 text-right font-mono font-bold">&plusmn;{row.avgError.toFixed(3)}%</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Corporate dispatch authentication space */}
+                    <div className="grid grid-cols-2 gap-8 pt-8 font-sans text-xs">
+                      <div className="space-y-12">
+                        <p className="text-slate-500 select-none">
+                          Report Compiled &amp; Reviewed By:
+                        </p>
+                        <div className="border-t border-slate-400 pt-1">
+                          <p className="font-bold">M. ABDULLAH KHAN</p>
+                          <p className="text-[10px] text-slate-500 font-medium leading-tight">Director, Quality Assurance &amp; Grid Bench Compliance</p>
+                          <p className="text-[9px] text-slate-400 font-mono">ID No: QA-MTL-2601</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-12 text-right">
+                        <p className="text-slate-500 select-none">
+                          Counter-Signed &amp; Approved For Field Dispatch:
+                        </p>
+                        <div className="border-t border-slate-400 pt-1">
+                          <p className="font-bold text-right">CHIEF TESTING ENGINEER</p>
+                          <p className="text-[10px] text-slate-500 font-medium leading-tight text-right">Peshawar Grid Compliance Laboratory Master, PESCO</p>
+                          <p className="text-[9px] text-slate-400 font-mono text-right">Class 0.05 Seal Authority: PESCO-0099</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer disclaimer */}
+                    <div className="border-t border-slate-200 pt-3 text-[9px] text-slate-455 text-center font-sans">
+                      This summary certificate is system compiled using secure digital cryptographic seals and verified ledger logs. Peshawar Electric Supply Company (PESCO) reserves all tracing rights.
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        );
+      })()}
 
     </div>
   );
