@@ -551,72 +551,74 @@ export default function ManagementView({
             </div>
           </div>
 
-          {/* Member Security Passwords Registry */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
-            <div className="flex gap-2 items-center text-sm font-extrabold text-indigo-950 uppercase border-b border-slate-100 pb-3">
-              <KeyRound className="w-5 h-5 text-indigo-650 animate-pulse" />
-              Member Security Passwords Registry
-            </div>
-            
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Define unique authentication passwords for each laboratory team member below. Passwords can be synchronized remotely to the Supabase database via the **Supabase Cloud Sync** tab.
-            </p>
+          {/* Member Security Passwords Registry - ADMINISTRATOR EXCLUSIVE */}
+          {currentUser?.role === 'administrator' && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
+              <div className="flex gap-2 items-center text-sm font-extrabold text-indigo-950 uppercase border-b border-slate-100 pb-3">
+                <KeyRound className="w-5 h-5 text-indigo-650 animate-pulse" />
+                Member Security Passwords Registry
+              </div>
+              
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Define unique authentication passwords for each laboratory team member below. Passwords can be synchronized remotely to the Supabase database via the **Supabase Cloud Sync** tab.
+              </p>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse divide-y divide-slate-100">
-                <thead>
-                  <tr className="text-slate-400 font-bold uppercase tracking-wider text-[9px] bg-slate-50/50">
-                    <th className="p-3">Team Officer</th>
-                    <th className="p-3">Assigned Role</th>
-                    <th className="p-3">Corporate Email</th>
-                    <th className="p-3">Authentication PIN/Password</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {users.map((u) => {
-                    return (
-                      <tr key={u.id} className="hover:bg-slate-50/40">
-                        <td className="p-3">
-                          <p className="font-bold text-slate-800">{u.name}</p>
-                          <span className="text-[10px] text-slate-400">{u.designation}</span>
-                        </td>
-                        <td className="p-3 font-semibold uppercase text-indigo-650 text-[10px]">
-                          {u.role.replace('_', ' ')}
-                        </td>
-                        <td className="p-3 text-slate-550 font-mono">{u.email}</td>
-                        <td className="p-3">
-                          <input
-                            type="text"
-                            defaultValue={u.password || 'password123'}
-                            id={`user-pass-input-${u.id}`}
-                            placeholder="Enter password..."
-                            className="px-2.5 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded font-mono w-44 focus:ring-1 focus:ring-indigo-600 focus:outline-none"
-                          />
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const inputEl = document.getElementById(`user-pass-input-${u.id}`) as HTMLInputElement;
-                              if (inputEl && onUpdateUserPassword) {
-                                onUpdateUserPassword(u.id, inputEl.value.trim());
-                                alert(`Security password for ${u.name} successfully updated to "${inputEl.value.trim()}". Keep this PIN confidential.`);
-                              }
-                            }}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] px-3 py-1 rounded transition flex items-center gap-1 ml-auto cursor-pointer"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            Save
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse divide-y divide-slate-100">
+                  <thead>
+                    <tr className="text-slate-400 font-bold uppercase tracking-wider text-[9px] bg-slate-50/50">
+                      <th className="p-3">Team Officer</th>
+                      <th className="p-3">Assigned Role</th>
+                      <th className="p-3">Corporate Email</th>
+                      <th className="p-3">Authentication PIN/Password</th>
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {users.map((u) => {
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/40">
+                          <td className="p-3">
+                            <p className="font-bold text-slate-800">{u.name}</p>
+                            <span className="text-[10px] text-slate-400">{u.designation}</span>
+                          </td>
+                          <td className="p-3 font-semibold uppercase text-indigo-650 text-[10px]">
+                            {u.role.replace('_', ' ')}
+                          </td>
+                          <td className="p-3 text-slate-550 font-mono">{u.email}</td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              defaultValue={u.password || 'password123'}
+                              id={`user-pass-input-${u.id}`}
+                              placeholder="Enter password..."
+                              className="px-2.5 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded font-mono w-44 focus:ring-1 focus:ring-indigo-600 focus:outline-none"
+                            />
+                          </td>
+                          <td className="p-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const inputEl = document.getElementById(`user-pass-input-${u.id}`) as HTMLInputElement;
+                                if (inputEl && onUpdateUserPassword) {
+                                  onUpdateUserPassword(u.id, inputEl.value.trim());
+                                  alert(`Security password for ${u.name} successfully updated to "${inputEl.value.trim()}". Keep this PIN confidential.`);
+                                }
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] px-3 py-1 rounded transition flex items-center gap-1 ml-auto cursor-pointer"
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              Save
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

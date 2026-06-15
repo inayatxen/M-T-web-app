@@ -162,6 +162,14 @@ export default function App() {
     loadUsersFromSupabase();
   }, []);
 
+  // Guarantee that only users with 'administrator' role can view administrator pages
+  useEffect(() => {
+    const adminPages = ['user_management', 'system_settings', 'supabase_sync', 'supabase_todos'];
+    if (currentUser && currentUser.role !== 'administrator' && adminPages.includes(activePageId)) {
+      setActivePageId('dashboard');
+    }
+  }, [currentUser, activePageId]);
+
   // Satisfy Supabase Todos check in App.tsx
   useEffect(() => {
     async function getTodos() {
@@ -821,34 +829,39 @@ export default function App() {
 
           {/* Dynamic Sections navigation list list */}
           <nav className="space-y-3 text-[11px]">
-            {menuItems.map((sec, sIdx) => (
-              <div key={sIdx} className="space-y-0.5">
-                <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block px-1.5 py-0.5 mt-2">
-                  {sec.section}
-                </span>
+            {menuItems.map((sec, sIdx) => {
+              if (sec.section === 'ADMINISTRATOR HUB' && currentUser?.role !== 'administrator') {
+                return null;
+              }
+              return (
+                <div key={sIdx} className="space-y-0.5">
+                  <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block px-1.5 py-0.5 mt-2">
+                    {sec.section}
+                  </span>
 
-                <div className="space-y-0.5">
-                  {sec.items.map(item => {
-                    const IconComponent = item.icon;
-                    const isActive = activePageId === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => handleNavigateToPage(item.id)}
-                        className={`w-full text-left py-1 px-2 rounded flex items-center gap-2 transition-all ${
-                          isActive 
-                            ? 'bg-blue-600 text-white font-bold' 
-                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                        }`}
-                      >
-                        <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-amber-300' : 'text-slate-400'}`} />
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    );
-                  })}
+                  <div className="space-y-0.5">
+                    {sec.items.map(item => {
+                      const IconComponent = item.icon;
+                      const isActive = activePageId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleNavigateToPage(item.id)}
+                          className={`w-full text-left py-1 px-2 rounded flex items-center gap-2 transition-all ${
+                            isActive 
+                              ? 'bg-blue-600 text-white font-bold' 
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-amber-300' : 'text-slate-400'}`} />
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
         </div>
 
@@ -1072,7 +1085,7 @@ export default function App() {
               )}
 
               {/* Simulating profiles & Calibration benchmarks */}
-              {activePageId === 'user_management' && (
+              {activePageId === 'user_management' && currentUser?.role === 'administrator' && (
                 <ManagementView 
                   users={users} 
                   onUpdateRole={handleUpdateRole} 
@@ -1088,7 +1101,7 @@ export default function App() {
                 />
               )}
 
-              {activePageId === 'system_settings' && (
+              {activePageId === 'system_settings' && currentUser?.role === 'administrator' && (
                 <ManagementView 
                   users={users} 
                   onUpdateRole={handleUpdateRole} 
@@ -1104,7 +1117,7 @@ export default function App() {
                 />
               )}
 
-              {activePageId === 'supabase_sync' && (
+              {activePageId === 'supabase_sync' && currentUser?.role === 'administrator' && (
                 <SupabaseSyncView
                   users={users}
                   setUsers={setUsers}
@@ -1129,7 +1142,7 @@ export default function App() {
                 />
               )}
 
-              {activePageId === 'supabase_todos' && (
+              {activePageId === 'supabase_todos' && currentUser?.role === 'administrator' && (
                 <SupabaseTodosView isDarkMode={isDarkMode} />
               )}
 

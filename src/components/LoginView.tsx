@@ -233,44 +233,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
           </div>
         )}
 
-        {/* Toggleable credentials guide */}
-        <div className="mx-6 mt-4 border border-blue-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowCredsGuide(!showCredsGuide)}
-            className="w-full px-4 py-2 text-left text-[11px] font-extrabold uppercase tracking-wide text-blue-600 dark:text-blue-405 hover:bg-slate-100/50 dark:hover:bg-slate-900/40 flex justify-between items-center transition cursor-pointer"
-          >
-            <span className="flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-blue-500" />
-              Toggle Access Credentials Guide
-            </span>
-            <span className="text-[10px] bg-blue-100 dark:bg-slate-800 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded font-black">
-              {showCredsGuide ? 'HIDE' : 'SHOW'}
-            </span>
-          </button>
-          {showCredsGuide && (
-            <div className="p-3.5 bg-white dark:bg-slate-950 border-t border-slate-150 dark:border-slate-900 text-[11.5px] space-y-2.5 animate-in slide-in-from-top-2 duration-200">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
-                Active Member Security Passwords
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-[10.5px]">
-                {roleOptions.map(opt => {
-                  const matchingU = users.find(u => u.id === opt.seedId) || SEED_USERS.find(s => s.id === opt.seedId);
-                  const pass = matchingU ? (matchingU.password || 'password123') : 'supervisor123';
-                  return (
-                    <div key={opt.role} className="p-2 rounded bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-850 flex flex-col justify-between">
-                      <span className="font-bold text-slate-700 dark:text-slate-350">{opt.title}</span>
-                      <span className="font-mono text-[9px] mt-1 text-slate-500 break-all">{matchingU?.name || 'Assigned Supervisor'}</span>
-                      <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-[10px] tracking-wider mt-1.5 bg-slate-100 dark:bg-slate-850 p-1 rounded block text-center">
-                        PIN: {pass}
-                      </strong>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+
 
         <div className="p-6 space-y-6">
           
