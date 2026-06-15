@@ -76,7 +76,10 @@
     max-width: 210mm !important;
     min-height: 296mm !important;
     
-    padding: 18mm 20mm 15mm 20mm !important; /* Elegant margin padding */
+    padding-top: var(--print-padding-top, 18mm) !important;
+    padding-right: var(--print-padding-right, 20mm) !important;
+    padding-bottom: var(--print-padding-bottom, 15mm) !important;
+    padding-left: var(--print-padding-left, 20mm) !important;
     margin: 0 auto !important;
     background-color: #ffffff !important;
     background: #ffffff !important;
@@ -92,6 +95,7 @@
     
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    font-size: var(--print-font-scale, 100%) !important;
   }
 
   /* Exclude last item from extra page blank spillover in some browsers */
@@ -100,12 +104,13 @@
     break-after: avoid !important;
   }
 
-  /* High fidelity print-rendered borders */
+  /* High fidelity print-rendered borders with dynamic inset and visibility controls */
   #printable-certificate-canvas::before,
   .printable-batch-canvas::before {
+    display: var(--print-border-display, block) !important;
     content: "" !important;
     position: absolute !important;
-    inset: 6mm !important;
+    inset: var(--print-border-inset-1, 6mm) !important;
     border: 1px solid rgba(67, 56, 202, 0.25) !important;
     pointer-events: none !important;
     -webkit-print-color-adjust: exact !important;
@@ -114,9 +119,10 @@
 
   #printable-certificate-canvas::after,
   .printable-batch-canvas::after {
+    display: var(--print-border-display, block) !important;
     content: "" !important;
     position: absolute !important;
-    inset: 7mm !important;
+    inset: var(--print-border-inset-2, 7mm) !important;
     border: 2px solid rgba(67, 56, 202, 0.4) !important;
     pointer-events: none !important;
     -webkit-print-color-adjust: exact !important;
