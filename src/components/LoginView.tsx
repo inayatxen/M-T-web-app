@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building, 
   Mail, 
@@ -27,9 +27,15 @@ interface LoginViewProps {
   onLoginSuccess: (user: UserType) => void;
   isDarkMode: boolean;
   users?: UserType[];
+  syncStatus?: 'synced' | 'syncing' | 'offline' | 'error';
 }
 
-export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USERS }: LoginViewProps) {
+export default function LoginView({ 
+  onLoginSuccess, 
+  isDarkMode, 
+  users = SEED_USERS,
+  syncStatus = 'offline'
+}: LoginViewProps) {
   // Currently selected active role
   const [activeRole, setActiveRole] = useState<UserRole>('lab_manager');
   
@@ -106,6 +112,25 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
     }
   ];
 
+  // Selected specific User ID state
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+
+  // Auto-resolve selectedUserId when activeRole changes
+  useEffect(() => {
+    if (activeRole !== 'circle_supervisor') {
+      const activeRoleUsers = users.filter(u => u.role === activeRole);
+      if (activeRoleUsers.length > 0) {
+        const stillValid = activeRoleUsers.some(u => u.id === selectedUserId);
+        if (!stillValid) {
+          setSelectedUserId(activeRoleUsers[0].id);
+        }
+      } else {
+        const option = roleOptions.find(o => o.role === activeRole);
+        setSelectedUserId(option?.seedId || '');
+      }
+    }
+  }, [activeRole, users]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -150,15 +175,8 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
 
           onLoginSuccess(loggedInUser);
         } else {
-          // Find standard seed laboratory profile representing this exact role
-          const option = roleOptions.find(o => o.role === activeRole);
-          if (!option || !option.seedId) {
-            setErrorMsg('Matched platform role configuration cannot be resolved.');
-            setIsAuthenticating(false);
-            return;
-          }
-
-          const matchedStaff = users.find(u => u.id === option.seedId) || SEED_USERS.find(u => u.id === option.seedId);
+          // Find standard seed/copied database profile representing the selected account
+          const matchedStaff = users.find(u => u.id === selectedUserId) || SEED_USERS.find(u => u.id === selectedUserId);
           if (matchedStaff) {
             const expectedPassword = matchedStaff.password || 'password123';
             if (password !== expectedPassword) {
@@ -168,7 +186,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
             }
             onLoginSuccess(matchedStaff);
           } else {
-            setErrorMsg('Standard laboratory staff seed profile not found.');
+            setErrorMsg('Selected laboratory staff profile not found in database.');
           }
         }
       } catch (err) {
@@ -180,9 +198,8 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
   };
 
   const currentRoleConfig = roleOptions.find(o => o.role === activeRole);
-  const currentSeedUser = currentRoleConfig?.seedId 
-    ? (users.find(u => u.id === currentRoleConfig.seedId) || SEED_USERS.find(u => u.id === currentRoleConfig.seedId)) 
-    : null;
+  const roleUsers = users.filter(u => u.role === activeRole);
+  const currentSelectedUser = users.find(u => u.id === selectedUserId) || SEED_USERS.find(u => u.id === selectedUserId);
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 transition-all relative overflow-hidden ${
@@ -202,6 +219,24 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
         <div className="bg-slate-900 p-6 text-white border-b border-slate-800/85 relative">
           <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
           
+          {/* Supabase connection status indicator */}
+          <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-950/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-800/50 text-[9px] select-none font-bold">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              syncStatus === 'synced' ? 'bg-emerald-400 animate-pulse' :
+              syncStatus === 'syncing' ? 'bg-amber-400 animate-pulse' :
+              syncStatus === 'error' ? 'bg-rose-500 animate-ping' : 'bg-slate-505'
+            }`} />
+            <span className={
+              syncStatus === 'synced' ? 'text-emerald-400' :
+              syncStatus === 'syncing' ? 'text-amber-400' :
+              syncStatus === 'error' ? 'text-rose-400' : 'text-slate-400'
+            }>
+              {syncStatus?.toUpperCase() === 'SYNCED' ? 'SUPABASE LIVE' : 
+               syncStatus?.toUpperCase() === 'SYNCING' ? 'SYNCING...' :
+               syncStatus?.toUpperCase() === 'ERROR' ? 'DB OFFLINE' : 'LOCAL CACHE'}
+            </span>
+          </div>
+
           <div className="flex flex-col items-center text-center">
             {/* Centered PESCO Logo */}
             <div className="w-16 h-16 bg-white rounded-full overflow-hidden flex items-center justify-center border border-slate-700 shadow-xl mb-3 p-1.5 transition-transform hover:scale-105 duration-300">
@@ -379,9 +414,7 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Password input */}
+                </div>                {/* Password input */}
                 <div className="space-y-1">
                   <label className="block text-[9.5px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
                     Security Passcode PIN
@@ -403,40 +436,69 @@ export default function LoginView({ onLoginSuccess, isDarkMode, users = SEED_USE
             ) : (
               <div className="space-y-4">
                 {/* Laboratory staff selection view */}
-                <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15 text-[10.5px] text-slate-600 dark:text-slate-300">
-                  <p className="font-bold uppercase text-indigo-600 dark:text-indigo-400 tracking-wide mb-1 flex items-center gap-1.5">
+                <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl border border-indigo-500/15 text-[10.5px] text-slate-650 dark:text-slate-300">
+                  <p className="font-bold uppercase text-indigo-600 dark:text-indigo-400 tracking-wide mb-1 flex items-center gap-1.5 font-sans">
                     <KeyRound className="w-3.5 h-3.5" />
                     Assigned Officer Identity
                   </p>
-                  Selected profile is fully mapped and cleared to view, calibrate, and release corporate certificates:
+                  Choose a verified laboratory account synchronized directly from the central Supabase ledger database:
                 </div>
 
-                {/* Profile card view */}
-                {currentSeedUser && (
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/20 flex flex-col gap-2.5">
+                {/* Supabase dynamic accounts dropdown */}
+                {roleUsers.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-[9.5px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+                      Select Active Supabase Account
+                    </label>
+                    <select
+                      value={selectedUserId}
+                      onChange={(e) => {
+                        setSelectedUserId(e.target.value);
+                        setPassword('');
+                        setErrorMsg('');
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950/55 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-slate-800 dark:text-slate-200 cursor-pointer"
+                    >
+                      {roleUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} — {u.designation || u.role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Dynamic user profile card */}
+                {currentSelectedUser && (
+                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-855 bg-slate-50/40 dark:bg-slate-950/20 flex flex-col gap-2.5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                         <User className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                          {currentSeedUser.name}
+                          {currentSelectedUser.name}
                         </h4>
                         <p className="text-[10px] text-slate-500 dark:text-slate-450 font-semibold truncate uppercase">
-                          {currentSeedUser.designation}
+                          {currentSelectedUser.designation}
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono grid grid-cols-1 gap-1 border-t border-slate-100 dark:border-slate-800 pt-2.5">
-                      <div><strong className="text-slate-400">CORP EMAIL:</strong> {currentSeedUser.email}</div>
+                    <div className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono grid grid-cols-1 gap-1 border-t border-slate-200/50 dark:border-slate-800/80 pt-2.5">
+                      <div className="flex justify-between items-center flex-wrap gap-1">
+                        <span><strong className="text-slate-400">EMAIL:</strong> {currentSelectedUser.email}</span>
+                        <span className="text-[8px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> SUPABASE Verified
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* Secure password input */}
                 <div className="space-y-1">
-                  <label className="block text-[9.5px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                  <label className="block text-[9.5px] font-black uppercase text-slate-550 dark:text-slate-400 tracking-wider">
                     Enter Personal Security Password
                   </label>
                   <div className="relative">

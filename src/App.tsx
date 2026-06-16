@@ -746,6 +746,7 @@ export default function App() {
         }} 
         isDarkMode={isDarkMode} 
         users={users}
+        syncStatus={syncStatus}
       />
     );
   }
