@@ -22,6 +22,7 @@ export const SEED_USERS: User[] = [
     email: 'sarah.rahman@powercorp.com',
     role: 'lab_manager',
     designation: 'Laboratory Executive & Manager',
+    circleCode: '261',
     password: 'manager123'
   },
   {
@@ -30,6 +31,7 @@ export const SEED_USERS: User[] = [
     email: 'amit.kumar@powercorp.com',
     role: 'testing_engineer',
     designation: 'Senior Testing Field Engineer',
+    circleCode: '262',
     password: 'engineer123'
   },
   {
@@ -38,6 +40,7 @@ export const SEED_USERS: User[] = [
     email: 'devon.miller@powercorp.com',
     role: 'administrator',
     designation: 'System Administrator',
+    circleCode: '266',
     password: 'admin123'
   },
   {
@@ -46,6 +49,7 @@ export const SEED_USERS: User[] = [
     email: 'priya.sharma@powercorp.com',
     role: 'data_entry_operator',
     designation: 'Laboratory Intake Officer',
+    circleCode: '263',
     password: 'operator123'
   }
 ];

@@ -689,6 +689,25 @@ export default function App() {
     }
   };
 
+  // Update specific user profile properties dynamically (like circle and mapped role)
+  const handleUpdateUserProfile = (userId: string, updatedFields: Partial<UserType>) => {
+    const updated = users.map(u => u.id === userId ? { ...u, ...updatedFields } : u);
+    setUsers(updated);
+    localStorage.setItem('mtlms_users', JSON.stringify(updated));
+    
+    const userToUpdate = users.find(u => u.id === userId);
+    if (userToUpdate) {
+      const fieldDesc = Object.entries(updatedFields)
+        .map(([k, v]) => `${k.toUpperCase()}: ${v}`)
+        .join(', ');
+      recordAuditTrail(
+        `Aligned profile credentials for ${userToUpdate.name}`,
+        `Previous Role: ${userToUpdate.role.toUpperCase()}`,
+        `New Configuration (${fieldDesc})`
+      );
+    }
+  };
+
   // Trigger page displacement from any link shortcut
   const handleNavigateToPage = (pageId: string) => {
     setActivePageId(pageId);
@@ -1099,6 +1118,7 @@ export default function App() {
                   onRestoreState={handleRestoreState} 
                   onRecordAudit={recordAuditTrail}
                   onUpdateUserPassword={handleUpdateUserPassword}
+                  onUpdateUserProfile={handleUpdateUserProfile}
                 />
               )}
 
@@ -1115,6 +1135,7 @@ export default function App() {
                   onRestoreState={handleRestoreState} 
                   onRecordAudit={recordAuditTrail}
                   onUpdateUserPassword={handleUpdateUserPassword}
+                  onUpdateUserProfile={handleUpdateUserProfile}
                 />
               )}
 

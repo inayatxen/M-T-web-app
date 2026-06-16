@@ -27,7 +27,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { User, AuditLog, CalibrationStandard, UserRole } from '../types';
-import { PESCO_HIERARCHY, updatePescoHierarchy, PescoCircle, PescoDivision, PescoSubdivision, formatPKTDateTime } from '../utils';
+import { PESCO_HIERARCHY, updatePescoHierarchy, PescoCircle, PescoDivision, PescoSubdivision, formatPKTDateTime, getRoleFromCircleCode, getCircleName } from '../utils';
 
 interface ManagementViewProps {
   users: User[];
@@ -41,6 +41,7 @@ interface ManagementViewProps {
   onRestoreState: (jsonContent: string) => boolean;
   onRecordAudit?: (action: string, oldVal: string, newVal: string) => void;
   onUpdateUserPassword?: (userId: string, newPass: string) => void;
+  onUpdateUserProfile?: (userId: string, updatedFields: Partial<User>) => void;
 }
 
 export default function ManagementView({
@@ -54,7 +55,8 @@ export default function ManagementView({
   onBackupState,
   onRestoreState,
   onRecordAudit,
-  onUpdateUserPassword
+  onUpdateUserPassword,
+  onUpdateUserProfile
 }: ManagementViewProps) {
   
   const [activePane, setActivePane] = useState<'profile' | 'audit' | 'settings' | 'backup' | 'org'>('profile');
@@ -553,21 +555,40 @@ export default function ManagementView({
 
           {/* Member Security Passwords Registry - ADMINISTRATOR EXCLUSIVE */}
           {currentUser?.role === 'administrator' && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5 shadow-sm animate-in fade-in duration-200">
               <div className="flex gap-2 items-center text-sm font-extrabold text-indigo-950 uppercase border-b border-slate-100 pb-3">
                 <KeyRound className="w-5 h-5 text-indigo-650 animate-pulse" />
-                Member Security Passwords Registry
+                Member Security Passwords & Directory Registry
               </div>
               
               <p className="text-xs text-slate-500 leading-relaxed">
-                Define unique authentication passwords for each laboratory team member below. Passwords can be synchronized remotely to the Supabase database via the **Supabase Cloud Sync** tab.
+                Configure regional jurisdictions and verify authentication credentials for each laboratory team member below. Passwords and jurisdictions can be synchronized remotely to the central Supabase database ledger.
               </p>
+
+              {/* Automatic Role Assignment Helper Information Box */}
+              <div className="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 text-[11px] text-slate-600 space-y-2">
+                <div className="font-extrabold text-indigo-955 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-650" />
+                  Jurisdiction-Based Role Assignment Matrix (Central Protocols)
+                </div>
+                <p className="text-slate-500 leading-relaxed">
+                  In compliance with PESCO laboratory security protocols, a member's workspace environment is strictly configured based on their assigned regional circle code. Assigning a circle jurisdiction automatically maps their role and system designation:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 pt-1 font-bold text-[10px]">
+                  <div className="p-1 px-2.5 bg-indigo-100/40 rounded border border-indigo-150">Code 261 (PESHAWAR) <br/>→ Lab Manager</div>
+                  <div className="p-1 px-2.5 bg-amber-100/40 rounded border border-amber-150">Code 262 (KHYBER) <br/>→ Test Engineer</div>
+                  <div className="p-1 px-2.5 bg-emerald-100/40 rounded border border-emerald-150">Code 263 (MARDAN) <br/>→ Intake Operator</div>
+                  <div className="p-1 px-2.5 bg-purple-100/40 rounded border border-purple-150">Code 266 (SWAT) <br/>→ System Admin</div>
+                  <div className="p-1 px-2.5 bg-blue-100/40 rounded border border-blue-150">Others (Bannu, Hazara...) <br/>→ Supervisor</div>
+                </div>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse divide-y divide-slate-100">
                   <thead>
                     <tr className="text-slate-400 font-bold uppercase tracking-wider text-[9px] bg-slate-50/50">
                       <th className="p-3">Team Officer</th>
+                      <th className="p-3">PESCO Circle Jurisdiction</th>
                       <th className="p-3">Assigned Role</th>
                       <th className="p-3">Corporate Email</th>
                       <th className="p-3">Authentication PIN/Password</th>
@@ -580,10 +601,36 @@ export default function ManagementView({
                         <tr key={u.id} className="hover:bg-slate-50/40">
                           <td className="p-3">
                             <p className="font-bold text-slate-800">{u.name}</p>
-                            <span className="text-[10px] text-slate-400">{u.designation}</span>
+                            <span className="text-[10px] text-slate-400 block font-mono mt-0.5">{u.designation}</span>
                           </td>
-                          <td className="p-3 font-semibold uppercase text-indigo-650 text-[10px]">
-                            {u.role.replace('_', ' ')}
+                          <td className="p-3">
+                            <select
+                              value={u.circleCode || ''}
+                              onChange={(e) => {
+                                const nextCircle = e.target.value;
+                                const mapping = getRoleFromCircleCode(nextCircle);
+                                if (onUpdateUserProfile) {
+                                  onUpdateUserProfile(u.id, {
+                                    circleCode: nextCircle || undefined,
+                                    role: mapping.role as any,
+                                    designation: mapping.designation
+                                  });
+                                }
+                              }}
+                              className="px-2.5 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-650 cursor-pointer"
+                            >
+                              <option value="">— Unassigned —</option>
+                              {localHierarchy.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} — {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-3">
+                            <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100/50">
+                              {u.role.replace('_', ' ')}
+                            </span>
                           </td>
                           <td className="p-3 text-slate-550 font-mono">{u.email}</td>
                           <td className="p-3">
@@ -602,13 +649,13 @@ export default function ManagementView({
                                 const inputEl = document.getElementById(`user-pass-input-${u.id}`) as HTMLInputElement;
                                 if (inputEl && onUpdateUserPassword) {
                                   onUpdateUserPassword(u.id, inputEl.value.trim());
-                                  alert(`Security password for ${u.name} successfully updated to "${inputEl.value.trim()}". Keep this PIN confidential.`);
+                                  alert(`Security PIN password for ${u.name} successfully updated to "${inputEl.value.trim()}".`);
                                 }
                               }}
                               className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] px-3 py-1 rounded transition flex items-center gap-1 ml-auto cursor-pointer"
                             >
                               <Save className="w-3.5 h-3.5" />
-                              Save
+                              Save Password
                             </button>
                           </td>
                         </tr>

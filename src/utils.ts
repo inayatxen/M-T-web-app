@@ -821,5 +821,33 @@ export function getPKTDateString(dateInput?: Date | string | number): string {
   return `${find('year')}-${find('month')}-${find('day')}`;
 }
 
+/**
+ * Automap user role and designation as per their circle codes.
+ */
+export function getRoleFromCircleCode(circleCode: string | undefined): { role: string; designation: string } {
+  if (!circleCode) {
+    return { role: 'circle_supervisor', designation: 'PESCO Circle Officer' };
+  }
+  const cleanCode = String(circleCode).trim();
+  switch (cleanCode) {
+    case '261':
+      return { role: 'lab_manager', designation: 'Laboratory Executive & Manager (Peshawar)' };
+    case '262':
+      return { role: 'testing_engineer', designation: 'Senior Testing Field Engineer (Khyber)' };
+    case '263':
+      return { role: 'data_entry_operator', designation: 'Laboratory Intake Officer (Mardan)' };
+    case '266':
+      return { role: 'administrator', designation: 'System Administrator (Swat)' };
+    case '265':
+      return { role: 'circle_supervisor', designation: 'PESCO Circle Officer (Bannu)' };
+    case '268':
+      return { role: 'circle_supervisor', designation: 'PESCO Circle Officer (Hazara)' };
+    case '269':
+      return { role: 'circle_supervisor', designation: 'PESCO Circle Officer (DIK)' };
+    default:
+      return { role: 'circle_supervisor', designation: `PESCO Circle Officer (${cleanCode})` };
+  }
+}
+
 
 
