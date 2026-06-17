@@ -528,7 +528,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Warp/Serial Number *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Letter No. *</label>
                   <input
                     type="text"
                     placeholder="SN-...."
@@ -539,7 +539,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Make/Manufacturer</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Make</label>
                   <input
                     type="text"
                     placeholder="Make / Brand"
@@ -549,7 +549,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Installation Date</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Testing Date</label>
                   <input
                     type="date"
                     value={installationDate}
@@ -677,7 +677,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Applied Amperage Current *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Applied Current *</label>
                   <input
                     type="text"
                     value={testCurrent}
@@ -716,7 +716,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Decision Benchmark</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Decision Benchmark of Meter</label>
                   <select
                     value={passFail}
                     onChange={(e) => setPassFail(e.target.value as 'Pass' | 'Fail')}
