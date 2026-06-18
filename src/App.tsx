@@ -29,7 +29,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Award,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react';
 
 // Shared type signatures
@@ -188,6 +189,7 @@ export default function App() {
   // Active printable PDF reference preview
   const [activePdfReport, setActivePdfReport] = useState<TestReport | null>(null);
   const [batchPdfReports, setBatchPdfReports] = useState<TestReport[] | null>(null);
+  const [isClearDataModalOpen, setIsClearDataModalOpen] = useState<boolean>(false);
 
   // Cloud database real-time sync status
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('offline');
@@ -430,6 +432,52 @@ export default function App() {
       `Provisioned Smart SIM parameter specs for ${targetMeter?.meterNumber}`,
       previousSIMMsg,
       `SIM Number ID: ${updatedFields.simNumber || 'N/A'} • ICCID Provision verified`
+    );
+  };
+
+  // Clear or Factory Reset Local Data Registers method
+  const handleClearLocalData = (resetToSeed: boolean) => {
+    const targetMeters = resetToSeed ? SEED_METERS : [];
+    const targetReceipts = resetToSeed ? SEED_RECEIPTS : [];
+    const targetCts = resetToSeed ? SEED_CTS : [];
+    const targetPts = resetToSeed ? SEED_PTS : [];
+    const targetCases = resetToSeed ? SEED_COMMITTEE_CASES : [];
+    const targetReports = resetToSeed ? SEED_REPORTS : [];
+    const targetAuditLogs = resetToSeed ? SEED_AUDIT_LOGS : [];
+    const targetStandards = resetToSeed ? SEED_CALIBRATION_STANDARDS : [];
+
+    setMeters(targetMeters);
+    saveState('meters', targetMeters);
+
+    setReceipts(targetReceipts);
+    saveState('receipts', targetReceipts);
+
+    setCts(targetCts);
+    saveState('cts', targetCts);
+
+    setPts(targetPts);
+    saveState('pts', targetPts);
+
+    setCases(targetCases);
+    saveState('cases', targetCases);
+
+    setReports(targetReports);
+    saveState('reports', targetReports);
+
+    setAuditLogs(targetAuditLogs);
+    saveState('auditLogs', targetAuditLogs);
+
+    setStandards(targetStandards);
+    saveState('standards', targetStandards);
+
+    const actionDesc = resetToSeed 
+      ? 'Factory Setup: Reset all laboratory metadata back to baseline seed records'
+      : 'Purged: Cleared all datasets and reports for clean laboratory registry';
+
+    recordAuditTrail(
+      resetToSeed ? 'Factory Seed Reset' : 'Database Purged',
+      'Active database rows',
+      actionDesc
     );
   };
 
@@ -912,6 +960,15 @@ export default function App() {
             )}
           </button>
 
+          {/* Clear Local Data Action */}
+          <button
+            onClick={() => setIsClearDataModalOpen(true)}
+            className="w-full py-1 bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-amber-900/30"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear Local Data
+          </button>
+
           {/* Sign Out Action */}
           <button
             onClick={() => {
@@ -1180,6 +1237,80 @@ export default function App() {
         </footer>
 
       </main>
+
+      {/* CLEAR LOCAL DATA MODAL OVERLAY */}
+      {isClearDataModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in duration-200 text-left">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 dark:bg-amber-400/15 flex items-center justify-center shrink-0 border border-amber-500/20 text-amber-500 dark:text-amber-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-black tracking-tight uppercase text-slate-900 dark:text-white">
+                  Reset Laboratory State Database
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                  This will override your current browser-cached local registers. Choose a baseline model to set up your laboratory calibration state:
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Option A: Factory Baseline Seeds */}
+              <button
+                onClick={() => {
+                  handleClearLocalData(true);
+                  setIsClearDataModalOpen(false);
+                }}
+                className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 border border-slate-100 dark:border-slate-800 rounded-lg flex items-center gap-3 transition-all group"
+              >
+                <div className="w-8 h-8 rounded-md bg-blue-500/10 dark:bg-blue-400/15 flex items-center justify-center text-blue-500 dark:text-blue-400 border border-blue-500/20">
+                  <Database className="w-4 h-4 fill-blue-500/10" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-[11.5px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    Restore Baseline Seed Records
+                  </p>
+                  <p className="text-[9.5px] text-slate-400 font-medium truncate">
+                    Re-seeds meters, equipment receipts, reports, standards, and CT/PT lists.
+                  </p>
+                </div>
+              </button>
+
+              {/* Option B: Fully Empty Database */}
+              <button
+                onClick={() => {
+                  handleClearLocalData(false);
+                  setIsClearDataModalOpen(false);
+                }}
+                className="w-full text-left p-3.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 border border-slate-100 dark:border-slate-800 rounded-lg flex items-center gap-3 transition-all group"
+              >
+                <div className="w-8 h-8 rounded-md bg-red-500/10 dark:bg-red-400/15 flex items-center justify-center text-red-500 dark:text-red-400 border border-red-500/20">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-[11.5px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                    Reset to a Completely Empty State
+                  </p>
+                  <p className="text-[9.5px] text-slate-400 font-medium truncate">
+                    Wipes all local entries. Ideal for entering real laboratory-specific datasets.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
+              <button
+                onClick={() => setIsClearDataModalOpen(false)}
+                className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[11px] font-bold transition border border-slate-200/40 dark:border-slate-700/50"
+              >
+                Cancel Setup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

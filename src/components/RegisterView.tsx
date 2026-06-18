@@ -56,6 +56,7 @@ interface ParsedBulkRow {
   rawText: string;
   consumerAccount: string;
   consumerName: string;
+  fatherName: string;
   meterType: MeterCategory;
   meterNumber: string;
   readings: string;
@@ -77,8 +78,11 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
     const isHeader = line.toLowerCase().includes('consumer account') || 
                      line.toLowerCase().includes('consumer name') || 
                      line.toLowerCase().includes('primary name') ||
+                     line.toLowerCase().includes('father') ||
+                     line.toLowerCase().includes('guardian') ||
                      line.toLowerCase().includes('meter target type') ||
                      line.toLowerCase().includes('warp') ||
+                     line.toLowerCase().includes('letter') ||
                      line.toLowerCase().includes('testing reason');
     if (isHeader && idx === 0) {
       return;
@@ -115,13 +119,14 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
     
     const consumerAccountRaw = (parts[0] || '').trim();
     const consumerName = (parts[1] || '').trim();
-    const meterTypeRaw = (parts[2] || '').trim();
-    const meterNumber = (parts[3] || '').trim();
-    const readings = (parts[4] || '').trim();
-    const serialNumber = (parts[5] || '').trim();
-    const make = (parts[6] || '').trim();
-    const reasonForTesting = (parts[7] || '').trim();
-    const receivedFrom = (parts[8] || '').trim();
+    const fatherName = (parts[2] || '').trim();
+    const meterTypeRaw = (parts[3] || '').trim();
+    const meterNumber = (parts[4] || '').trim();
+    const readings = (parts[5] || '').trim();
+    const serialNumber = (parts[6] || '').trim();
+    const make = (parts[7] || '').trim();
+    const reasonForTesting = (parts[8] || '').trim();
+    const receivedFrom = (parts[9] || '').trim();
 
     const digitsOnlyObj = consumerAccountRaw.replace(/\D/g, '');
     if (!consumerAccountRaw) {
@@ -132,6 +137,10 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
 
     if (!consumerName) {
       errors.push('Name field missing');
+    }
+
+    if (!fatherName) {
+      errors.push('Father/Guardian field missing');
     }
     
     if (!meterNumber) {
@@ -157,6 +166,7 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
       rawText: line,
       consumerAccount: consumerAccountRaw,
       consumerName,
+      fatherName,
       meterType,
       meterNumber,
       readings,
@@ -193,18 +203,19 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
         [
           'Consumer Account Number (14 Digits) *',
           'Consumer Primary Name *',
+          'Father / Guardian Name *',
           'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / smart) *',
           'Meter ID / Number *',
           'Readings',
-          'Warp/Serial Number *',
+          'Letter No. *',
           'Manufacturer Make *',
           'Testing Reason *',
           'Origin Division Received From'
         ]
       ];
       const sampleData = [
-        ['01263110083301', 'Blue Ridge Textiles Ltd', 'single_phase', 'MTR-102941', '12845.2', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II'],
-        ['02334881099234', 'Farhan Brothers Rice Mill', 'three_phase_whole', 'MTR-503921', '45812.9', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge High Reading', 'Peshawar Cantt Division']
+        ['01263110083301', 'Blue Ridge Textiles Ltd', 'Haji Waris Khan', 'single_phase', 'MTR-102941', '12845.2', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II'],
+        ['02334881099234', 'Farhan Brothers Rice Mill', 'Muhammad Farhan', 'three_phase_whole', 'MTR-503921', '45812.9', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge High Reading', 'Peshawar Cantt Division']
       ];
       
       const ws = utils.aoa_to_sheet([...headers, ...sampleData]);
@@ -304,6 +315,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
   // Form State
   const [consumerAccount, setConsumerAccount] = useState('');
   const [consumerName, setConsumerName] = useState('');
+  const [fatherName, setFatherName] = useState('');
   const [meterType, setMeterType] = useState<MeterCategory>('single_phase');
   const [meterNumber, setMeterNumber] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
@@ -369,6 +381,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
       dateReceived: today,
       consumerAccount,
       consumerName,
+      fatherName,
       meterType,
       meterNumber,
       serialNumber,
@@ -402,6 +415,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
     // Reset Form Fields
     setConsumerAccount('');
     setConsumerName('');
+    setFatherName('');
     setMeterNumber('');
     setSerialNumber('');
     setMake('');
@@ -887,16 +901,29 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Primary Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Blue Ridge Textiles Ltd"
-                  value={consumerName}
-                  onChange={(e) => setConsumerName(e.target.value)}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
-                  required
-                />
+              <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Primary Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Blue Ridge Textiles Ltd"
+                    value={consumerName}
+                    onChange={(e) => setConsumerName(e.target.value)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Father / Guardian Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Haji Waris Khan / Official Utility Custody"
+                    value={fatherName}
+                    onChange={(e) => setFatherName(e.target.value)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Hardware Specifications */}
@@ -1072,6 +1099,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   dateReceived: today,
                   consumerAccount: row.consumerAccount,
                   consumerName: row.consumerName,
+                  fatherName: row.fatherName,
                   meterType: row.meterType,
                   meterNumber: row.meterNumber,
                   serialNumber: row.serialNumber,
@@ -1167,7 +1195,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         <span>Receipt Columns Sequence</span>
                       </div>
                       <p className="text-[10.5px] text-slate-500 leading-relaxed font-bold">
-                        Requires columns: Account No, Consumer Name, Meter Type, Meter No, Readings, Serial No, Make, Reason, Origin Division.
+                        Requires columns: Account No, Consumer Name, Father Name, Meter Type, Meter No, Readings, Letter No, Make, Reason, Origin Division.
                       </p>
                     </div>
 
@@ -1200,7 +1228,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       rows={5}
                       value={bulkText}
                       onChange={(e) => setBulkText(e.target.value)}
-                      placeholder="Consumer Account Number,Consumer Primary Name,Meter Type,Meter ID / Number,Readings,Serial Number,Make,Testing Reason,Origin Division"
+                      placeholder="Consumer Account Number,Consumer Primary Name,Father / Guardian Name,Meter Type,Meter ID / Number,Readings,Serial Number,Make,Testing Reason,Origin Division"
                       className="w-full font-mono text-xs p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white"
                     />
                   </div>
@@ -1250,8 +1278,9 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                                 <td className="p-2 font-mono font-bold text-slate-800 dark:text-slate-200">
                                   {row.consumerAccount ? row.consumerAccount : <span className="text-rose-400">Missing</span>}
                                 </td>
-                                <td className="p-2 truncate max-w-[120px] font-sans" title={row.consumerName}>
-                                  {row.consumerName || <span className="text-rose-400">Missing</span>}
+                                <td className="p-2 truncate max-w-[120px] font-sans" title={`Consumer: ${row.consumerName} | Father: ${row.fatherName}`}>
+                                  <div className="font-bold">{row.consumerName || <span className="text-rose-400">Missing Name</span>}</div>
+                                  <div className="text-[9.5px] text-slate-400 font-medium leading-tight block">F/G: {row.fatherName || <span className="text-rose-400">Missing</span>}</div>
                                 </td>
                                 <td className="p-2 font-mono">
                                   <div className="font-extrabold text-blue-600 dark:text-blue-400">{row.meterNumber || '—'}</div>

@@ -90,6 +90,89 @@ export default function TestingView({
 
   const [formSuccess, setFormSuccess] = useState('');
 
+  // Extra CT/PT Fields state variables
+  const [sanctionLoad, setSanctionLoad] = useState('75 kW');
+  const [connectedLoad, setConnectedLoad] = useState('72 kW');
+  const [transformerCapacity, setTransformerCapacity] = useState('100 kVA');
+  const [multiplyingFactor, setMultiplyingFactor] = useState('40');
+  const [installedCtsRatio, setInstalledCtsRatio] = useState('200/5');
+  const [marksOfSealingPlier, setMarksOfSealingPlier] = useState('PESCO-M&T-MARDAN #14');
+  const [resultsCheckingSlow, setResultsCheckingSlow] = useState('0.00%');
+  const [resultsCheckingFast, setResultsCheckingFast] = useState('0.15%');
+  const [resultsCheckingCorrect, setResultsCheckingCorrect] = useState('99.85%');
+
+  // Security Slips
+  const [touBody, setTouBody] = useState('M-SLIP-8891');
+  const [touTcover, setTouTcover] = useState('M-SLIP-8892');
+  const [touSimNo, setTouSimNo] = useState('+92-300-9876543');
+  const [touMsb, setTouMsb] = useState('MSB-1122');
+  const [touMsbGlass, setTouMsbGlass] = useState('G-SLIP-7731');
+  const [touSimId, setTouSimId] = useState('SIM-8992100823');
+
+  // Security Slips Removed
+  const [removedTouBody, setRemovedTouBody] = useState('R-SLIP-5541');
+  const [removedTouTcover, setRemovedTouTcover] = useState('R-SLIP-5542');
+  const [removedTouMsb, setRemovedTouMsb] = useState('R-MSB-4411');
+  const [removedTouMsbGlass, setRemovedTouMsbGlass] = useState('R-G-SLIP-2291');
+
+  // Removed AMR details
+  const [removedAmrNo, setRemovedAmrNo] = useState('AMR-77821');
+  const [removedAmrMake, setRemovedAmrMake] = useState('MicroTech');
+  const [removedAmrAmps, setRemovedAmrAmps] = useState('50/5 A');
+  const [removedAmrKwh, setRemovedAmrKwh] = useState('45821.1');
+  const [removedAmrKvarh, setRemovedAmrKvarh] = useState('14922.4');
+  const [removedAmrMdi, setRemovedAmrMdi] = useState('42.8');
+  const [removedAmrSum, setRemovedAmrSum] = useState('60743.5');
+  const [removedAmrResetNo, setRemovedAmrResetNo] = useState('14');
+
+  // Removed Backup details
+  const [removedBackupNo, setRemovedBackupNo] = useState('BKUP-99321');
+  const [removedBackupMake, setRemovedBackupMake] = useState('Landis+Gyr');
+  const [removedBackupAmps, setRemovedBackupAmps] = useState('100/5 A');
+  const [removedBackupKwh, setRemovedBackupKwh] = useState('32109.5');
+  const [removedBackupKvarh, setRemovedBackupKvarh] = useState('10882.1');
+  const [removedBackupMdi, setRemovedBackupMdi] = useState('35.6');
+  const [removedBackupSum, setRemovedBackupSum] = useState('42991.6');
+  const [removedBackupResetNo, setRemovedBackupResetNo] = useState('09');
+
+  const [removedCtsRatio, setRemovedCtsRatio] = useState('200/5 A');
+
+  // TOU Table (Import/Export grid)
+  const [kwhImportTotal, setKwhImportTotal] = useState('12034.5');
+  const [kwhExportTotal, setKwhExportTotal] = useState('4510.2');
+  const [kwhImportT1, setKwhImportT1] = useState('6030.1');
+  const [kwhExportT1, setKwhExportT1] = useState('2290.5');
+  const [kwhImportT2, setKwhImportT2] = useState('6004.4');
+  const [kwhExportT2, setKwhExportT2] = useState('2219.7');
+
+  const [kvarhImportTotal, setKvarhImportTotal] = useState('4511.0');
+  const [kvarhExportTotal, setKvarhExportTotal] = useState('1109.8');
+  const [kvarhImportT1, setKvarhImportT1] = useState('2250.2');
+  const [kvarhExportT1, setKvarhExportT1] = useState('560.4');
+  const [kvarhImportT2, setKvarhImportT2] = useState('2260.8');
+  const [kvarhExportT2, setKvarhExportT2] = useState('549.4');
+
+  const [mdiImportTotal, setmdiImportTotal] = useState('45.6');
+  const [mdiExportTotal, setmdiExportTotal] = useState('18.2');
+  const [mdiImportT1, setmdiImportT1] = useState('42.1');
+  const [mdiExportT1, setmdiExportT1] = useState('15.4');
+  const [mdiImportT2, setmdiImportT2] = useState('45.0');
+  const [mdiExportT2, setmdiExportT2] = useState('18.0');
+
+  const [sumImportTotal, setSumImportTotal] = useState('16545.5');
+  const [sumExportTotal, setSumExportTotal] = useState('5620.0');
+  const [sumImportT1, setSumImportT1] = useState('8280.3');
+  const [sumExportT1, setSumExportT1] = useState('2850.9');
+  const [sumImportT2, setSumImportT2] = useState('8265.2');
+  const [sumExportT2, setSumExportT2] = useState('2769.1');
+
+  const [resetImportTotal, setResetImportTotal] = useState('12');
+  const [resetExportTotal, setResetExportTotal] = useState('12');
+  const [resetImportT1, setResetImportT1] = useState('12');
+  const [resetExportT1, setResetExportT1] = useState('12');
+  const [resetImportT2, setResetImportT2] = useState('12');
+  const [resetExportT2, setResetExportT2] = useState('12');
+
   // Auto layout prefill when meter selected from backlog queue
   useEffect(() => {
     if (selectedMeterId) {
@@ -110,7 +193,7 @@ export default function TestingView({
           setConsumerName(matchedReceipt.consumerName || '');
           setNatureOfConnection(matchedReceipt.reasonForTesting || 'Routine Calibration');
           setTariff(matchedReceipt.remarks?.includes('Commercial') ? 'A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)' : 'A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)');
-          setFatherName('Official Utility Custody');
+          setFatherName(matchedReceipt.fatherName || 'Official Utility Custody');
         } else {
           // Custom consumer mapping based on preseeded receipts (if exist)
           if (match.meterNumber === 'MTR-102941') {
@@ -257,7 +340,50 @@ export default function TestingView({
       counterSignedBy,
       counterSignedByDesignation,
       approvalDate,
-      qrCodeMockUrl: `${window.location.origin}/verify/${reportNumber}`
+      qrCodeMockUrl: `${window.location.origin}/verify/${reportNumber}`,
+      ctPtExtra: (defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt') ? {
+        sanctionLoad,
+        connectedLoad,
+        transformerCapacity,
+        multiplyingFactor,
+        installedCtsRatio,
+        marksOfSealingPlier,
+        resultsCheckingSlow,
+        resultsCheckingFast,
+        resultsCheckingCorrect,
+        touBody,
+        touTcover,
+        touSimNo,
+        touMsb,
+        touMsbGlass,
+        touSimId,
+        removedTouBody,
+        removedTouTcover,
+        removedTouMsb,
+        removedTouMsbGlass,
+        removedAmrNo,
+        removedAmrMake,
+        removedAmrAmps,
+        removedAmrKwh,
+        removedAmrKvarh,
+        removedAmrMdi,
+        removedAmrSum,
+        removedAmrResetNo,
+        removedBackupNo,
+        removedBackupMake,
+        removedBackupAmps,
+        removedBackupKwh,
+        removedBackupKvarh,
+        removedBackupMdi,
+        removedBackupSum,
+        removedBackupResetNo,
+        removedCtsRatio,
+        kwhImportTotal, kwhExportTotal, kwhImportT1, kwhExportT1, kwhImportT2, kwhExportT2,
+        kvarhImportTotal, kvarhExportTotal, kvarhImportT1, kvarhExportT1, kvarhImportT2, kvarhExportT2,
+        mdiImportTotal, mdiExportTotal, mdiImportT1, mdiExportT1, mdiImportT2, mdiExportT2,
+        sumImportTotal, sumExportTotal, sumImportT1, sumExportT1, sumImportT2, sumExportT2,
+        resetImportTotal, resetExportTotal, resetImportT1, resetExportT1, resetImportT2, resetExportT2,
+      } : undefined
     };
 
     // Target meter state to update
@@ -496,10 +622,10 @@ export default function TestingView({
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Nature of Connection</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Testing Reason</label>
                   <input
                     type="text"
-                    placeholder="e.g. Standard High-Voltage feed connected via line drop"
+                    placeholder="e.g. Laboratory dispute calibration check / Routine Test"
                     value={natureOfConnection}
                     onChange={(e) => setNatureOfConnection(e.target.value)}
                     className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none focus:bg-white text-slate-900"
@@ -786,6 +912,277 @@ export default function TestingView({
                 />
               </div>
             </div>
+
+            {(defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt') && (
+              <div className="space-y-6 bg-slate-50 p-6 rounded-xl border border-indigo-100 shadow-sm">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-indigo-700" />
+                    <div>
+                      <h4 className="text-sm font-black text-indigo-950 uppercase tracking-tight">Two-Page Report Parameters (CT operated Benches)</h4>
+                      <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">Inputs below map to the official two-page Checking Performa utilized by Mardan Circle.</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-805 font-bold px-2 py-0.5 rounded uppercase">M&T Mardan Circle</span>
+                </div>
+
+                {/* Sub-section 1: Service details */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Sanctioned Load</label>
+                    <input type="text" value={sanctionLoad} onChange={(e) => setSanctionLoad(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Connected Load</label>
+                    <input type="text" value={connectedLoad} onChange={(e) => setConnectedLoad(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Transformer Capacity</label>
+                    <input type="text" value={transformerCapacity} onChange={(e) => setTransformerCapacity(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Multiplying Factor (MF)</label>
+                    <input type="text" value={multiplyingFactor} onChange={(e) => setMultiplyingFactor(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Installed CT Ratio</label>
+                    <input type="text" value={installedCtsRatio} onChange={(e) => setInstalledCtsRatio(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Marks of Sealing Plier</label>
+                    <input type="text" value={marksOfSealingPlier} onChange={(e) => setMarksOfSealingPlier(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-dashed border-slate-200 pt-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Checking Result (A) Slow %</label>
+                    <input type="text" value={resultsCheckingSlow} onChange={(e) => setResultsCheckingSlow(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold text-rose-700 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Checking Result (B) Fast %</label>
+                    <input type="text" value={resultsCheckingFast} onChange={(e) => setResultsCheckingFast(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold text-blue-700 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Checking Result (C) Correct %</label>
+                    <input type="text" value={resultsCheckingCorrect} onChange={(e) => setResultsCheckingCorrect(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold text-emerald-700 font-mono" />
+                  </div>
+                </div>
+
+                {/* Sub-section 2: TOU Table Import/Export inputs */}
+                <div className="border-t border-dashed border-slate-200 pt-4 space-y-2">
+                  <span className="font-extrabold text-[10.5px] uppercase tracking-wide text-indigo-950 block">1. Import & Export TOU Meter Index Readings (Current Meter)</span>
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-left font-mono text-[10.5px] shadow-inner divide-y divide-slate-205">
+                      <thead className="bg-indigo-50/70 text-indigo-950 font-bold">
+                        <tr>
+                          <th className="p-2 text-slate-700 font-sans">Index Type</th>
+                          <th className="p-2">Import Total</th>
+                          <th className="p-2">Export Total</th>
+                          <th className="p-2">Import T-1</th>
+                          <th className="p-2">Export T-1</th>
+                          <th className="p-2">Import T-2</th>
+                          <th className="p-2">Export T-2</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        <tr>
+                          <td className="p-2 font-bold font-sans">KWH</td>
+                          <td className="p-1"><input type="text" value={kwhImportTotal} onChange={(e) => setKwhImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
+                          <td className="p-1"><input type="text" value={kwhExportTotal} onChange={(e) => setKwhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kwhImportT1} onChange={(e) => setKwhImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kwhExportT1} onChange={(e) => setKwhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kwhImportT2} onChange={(e) => setKwhImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kwhExportT2} onChange={(e) => setKwhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-bold font-sans">KVARH</td>
+                          <td className="p-1"><input type="text" value={kvarhImportTotal} onChange={(e) => setKvarhImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
+                          <td className="p-1"><input type="text" value={kvarhExportTotal} onChange={(e) => setKvarhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kvarhImportT1} onChange={(e) => setKvarhImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kvarhExportT1} onChange={(e) => setKvarhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kvarhImportT2} onChange={(e) => setKvarhImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={kvarhExportT2} onChange={(e) => setKvarhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-bold font-sans">MDI</td>
+                          <td className="p-1"><input type="text" value={mdiImportTotal} onChange={(e) => setmdiImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
+                          <td className="p-1"><input type="text" value={mdiExportTotal} onChange={(e) => setmdiExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={mdiImportT1} onChange={(e) => setmdiImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={mdiExportT1} onChange={(e) => setmdiExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={mdiImportT2} onChange={(e) => setmdiImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={mdiExportT2} onChange={(e) => setmdiExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-bold font-sans">Sum</td>
+                          <td className="p-1"><input type="text" value={sumImportTotal} onChange={(e) => setSumImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
+                          <td className="p-1"><input type="text" value={sumExportTotal} onChange={(e) => setSumExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={sumImportT1} onChange={(e) => setSumImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={sumExportT1} onChange={(e) => setSumExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={sumImportT2} onChange={(e) => setSumImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={sumExportT2} onChange={(e) => setSumExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-bold font-sans">Reset No.</td>
+                          <td className="p-1"><input type="text" value={resetImportTotal} onChange={(e) => setResetImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
+                          <td className="p-1"><input type="text" value={resetExportTotal} onChange={(e) => setResetExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={resetImportT1} onChange={(e) => setResetImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={resetExportT1} onChange={(e) => setResetExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={resetImportT2} onChange={(e) => setResetImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          <td className="p-1"><input type="text" value={resetExportT2} onChange={(e) => setResetExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Sub-section 3: Sealing slips */}
+                <div className="border-t border-dashed border-slate-200 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <span className="font-extrabold text-[10.5px] uppercase tracking-wide text-indigo-950 block">2. Sealing Slips (Currently Installed)</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">Body Slip No</label>
+                        <input type="text" value={touBody} onChange={(e) => setTouBody(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">T/Cover Slip No</label>
+                        <input type="text" value={touTcover} onChange={(e) => setTouTcover(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">SIM Mobile No</label>
+                        <input type="text" value={touSimNo} onChange={(e) => setTouSimNo(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">MSB Box Seal No</label>
+                        <input type="text" value={touMsb} onChange={(e) => setTouMsb(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">MSB Glass Slip No</label>
+                        <input type="text" value={touMsbGlass} onChange={(e) => setTouMsbGlass(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">SIM ID / ICCID</label>
+                        <input type="text" value={touSimId} onChange={(e) => setTouSimId(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <span className="font-extrabold text-[10.5px] uppercase tracking-wide text-indigo-950 block">3. Sealing Slips (Removed)</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">Body Slip No</label>
+                        <input type="text" value={removedTouBody} onChange={(e) => setRemovedTouBody(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">T/Cover Slip No</label>
+                        <input type="text" value={removedTouTcover} onChange={(e) => setRemovedTouTcover(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">MSB Box Seal No</label>
+                        <input type="text" value={removedTouMsb} onChange={(e) => setRemovedTouMsb(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-slate-500 mb-0.5 uppercase">MSB Glass Slip No</label>
+                        <input type="text" value={removedTouMsbGlass} onChange={(e) => setRemovedTouMsbGlass(e.target.value)} className="w-full text-xs p-2 bg-white border border-slate-200 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-section 4: Removed meters particulars (AMR & Backup) */}
+                <div className="border-t border-dashed border-slate-200 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* AMR Particulars */}
+                  <div className="space-y-3.5 bg-white p-4 rounded-lg border border-slate-200">
+                    <span className="font-extrabold text-[10.5px] uppercase tracking-wide text-indigo-950 block">4. Removed AMR Meter Particulars</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Meter Number</label>
+                        <input type="text" value={removedAmrNo} onChange={(e) => setRemovedAmrNo(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Manufacturer</label>
+                        <input type="text" value={removedAmrMake} onChange={(e) => setRemovedAmrMake(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Amperage (Amps)</label>
+                        <input type="text" value={removedAmrAmps} onChange={(e) => setRemovedAmrAmps(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-2 text-[10px] uppercase font-mono">
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Kwh Reading</label>
+                        <input type="text" value={removedAmrKwh} onChange={(e) => setRemovedAmrKwh(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Kvarh Reading</label>
+                        <input type="text" value={removedAmrKvarh} onChange={(e) => setRemovedAmrKvarh(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">MDI (kW)</label>
+                        <input type="text" value={removedAmrMdi} onChange={(e) => setRemovedAmrMdi(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Sum Accum.</label>
+                        <input type="text" value={removedAmrSum} onChange={(e) => setRemovedAmrSum(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Reset No count</label>
+                        <input type="text" value={removedAmrResetNo} onChange={(e) => setRemovedAmrResetNo(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Backup Meter Particulars */}
+                  <div className="space-y-3.5 bg-white p-4 rounded-lg border border-slate-200">
+                    <span className="font-extrabold text-[10.5px] uppercase tracking-wide text-indigo-950 block">5. Removed Backup Meter Particulars</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Meter Number</label>
+                        <input type="text" value={removedBackupNo} onChange={(e) => setRemovedBackupNo(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Manufacturer</label>
+                        <input type="text" value={removedBackupMake} onChange={(e) => setRemovedBackupMake(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-[9px] font-bold text-slate-500 mb-0.5 uppercase">Amperage (Amps)</label>
+                        <input type="text" value={removedBackupAmps} onChange={(e) => setRemovedBackupAmps(e.target.value)} className="w-full text-[11px] p-2 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-2 text-[10px] uppercase font-mono">
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Kwh Reading</label>
+                        <input type="text" value={removedBackupKwh} onChange={(e) => setRemovedBackupKwh(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Kvarh Reading</label>
+                        <input type="text" value={removedBackupKvarh} onChange={(e) => setRemovedBackupKvarh(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">MDI (kW)</label>
+                        <input type="text" value={removedBackupMdi} onChange={(e) => setRemovedBackupMdi(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Sum Accum.</label>
+                        <input type="text" value={removedBackupSum} onChange={(e) => setRemovedBackupSum(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[8.5px] text-slate-400 font-sans">Reset No count</label>
+                        <input type="text" value={removedBackupResetNo} onChange={(e) => setRemovedBackupResetNo(e.target.value)} className="w-full p-1.5 border border-slate-200 rounded text-slate-900" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-section 5: Removed CT Ratio */}
+                <div className="border-t border-dashed border-slate-200 pt-4 max-w-xs">
+                  <label className="block text-[10px] font-extrabold text-slate-600 mb-1 uppercase">Removed CTs Ratio (16)</label>
+                  <input type="text" value={removedCtsRatio} onChange={(e) => setRemovedCtsRatio(e.target.value)} className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 font-bold text-slate-900" />
+                </div>
+              </div>
+            )}
 
             {/* Sec VI: Sign-off Seal authorities */}
             <div className="space-y-4">

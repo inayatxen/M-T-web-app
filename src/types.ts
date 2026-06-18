@@ -65,6 +65,7 @@ export interface EquipmentReceipt {
   newOrUsed: 'New' | 'Used';
   receivedBy: string;
   remarks?: string;
+  fatherName?: string;
 }
 
 // Current & Potential Transformers
@@ -145,6 +146,61 @@ export interface AccuracyTest {
   passFail: 'Pass' | 'Fail';
 }
 
+export interface CtPtExtraFields {
+  sanctionLoad?: string;
+  connectedLoad?: string;
+  transformerCapacity?: string;
+  multiplyingFactor?: string;
+  installedCtsRatio?: string;
+  marksOfSealingPlier?: string;
+  resultsCheckingSlow?: string;
+  resultsCheckingFast?: string;
+  resultsCheckingCorrect?: string;
+  
+  // Security Slips
+  touBody?: string;
+  touTcover?: string;
+  touSimNo?: string;
+  touMsb?: string;
+  touMsbGlass?: string;
+  touSimId?: string;
+
+  // Security Slips Removed
+  removedTouBody?: string;
+  removedTouTcover?: string;
+  removedTouMsb?: string;
+  removedTouMsbGlass?: string;
+
+  // Removed AMR Meter
+  removedAmrNo?: string;
+  removedAmrMake?: string;
+  removedAmrAmps?: string;
+  removedAmrKwh?: string;
+  removedAmrKvarh?: string;
+  removedAmrMdi?: string;
+  removedAmrSum?: string;
+  removedAmrResetNo?: string;
+
+  // Removed Backup Meter
+  removedBackupNo?: string;
+  removedBackupMake?: string;
+  removedBackupAmps?: string;
+  removedBackupKwh?: string;
+  removedBackupKvarh?: string;
+  removedBackupMdi?: string;
+  removedBackupSum?: string;
+  removedBackupResetNo?: string;
+
+  removedCtsRatio?: string;
+
+  // TOU Table (Import/Export grid)
+  kwhImportTotal?: string; kwhExportTotal?: string; kwhImportT1?: string; kwhExportT1?: string; kwhImportT2?: string; kwhExportT2?: string;
+  kvarhImportTotal?: string; kvarhExportTotal?: string; kvarhImportT1?: string; kvarhExportT1?: string; kvarhImportT2?: string; kvarhExportT2?: string;
+  mdiImportTotal?: string; mdiExportTotal?: string; mdiImportT1?: string; mdiExportT1?: string; mdiImportT2?: string; mdiExportT2?: string;
+  sumImportTotal?: string; sumExportTotal?: string; sumImportT1?: string; sumExportT1?: string; sumImportT2?: string; sumExportT2?: string;
+  resetImportTotal?: string; resetExportTotal?: string; resetImportT1?: string; resetExportT1?: string; resetImportT2?: string; resetExportT2?: string;
+}
+
 // Meter Test Report Schema
 export interface TestReport {
   id: string;
@@ -172,6 +228,7 @@ export interface TestReport {
   counterSignedByDesignation: string;
   approvalDate: string;
   qrCodeMockUrl: string;
+  ctPtExtra?: CtPtExtraFields;
 }
 
 // Audit Trail interface

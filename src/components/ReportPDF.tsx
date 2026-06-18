@@ -8,6 +8,7 @@ import { ShieldCheck, Download, Printer, ArrowLeft, RefreshCw, AlertCircle } fro
 import { TestReport, MeterCategory } from '../types';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 import { formatPKTDate } from '../utils';
+import TwoPageCTReport from './TwoPageCTReport';
 
 interface ReportPDFProps {
   report: TestReport;
@@ -73,13 +74,16 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
       </div>
 
       {/* Printable Report Canvas */}
-      <div 
-        id="printable-certificate-canvas" 
-        className="mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
-      >
-        {/* Certificate Decorative Border */}
-        <div className="absolute inset-4 border-2 border-indigo-700/20 pointer-events-none print:hidden" />
-        <div className="absolute inset-5 border border-indigo-700/10 pointer-events-none print:hidden" />
+      {report.meterType === 'three_phase_ct' || report.meterType === 'three_phase_ct_pt' ? (
+        <TwoPageCTReport report={report} />
+      ) : (
+        <div 
+          id="printable-certificate-canvas" 
+          className="mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
+        >
+          {/* Certificate Decorative Border */}
+          <div className="absolute inset-4 border-2 border-indigo-700/20 pointer-events-none print:hidden" />
+          <div className="absolute inset-5 border border-indigo-700/10 pointer-events-none print:hidden" />
 
         {/* 1. Header Section */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 border-b-2 border-indigo-900/30 pb-6 mb-8 mt-2 relative">
@@ -141,7 +145,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
               <span className="font-semibold text-slate-800">{report.fatherName}</span>
             </div>
             <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Nature of Connection:</span>
+              <span className="text-slate-500 font-medium">Testing Reason:</span>
               <span className="font-bold text-slate-800">{report.natureOfConnection}</span>
             </div>
           </div>
@@ -388,6 +392,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
           This document is generated digitally and verified by automated laboratory calibration benches. Metropolis Power Distribution holds full legal custodian rights over secondary sealing rings. Report accuracy is certified against Class 0.05 state primary meters.
         </div>
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

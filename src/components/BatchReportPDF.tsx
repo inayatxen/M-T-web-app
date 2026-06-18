@@ -8,6 +8,7 @@ import { ShieldCheck, Printer, ArrowLeft } from 'lucide-react';
 import { TestReport, MeterCategory } from '../types';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 import { formatPKTDate } from '../utils';
+import TwoPageCTReport from './TwoPageCTReport';
 
 interface BatchReportPDFProps {
   reports: TestReport[];
@@ -70,6 +71,14 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
       {/* Printable Batch Container */}
       <div className="space-y-8 print:space-y-0">
         {reports.map((report, idx) => {
+          const isTwoPage = report.meterType === 'three_phase_ct' || report.meterType === 'three_phase_ct_pt';
+          if (isTwoPage) {
+            return (
+              <div key={report.id} className={idx < reports.length - 1 ? 'print-page-break' : ''}>
+                <TwoPageCTReport report={report} />
+              </div>
+            );
+          }
           const cryptoSealHash = `SEC-${report.reportNumber}-${report.meterNumber.substring(0, 4)}`;
           return (
             <div 
@@ -142,7 +151,7 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
                     <span className="font-semibold text-slate-800">{report.fatherName}</span>
                   </div>
                   <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-                    <span className="text-slate-500 font-medium">Nature of Connection:</span>
+                    <span className="text-slate-500 font-medium">Testing Reason:</span>
                     <span className="font-bold text-slate-800">{report.natureOfConnection}</span>
                   </div>
                 </div>
