@@ -22,8 +22,11 @@ import {
   Building2,
   SlidersHorizontal,
   UploadCloud,
-  Download
+  Download,
+  QrCode,
+  Camera
 } from 'lucide-react';
+import QRScannerModal from './QRScannerModal';
 import { read, utils, write } from 'xlsx';
 import { EquipmentReceipt, MeterCategory, Meter } from '../types';
 import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY } from '../utils';
@@ -327,6 +330,76 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // QR Scanner States & Handlers
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [qrScanMode, setQRScanMode] = useState<'search' | 'intake'>('search');
+  const [qrNotification, setQrNotification] = useState('');
+
+  const handleQRScanResult = (decodedText: string) => {
+    setIsQRScannerOpen(false);
+    
+    // Check if it's a JSON configuration object
+    let isJson = false;
+    let parsedData: any = null;
+    try {
+      if (decodedText.startsWith('{') && decodedText.endsWith('}')) {
+        parsedData = JSON.parse(decodedText);
+        isJson = true;
+      }
+    } catch (e) {
+      // not a json string
+    }
+
+    if (qrScanMode === 'intake') {
+      if (isJson && parsedData) {
+        // Autofill full intake form fields if json keys exist
+        if (parsedData.consumerAccount) setConsumerAccount(parsedData.consumerAccount);
+        if (parsedData.consumerName) setConsumerName(parsedData.consumerName);
+        if (parsedData.fatherName) setFatherName(parsedData.fatherName);
+        if (parsedData.meterType) setMeterType(mapMeterCategory(parsedData.meterType));
+        if (parsedData.meterNumber) setMeterNumber(parsedData.meterNumber);
+        if (parsedData.serialNumber) setSerialNumber(parsedData.serialNumber);
+        if (parsedData.make) setMake(parsedData.make);
+        if (parsedData.receivedFrom) setReceivedFrom(parsedData.receivedFrom);
+        if (parsedData.reasonForTesting) setReasonForTesting(parsedData.reasonForTesting);
+        if (parsedData.newOrUsed) setNewOrUsed(parsedData.newOrUsed === 'New' ? 'New' : 'Used');
+        if (parsedData.remarks) setRemarks(parsedData.remarks);
+        
+        setSuccessMsg("Scanned and parsed Equipment Specification Card! Intake form populated.");
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        // Raw text decoded. Smartly check what field to populate
+        const trimmed = decodedText.trim();
+        const digitsOnly = trimmed.replace(/\D/g, '');
+        
+        if (digitsOnly.length >= 10 && digitsOnly.length <= 15 && !isNaN(Number(digitsOnly))) {
+          setConsumerAccount(trimmed);
+          setSuccessMsg(`Auto-filled Account Number: "${trimmed}"`);
+        } else if (trimmed.startsWith('MTR-') || trimmed.match(/^[A-Z0-9-]{6,15}$/i)) {
+          setMeterNumber(trimmed.toUpperCase());
+          setSuccessMsg(`Auto-filled Meter Number: "${trimmed}"`);
+        } else {
+          setSerialNumber(trimmed.toUpperCase());
+          setSuccessMsg(`Auto-filled Serial Number: "${trimmed}"`);
+        }
+        setTimeout(() => setSuccessMsg(""), 4050);
+      }
+    } else {
+      // Search / Lookup Mode
+      if (isJson && parsedData) {
+        // If they scanned an intake spec card in search mode, use the meter number or account number to look up!
+        const searchVal = parsedData.meterNumber || parsedData.consumerAccount || parsedData.serialNumber || '';
+        setSearchQuery(searchVal);
+        setQrNotification(`Lookup matched scanned card: ${searchVal}`);
+      } else {
+        const trimmed = decodedText.trim();
+        setSearchQuery(trimmed);
+        setQrNotification(`Lookup matched scanned tag: ${trimmed}`);
+      }
+      setTimeout(() => setQrNotification(""), 5050);
+    }
+  };
+
   // Registry List Category Area Filters
   const [filterCompany, setFilterCompany] = useState<string>('26');
   const [filterCircle, setFilterCircle] = useState<string>('all');
@@ -529,6 +602,30 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 {successMsg}
               </div>
             )}
+
+            {/* Fast-Track QR Scanner Prompt */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-850/50 border border-dashed border-slate-200 dark:border-slate-850 rounded-md flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-top-1 select-none">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                  <QrCode className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white">Fast-Track QR Intake Identification</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">Scan printed meter barcode tags, utility receipts, or JSON equipment cards to skip manual indexing.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setQRScanMode('intake');
+                  setIsQRScannerOpen(true);
+                }}
+                className="w-full sm:w-auto px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-md flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 text-center cursor-pointer min-h-[32px] shrink-0"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                Scan Intake Tag
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Consumer Info Section */}
@@ -1357,16 +1454,42 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
         <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           {/* Controls bar with Structured Area Segment Filters */}
           <div className="p-3 bg-slate-55/40 dark:bg-slate-850/40 border-b border-slate-200 dark:border-slate-800 space-y-3">
+            {qrNotification && (
+              <div className="p-2 py-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-400 border-l-2 border-blue-500 text-[10.5px] font-bold rounded-md flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <QrCode className="w-4 h-4 text-blue-500 shrink-0 animate-pulse" />
+                <span>{qrNotification}</span>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative w-full sm:max-w-xs">
+              <div className="relative w-full sm:max-w-xs flex items-center">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search Account / Meter / Name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                  className="w-full text-xs pl-8 pr-12 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-650 dark:text-slate-400 text-xs px-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded select-none cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQRScanMode('search');
+                    setIsQRScannerOpen(true);
+                  }}
+                  title="Scan QR/Barcode Tag to lookup"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                </button>
               </div>
               <div className="text-[11px] font-bold text-slate-550 dark:text-slate-400 flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -1604,6 +1727,14 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
           </div>
         </div>
       )}
+
+      {/* Universal Laboratory QR Decoder Overlay */}
+      <QRScannerModal 
+        isOpen={isQRScannerOpen} 
+        onClose={() => setIsQRScannerOpen(false)} 
+        onScan={handleQRScanResult}
+        title={qrScanMode === 'intake' ? 'Equipment Inward Intake QR Scanner' : 'Register Search & Identifications Scanner'}
+      />
     </div>
   );
 }

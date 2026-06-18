@@ -121,22 +121,46 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         </div>
 
         {/* Meter Particulars */}
-        <div className="mt-8 space-y-2">
-          <h3 className="text-[11.5px] font-black underline uppercase text-slate-900">
-            8. Import & Export LT TOU Meter Particulars.
+        <div className="mt-8 space-y-3 pb-2 border-b border-slate-300">
+          <h3 className="text-[11.5px] font-black underline uppercase text-slate-900 mb-2">
+            8. Import & Export LT TOU Meter Particulars & Hardware Details.
           </h3>
-          <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2 text-[11px] font-bold text-slate-800">
-            <div className="flex items-baseline gap-2">
-              <span>(I).- Meter No:</span>
-              <span className="border-b border-dotted border-slate-400 font-mono font-extrabold text-slate-950 px-2 min-w-[140px] text-center">{report.meterNumber}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3 gap-x-6 text-[10.5px] font-bold text-slate-800">
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">(I).- Meter No:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-mono font-extrabold text-slate-950 px-1 text-center">{report.meterNumber}</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span>Make:</span>
-              <span className="border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-2 min-w-[140px] text-center">{report.meterMake}</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Brand Make:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.meterMake}</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span>Amps:</span>
-              <span className="border-b border-dotted border-slate-400 font-mono font-extrabold text-slate-950 px-2 min-w-[100px] text-center">{report.accuracyTest.testCurrent}</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Amps Rating:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-mono font-extrabold text-slate-950 px-1 text-center">{report.accuracyTest.testCurrent}</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Warp / Serial:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-mono font-extrabold text-slate-950 px-1 text-center">{report.serialNumber}</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Voltage Rating:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-semibold text-slate-800 px-1 text-center">3x230/400 Volts</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Accuracy Class:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-indigo-950 px-1 text-center">Class 1.0 / 0.5s</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Connection Date:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.installationDate ? formatPKTDate(report.installationDate) : 'N/A'}</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Removal Date:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.removalDate ? formatPKTDate(report.removalDate) : 'N/A'}</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="shrink-0">Phase/Config:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-semibold text-slate-800 px-1 text-center">3-Phase 4-Wire</span>
             </div>
           </div>
 

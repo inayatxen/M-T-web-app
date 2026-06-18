@@ -155,25 +155,61 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         <div className="mb-8">
           <div className="bg-indigo-900/5 px-3 py-1.5 rounded border-l-4 border-indigo-900 mb-4">
             <h2 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
-              II. SPECIFIED EQUIPMENT / TEST TARGET UNDER TESTING
+              II. SPECIFIED EQUIPMENT / METROLOGICAL TARGET PARTICULARS
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3.5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-xs">
             <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Equipment Type:</span>
-              <span className="font-bold text-slate-900">{getMeterCategoryName(report.meterType)}</span>
+              <span className="text-slate-500 font-medium">Equipment Type / Category:</span>
+              <span className="font-bold text-indigo-950">{getMeterCategoryName(report.meterType)}</span>
             </div>
             <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Meter ID / Number:</span>
-              <span className="font-bold text-slate-950 tracking-wider font-mono">{report.meterNumber}</span>
+              <span className="text-slate-500 font-medium">Meter ID / Corp Asset No:</span>
+              <span className="font-bold text-slate-950 tracking-wider font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">{report.meterNumber}</span>
             </div>
             <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Manufacturer / Make:</span>
+              <span className="text-slate-500 font-medium">Manufacturer / Brand Make:</span>
               <span className="font-bold text-slate-800">{report.meterMake}</span>
             </div>
             <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Warp/Serial Code:</span>
-              <span className="font-mono text-slate-800">{report.serialNumber}</span>
+              <span className="text-slate-500 font-medium">Warp / Serial Code:</span>
+              <span className="font-mono text-slate-800 font-bold">{report.serialNumber}</span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">Accuracy Class Rating:</span>
+              <span className="font-bold text-slate-800">
+                {report.meterType === 'single_phase' ? 'Class 1.0 (Active Energy)' : 'Class 1.0 Active / Class 2.0 Reactive'}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">Physical Phase Configuration:</span>
+              <span className="font-bold text-slate-800">
+                {report.meterType === 'single_phase' ? '1-Phase, 2-Wire Solid State' : '3-Phase, 4-Wire Solid State'}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">System Voltage Core Rating:</span>
+              <span className="font-semibold text-slate-800">
+                {report.meterType === 'single_phase' ? '230 V AC ± 10%, 50 Hz' : '3 x 230/400 V AC, 50 Hz'}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">Current Reference Limit (Amps):</span>
+              <span className="font-semibold text-slate-800 font-mono">
+                {report.meterType === 'single_phase' ? '10 (40) Amps Basic' : report.meterType === 'three_phase_whole' ? '10 (100) Amps Whole-Current' : '5 (10) Amps Transformer-Connected'}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">Power Connection Date:</span>
+              <span className="font-semibold text-slate-800">{report.installationDate ? formatPKTDate(report.installationDate) : 'Not Specified'}</span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
+              <span className="text-slate-500 font-medium">Field Disconnection Date:</span>
+              <span className="font-semibold text-slate-800">{report.removalDate ? formatPKTDate(report.removalDate) : 'Not Specified'}</span>
+            </div>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 col-span-1 md:col-span-2">
+              <span className="text-slate-500 font-medium">Physical Calibration Sealing System:</span>
+              <span className="font-bold text-emerald-800 dark:text-emerald-400">Double Hermetically Welded Polycarbonate Locks with Lead Verification Slips</span>
             </div>
           </div>
         </div>
