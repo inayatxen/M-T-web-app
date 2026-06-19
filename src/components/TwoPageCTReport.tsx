@@ -150,13 +150,9 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
               <span className="shrink-0">Accuracy Class:</span>
               <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-indigo-950 px-1 text-center">Class 1.0 / 0.5s</span>
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="shrink-0">Connection Date:</span>
-              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.installationDate ? formatPKTDate(report.installationDate) : 'N/A'}</span>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="shrink-0">Removal Date:</span>
-              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.removalDate ? formatPKTDate(report.removalDate) : 'N/A'}</span>
+            <div className="flex items-baseline gap-1.5 md:col-span-2">
+              <span className="shrink-0">Testing Date:</span>
+              <span className="flex-1 border-b border-dotted border-slate-400 font-extrabold text-slate-950 px-1 text-center">{report.testDate ? formatPKTDate(report.testDate) : 'N/A'}</span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="shrink-0">Phase/Config:</span>

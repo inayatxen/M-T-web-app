@@ -47,6 +47,15 @@ export interface Meter {
   simInstalledBy?: string;
   simInstallDate?: string;
   remarks?: string;
+  consumerName?: string;
+  consumerAccount?: string;
+  movementHistory?: {
+    timestamp: string;
+    fromStatus: StockStatus;
+    toStatus: StockStatus;
+    actor: string;
+    details?: string;
+  }[];
 }
 
 // Equipment Receipt Information

@@ -169,7 +169,10 @@ CREATE TABLE IF NOT EXISTS meters (
   "networkProvider" TEXT,
   "simInstalledBy" TEXT,
   "simInstallDate" TEXT,
-  remarks TEXT
+  remarks TEXT,
+  "consumerName" TEXT,
+  "consumerAccount" TEXT,
+  "movementHistory" JSONB
 );
 
 -- 2. Create receipts Table
@@ -187,7 +190,8 @@ CREATE TABLE IF NOT EXISTS receipts (
   "reasonForTesting" TEXT,
   "newOrUsed" TEXT,
   "receivedBy" TEXT,
-  remarks TEXT
+  remarks TEXT,
+  "fatherName" TEXT
 );
 
 -- 3. Create cts Table
@@ -334,6 +338,14 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
 
 DROP POLICY IF EXISTS "allow_anon_users" ON users;
 CREATE POLICY "allow_anon_users" ON users FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- =========================================================================
+-- RECOVERY / PATCH MIGRATION (RUN THIS SECURELY TO PATCH ALREADY-BUILT TABLES)
+-- =========================================================================
+ALTER TABLE meters ADD COLUMN IF NOT EXISTS "consumerName" TEXT;
+ALTER TABLE meters ADD COLUMN IF NOT EXISTS "consumerAccount" TEXT;
+ALTER TABLE meters ADD COLUMN IF NOT EXISTS "movementHistory" JSONB;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
 `;
 
   const copySqlToClipboard = () => {

@@ -329,8 +329,8 @@ export default function TestingView({
       meterType: defaultCategoryFilter,
       meterMake: manufacturer || 'Secure Meters Ltd',
       serialNumber,
-      installationDate,
-      removalDate,
+      installationDate: approvalDate,
+      removalDate: approvalDate,
       readings,
       accuracyTest,
       discrepancies,
@@ -398,7 +398,7 @@ export default function TestingView({
       category: defaultCategoryFilter,
       status: passFail === 'Pass' ? 'passed' : 'failed',
       stockStatus: passFail === 'Pass' ? 'Approved' : 'Rejected',
-      purchaseDate: installationDate,
+      purchaseDate: approvalDate,
       remarks: `Lab verification complete: Error recorded ${errorPercentage}%. Result: ${passFail}.`
     };
 
@@ -678,8 +678,8 @@ export default function TestingView({
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">Testing Date</label>
                   <input
                     type="date"
-                    value={installationDate}
-                    onChange={(e) => setInstallationDate(e.target.value)}
+                    value={approvalDate}
+                    onChange={(e) => setApprovalDate(e.target.value)}
                     className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-bold"
                   />
                 </div>

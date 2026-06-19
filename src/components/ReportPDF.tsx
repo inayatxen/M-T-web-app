@@ -199,17 +199,9 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
                 {report.meterType === 'single_phase' ? '10 (40) Amps Basic' : report.meterType === 'three_phase_whole' ? '10 (100) Amps Whole-Current' : '5 (10) Amps Transformer-Connected'}
               </span>
             </div>
-            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Power Connection Date:</span>
-              <span className="font-semibold text-slate-800">{report.installationDate ? formatPKTDate(report.installationDate) : 'Not Specified'}</span>
-            </div>
-            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2">
-              <span className="text-slate-500 font-medium">Field Disconnection Date:</span>
-              <span className="font-semibold text-slate-800">{report.removalDate ? formatPKTDate(report.removalDate) : 'Not Specified'}</span>
-            </div>
-            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 col-span-1 md:col-span-2">
-              <span className="text-slate-500 font-medium">Physical Calibration Sealing System:</span>
-              <span className="font-bold text-emerald-800 dark:text-emerald-400">Double Hermetically Welded Polycarbonate Locks with Lead Verification Slips</span>
+            <div className="flex justify-between border-b border-dashed border-slate-200 pb-2 md:col-span-2">
+              <span className="text-slate-500 font-medium">Meter Testing Date:</span>
+              <span className="font-semibold text-slate-800">{report.testDate ? formatPKTDate(report.testDate) : 'Not Specified'}</span>
             </div>
           </div>
         </div>

@@ -45,6 +45,7 @@ import {
   AuditLog, 
   CalibrationStandard, 
   StockStatus, 
+  MeterStatus,
   UserRole 
 } from './types';
 
@@ -374,9 +375,56 @@ export default function App() {
     const targetMeter = meters.find(m => m.id === meterId);
     const oldStatus = targetMeter ? targetMeter.stockStatus : 'Unknown';
 
+    const getMeterStatusFromStockStatus = (stockStat: StockStatus, currentStat: MeterStatus): MeterStatus => {
+      switch (stockStat) {
+        case 'In Store':
+          return currentStat === 'passed' || currentStat === 'failed' || currentStat === 'report_issued' 
+            ? currentStat 
+            : 'pending_testing';
+        case 'Under Testing':
+          return 'under_testing';
+        case 'Approved':
+          return 'passed';
+        case 'Rejected':
+          return 'failed';
+        case 'Installed':
+          return 'report_issued';
+        case 'Scrapped':
+          return 'failed';
+        default:
+          return currentStat;
+      }
+    };
+
     const updated = meters.map(m => {
       if (m.id === meterId) {
-        return { ...m, stockStatus: status };
+        const matchedReceipt = receipts.find(r => 
+          r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+          r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase()
+        );
+        const consName = m.consumerName || matchedReceipt?.consumerName || 'Official Utility Custody';
+        const consAcc = m.consumerAccount || matchedReceipt?.consumerAccount || 'N/A';
+        const manufacturerVal = m.manufacturer && m.manufacturer !== 'Secure Meters Ltd' ? m.manufacturer : (matchedReceipt?.make || m.manufacturer);
+
+        const historyItem = {
+          timestamp: formatPKTDateTime(new Date()),
+          fromStatus: m.stockStatus,
+          toStatus: status,
+          actor: currentUser ? `${currentUser.name} (${currentUser.role})` : 'System Operator',
+          details: `Dispatched condition shifted to [${status}]. Carried forward client account: ${consAcc} & consumer: ${consName}.`
+        };
+
+        const existingHistory = m.movementHistory || [];
+
+        return { 
+          ...m, 
+          stockStatus: status,
+          status: getMeterStatusFromStockStatus(status, m.status),
+          manufacturer: manufacturerVal,
+          consumerName: consName,
+          consumerAccount: consAcc !== 'N/A' ? consAcc : undefined,
+          movementHistory: [...existingHistory, historyItem]
+        };
       }
       return m;
     });
@@ -385,16 +433,63 @@ export default function App() {
     saveState('meters', updated);
 
     recordAuditTrail(
-      `Dispatched stock condition for meter ${targetMeter?.meterNumber || 'Hardware'}`,
+      `Dispatched stock condition for meter ${targetMeter?.meterNumber || 'Hardware'} (Carried Forward Details)`,
       `Stock Status: ${oldStatus}`,
-      `Stock Status: ${status}`
+      `Stock Status: ${status} • Preserved customer and calibration profile`
     );
   };
 
   const handleUpdateBulkStockStatus = (meterIds: string[], status: StockStatus) => {
+    const getMeterStatusFromStockStatus = (stockStat: StockStatus, currentStat: MeterStatus): MeterStatus => {
+      switch (stockStat) {
+        case 'In Store':
+          return currentStat === 'passed' || currentStat === 'failed' || currentStat === 'report_issued' 
+            ? currentStat 
+            : 'pending_testing';
+        case 'Under Testing':
+          return 'under_testing';
+        case 'Approved':
+          return 'passed';
+        case 'Rejected':
+          return 'failed';
+        case 'Installed':
+          return 'report_issued';
+        case 'Scrapped':
+          return 'failed';
+        default:
+          return currentStat;
+      }
+    };
+
     const updated = meters.map(m => {
       if (meterIds.includes(m.id)) {
-        return { ...m, stockStatus: status };
+        const matchedReceipt = receipts.find(r => 
+          r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+          r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase()
+        );
+        const consName = m.consumerName || matchedReceipt?.consumerName || 'Official Utility Custody';
+        const consAcc = m.consumerAccount || matchedReceipt?.consumerAccount || 'N/A';
+        const manufacturerVal = m.manufacturer && m.manufacturer !== 'Secure Meters Ltd' ? m.manufacturer : (matchedReceipt?.make || m.manufacturer);
+
+        const historyItem = {
+          timestamp: formatPKTDateTime(new Date()),
+          fromStatus: m.stockStatus,
+          toStatus: status,
+          actor: currentUser ? `${currentUser.name} (${currentUser.role})` : 'System Operator',
+          details: `Bulk movement transition to [${status}]. Carried forward client account: ${consAcc} & consumer: ${consName}.`
+        };
+
+        const existingHistory = m.movementHistory || [];
+
+        return { 
+          ...m, 
+          stockStatus: status,
+          status: getMeterStatusFromStockStatus(status, m.status),
+          manufacturer: manufacturerVal,
+          consumerName: consName,
+          consumerAccount: consAcc !== 'N/A' ? consAcc : undefined,
+          movementHistory: [...existingHistory, historyItem]
+        };
       }
       return m;
     });
@@ -403,9 +498,9 @@ export default function App() {
     saveState('meters', updated);
 
     recordAuditTrail(
-      `Bulk dispatched stock condition for ${meterIds.length} meters`,
+      `Bulk dispatched stock condition for ${meterIds.length} meters (Carried Forward Details)`,
       "Stock Status: Various",
-      `Stock Status: ${status}`
+      `Stock Status: ${status} • Preserved all dynamic parameters`
     );
   };
 
@@ -1072,6 +1167,7 @@ export default function App() {
               {activePageId === 'meter_inventory' && (
                 <InventoryView 
                   meters={meters} 
+                  receipts={receipts}
                   onUpdateStockStatus={handleUpdateStockStatus} 
                   onUpdateBulkStockStatus={handleUpdateBulkStockStatus}
                   currentUser={currentUser} 

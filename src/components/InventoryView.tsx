@@ -21,10 +21,11 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { Meter, StockStatus, MeterCategory } from '../types';
+import { Meter, StockStatus, MeterCategory, EquipmentReceipt } from '../types';
 
 interface InventoryViewProps {
   meters: Meter[];
+  receipts?: EquipmentReceipt[];
   onUpdateStockStatus: (meterId: string, status: StockStatus) => void;
   onUpdateBulkStockStatus?: (meterIds: string[], status: StockStatus) => void;
   currentUser: any;
@@ -32,6 +33,7 @@ interface InventoryViewProps {
 
 export default function InventoryView({ 
   meters, 
+  receipts = [],
   onUpdateStockStatus, 
   onUpdateBulkStockStatus, 
   currentUser 
@@ -40,6 +42,7 @@ export default function InventoryView({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [editingMeterId, setEditingMeterId] = useState<string | null>(null);
+  const [expandedMeterId, setExpandedMeterId] = useState<string | null>(null);
   
   // Selection & Bulk State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -208,49 +211,94 @@ export default function InventoryView({
 
         {/* Bulk Action Panel */}
         {selectedIds.length > 0 && isAuthorizedToEdit && (
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-indigo-600 text-white rounded-xl shrink-0 shadow-sm">
-                <ArrowRightLeft className="w-5 h-5" />
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-100 p-4 flex flex-col gap-4 animate-in slide-in-from-top-1">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shrink-0 shadow-sm">
+                  <ArrowRightLeft className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                    Bulk Meter Movement Operator
+                    <span className="bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {selectedIds.length} Selected
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-medium">Batch reassign the warehouse location or dispatch state for designated hardware assets instantly.</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                  Bulk Meter Movement Operator
-                  <span className="bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full">
-                    {selectedIds.length} Selected
-                  </span>
-                </h4>
-                <p className="text-[10px] text-slate-500 font-medium">Batch reassign the warehouse location or dispatch state for designated hardware assets instantly.</p>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-indigo-100">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Move To:</span>
+                  <select
+                    value={bulkStatus}
+                    onChange={(e) => setBulkStatus(e.target.value as StockStatus)}
+                    className="text-xs font-bold text-slate-800 bg-transparent border-none p-0 focus:outline-none focus:ring-0 cursor-pointer min-w-[120px]"
+                  >
+                    {stockStatuses.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleBulkMove}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] uppercase tracking-wide rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[34px]"
+                >
+                  <Check className="w-4 h-4" />
+                  Dispatch State
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="px-2.5 py-1.5 bg-slate-205 text-slate-600 hover:bg-slate-300 text-xs font-bold uppercase rounded-lg active:scale-95 transition-all cursor-pointer flex items-center gap-1 font-mono hover:text-slate-900"
+                >
+                  Clear
+                </button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-indigo-100">
-                <span className="text-[10px] font-bold uppercase text-slate-400">Move To:</span>
-                <select
-                  value={bulkStatus}
-                  onChange={(e) => setBulkStatus(e.target.value as StockStatus)}
-                  className="text-xs font-bold text-slate-800 bg-transparent border-none p-0 focus:outline-none focus:ring-0 cursor-pointer min-w-[120px]"
-                >
-                  {stockStatuses.map(status => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
+
+            {/* Displaying carried-forward details of selected items */}
+            <div className="w-full mt-1 bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-indigo-100/50">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-700 block mb-2">
+                📡 Automated Data Carrying Engine (Inward & Calibration Preservation)
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-36 overflow-y-auto">
+                {selectedIds.map(id => {
+                  const m = meters.find(item => item.id === id);
+                  if (!m) return null;
+                  
+                  const mr = receipts.find(r => 
+                    r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+                    r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase()
+                  );
+                  const clientName = m.consumerName || mr?.consumerName || 'Official Utility Custody';
+                  const accountNum = m.consumerAccount || mr?.consumerAccount || 'N/A';
+                  const oem = m.manufacturer && m.manufacturer !== 'Secure Meters Ltd' ? m.manufacturer : (mr?.make || m.manufacturer);
+
+                  return (
+                    <div key={id} className="text-[10px] bg-white p-2 rounded-lg border border-slate-100 flex flex-col justify-between font-mono shadow-xs">
+                      <div className="flex items-center justify-between font-black text-indigo-950 mb-1">
+                        <span>{m.meterNumber}</span>
+                        <span className="text-slate-400">({oem})</span>
+                      </div>
+                      <div className="text-slate-600 truncate font-sans">
+                        👤 {clientName}
+                      </div>
+                      <div className="text-slate-500 font-medium">
+                        💳 Acc: {accountNum}
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[9px] text-indigo-600 font-bold bg-indigo-50/75 px-1.5 py-0.5 rounded font-sans">
+                        <span>Stage: {m.stockStatus}</span>
+                        <span>➔ Propagate to {bulkStatus}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <button
-                type="button"
-                onClick={handleBulkMove}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] uppercase tracking-wide rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[34px]"
-              >
-                <Check className="w-4 h-4" />
-                Dispatch State
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedIds([])}
-                className="px-2.5 py-1.5 bg-slate-205 text-slate-600 hover:bg-slate-300 text-xs font-bold uppercase rounded-lg active:scale-95 transition-all cursor-pointer flex items-center gap-1 font-mono hover:text-slate-900"
-              >
-                Clear
-              </button>
+              <p className="text-[9px] text-slate-400 font-medium mt-2 font-sans">
+                ✓ Continuous Preservation Active: Confirming dispatch changes compiles safe chronological backups of serials, calibration errors, and client names.
+              </p>
             </div>
           </div>
         )}
@@ -310,76 +358,207 @@ export default function InventoryView({
                   </td>
                 </tr>
               ) : (
-                filteredMeters.map(m => (
-                  <tr key={m.id} className={`hover:bg-slate-50/50 transition-colors ${selectedIds.includes(m.id) ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''}`}>
-                    {isAuthorizedToEdit && (
-                      <td className="p-4 text-center">
-                        <input 
-                          type="checkbox"
-                          checked={selectedIds.includes(m.id)}
-                          onChange={() => {
-                            if (selectedIds.includes(m.id)) {
-                              setSelectedIds(prev => prev.filter(id => id !== m.id));
-                            } else {
-                              setSelectedIds(prev => [...prev, m.id]);
-                            }
-                          }}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
-                        />
-                      </td>
-                    )}
-                    <td className="p-4">
-                      <span className="font-extrabold text-slate-900 font-mono text-xs">{m.meterNumber}</span>
-                    </td>
-                    <td className="p-4 font-semibold text-indigo-900 capitalize">
-                      {m.category.replace(/_/g, ' ')}
-                    </td>
-                    <td className="p-4 font-mono text-slate-500">{m.serialNumber}</td>
-                    <td className="p-4 font-bold text-slate-700">{m.manufacturer}</td>
-                    <td className="p-4 text-xs font-mono font-medium text-slate-600">{m.accuracyClass}</td>
-                    <td className="p-4 relative">
-                      {editingMeterId === m.id && isAuthorizedToEdit ? (
-                        <select
-                          className="text-xs p-1.5 bg-white border border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-bold"
-                          defaultValue={m.stockStatus}
-                          onChange={(e) => handlesStatusChange(m.id, e.target.value as StockStatus)}
-                        >
-                          {stockStatuses.map(status => (
-                            <option key={status} value={status}>{status}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStockBadgeClass(m.stockStatus)}`}>
-                            {m.stockStatus}
-                          </span>
+                filteredMeters.flatMap(m => {
+                  const mr = receipts.find(r => 
+                    r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+                    r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase()
+                  );
+                  const clientName = m.consumerName || mr?.consumerName;
+                  const accountNum = m.consumerAccount || mr?.consumerAccount;
+                  const manufacturerVal = m.manufacturer && m.manufacturer !== 'Secure Meters Ltd' ? m.manufacturer : (mr?.make || m.manufacturer);
+
+                  const rowElements = [];
+
+                  rowElements.push(
+                    <tr key={m.id} className={`hover:bg-slate-50/50 transition-colors ${selectedIds.includes(m.id) ? 'bg-indigo-50/30' : ''} ${expandedMeterId === m.id ? 'bg-slate-50' : ''}`}>
+                      {isAuthorizedToEdit && (
+                        <td className="p-4 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={selectedIds.includes(m.id)}
+                            onChange={() => {
+                              if (selectedIds.includes(m.id)) {
+                                setSelectedIds(prev => prev.filter(id => id !== m.id));
+                              } else {
+                                setSelectedIds(prev => [...prev, m.id]);
+                              }
+                            }}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                          />
+                        </td>
+                      )}
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="font-extrabold text-slate-900 font-mono text-xs">{m.meterNumber}</span>
+                          {clientName && (
+                            <span className="text-[9px] text-slate-505 font-bold mt-0.5 truncate max-w-[170px]" title={`Preserved Client: ${clientName}`}>
+                              👤 {clientName}
+                            </span>
+                          )}
+                          {accountNum && (
+                            <span className="text-[8px] text-slate-400 font-semibold font-mono" title={`Preserved Account: ${accountNum}`}>
+                              💳 ACC-{accountNum}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      {isAuthorizedToEdit ? (
-                        editingMeterId === m.id ? (
-                          <button
-                            onClick={() => setEditingMeterId(null)}
-                            className="text-[10px] font-semibold text-slate-400 hover:underline px-2"
+                      </td>
+                      <td className="p-4 font-semibold text-indigo-900 capitalize">
+                        {m.category.replace(/_/g, ' ')}
+                      </td>
+                      <td className="p-4 font-mono text-slate-500">{m.serialNumber}</td>
+                      <td className="p-4 font-bold text-slate-700">{manufacturerVal}</td>
+                      <td className="p-4 text-xs font-mono font-medium text-slate-600">{m.accuracyClass}</td>
+                      <td className="p-4 relative">
+                        {editingMeterId === m.id && isAuthorizedToEdit ? (
+                          <select
+                            className="text-xs p-1.5 bg-white border border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-bold"
+                            defaultValue={m.stockStatus}
+                            onChange={(e) => handlesStatusChange(m.id, e.target.value as StockStatus)}
                           >
-                            Cancel
-                          </button>
+                            {stockStatuses.map(status => (
+                              <option key={status} value={status}>{status}</option>
+                            ))}
+                          </select>
                         ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStockBadgeClass(m.stockStatus)}`}>
+                              {m.stockStatus}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setEditingMeterId(m.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded font-bold text-[10px] transition-colors"
+                            type="button"
+                            onClick={() => setExpandedMeterId(expandedMeterId === m.id ? null : m.id)}
+                            className={`px-2.5 py-1 text-[10px] font-bold rounded flex items-center gap-1 border transition-all ${
+                              expandedMeterId === m.id 
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
                           >
-                            <Settings className="w-3 h-3" />
-                            Dispatch Condition
+                            <span className="font-sans uppercase tracking-tight">Logs</span>
+                            {m.movementHistory && m.movementHistory.length > 0 && (
+                              <span className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black ${
+                                expandedMeterId === m.id ? 'bg-indigo-800 text-indigo-100' : 'bg-indigo-100 text-indigo-800'
+                              }`}>
+                                {m.movementHistory.length}
+                              </span>
+                            )}
                           </button>
-                        )
-                      ) : (
-                        <span className="text-[10px] text-slate-400">Read only access</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+
+                          {isAuthorizedToEdit && (
+                            editingMeterId === m.id ? (
+                              <button
+                                onClick={() => setEditingMeterId(null)}
+                                className="text-[10px] font-semibold text-slate-400 hover:underline px-1"
+                              >
+                                Cancel
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setEditingMeterId(m.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded font-bold text-[10px] transition-all border border-transparent hover:border-slate-205"
+                              >
+                                <Settings className="w-3 h-3" />
+                                Dispatch
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+
+                  if (expandedMeterId === m.id) {
+                    rowElements.push(
+                      <tr key={`expanded-${m.id}`} className="bg-indigo-50/20">
+                        <td colSpan={isAuthorizedToEdit ? 8 : 7} className="p-4 border-t border-indigo-100">
+                          <div className="bg-white rounded-xl p-4 border border-indigo-100/65 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Col 1: Carried Forward Receipt Metadata */}
+                            <div className="space-y-2">
+                              <h5 className="text-[10.5px] font-black uppercase text-indigo-950 tracking-wider flex items-center gap-1.5 border-b pb-1.5 border-slate-100 font-sans">
+                                <Database className="w-3.5 h-3.5 text-indigo-600" />
+                                Carried Forward Inward Metadata Profile
+                              </h5>
+                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                <div>
+                                  <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Consumer Name</span>
+                                  <span className="font-extrabold text-slate-800 font-sans">{clientName || 'Official Utility Custody'}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Account Number</span>
+                                  <span className="font-mono text-slate-700 font-semibold">{accountNum || 'N/A: General Utility Inventory'}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Manufacturer</span>
+                                  <span className="font-bold text-slate-800 font-sans">{manufacturerVal}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Precision Code Index</span>
+                                  <span className="font-mono text-slate-700 font-bold">{m.accuracyClass}</span>
+                                </div>
+                                {mr && (
+                                  <>
+                                    <div>
+                                      <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Tested Reason</span>
+                                      <span className="font-bold text-indigo-700 font-sans text-[10px] uppercase">{mr.reasonForTesting || 'Routine Calibration'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[9px] text-slate-400 uppercase font-black font-sans">Inward Intake Date</span>
+                                      <span className="font-mono text-slate-700 font-bold">{mr.dateReceived}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              {m.remarks && (
+                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-2 text-[10.5px] text-slate-600 font-medium">
+                                  <span className="block text-[8px] uppercase tracking-wider font-extrabold text-slate-400 mb-0.5 font-sans">Laboratory Operational Comments</span>
+                                  "{m.remarks}"
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Col 2: Chronological Movement Ledger */}
+                            <div className="space-y-2">
+                              <h5 className="text-[10.5px] font-black uppercase text-indigo-950 tracking-wider flex items-center gap-1.5 border-b pb-1.5 border-slate-100 font-sans">
+                                <ArrowRightLeft className="w-3.5 h-3.5 text-indigo-600" />
+                                Meter Movement Dispatch Logs
+                              </h5>
+                              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                {(!m.movementHistory || m.movementHistory.length === 0) ? (
+                                  <div className="text-[10.5px] text-slate-400 italic py-5 text-center font-sans">
+                                    No previous movement recorded. This is a newly initialized inward register record.
+                                  </div>
+                                ) : (
+                                  m.movementHistory.slice().reverse().map((h, index) => (
+                                    <div key={index} className="bg-slate-50 border border-slate-100 p-2 rounded-lg text-[10px] space-y-1 font-mono">
+                                      <div className="flex justify-between items-center text-[9px] font-sans">
+                                        <span className="font-mono font-bold text-slate-400">{h.timestamp}</span>
+                                        <span className="font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded text-[8.5px]">{h.actor}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 font-bold text-slate-800 font-sans">
+                                        <span className="text-slate-400 text-[9px]">{h.fromStatus}</span>
+                                        <span className="text-indigo-500">➔</span>
+                                        <span className="text-indigo-800">{h.toStatus}</span>
+                                      </div>
+                                      {h.details && (
+                                        <p className="text-[9px] text-slate-500 font-sans italic">{h.details}</p>
+                                      )}
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return rowElements;
+                })
               )}
             </tbody>
           </table>
