@@ -654,7 +654,7 @@ export default function TestingView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Letter No. *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Warp / Serial Code:</label>
                   <input
                     type="text"
                     placeholder="SN-...."

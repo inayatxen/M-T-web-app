@@ -210,7 +210,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
           'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / smart) *',
           'Meter ID / Number *',
           'Readings',
-          'Letter No. *',
+          'Warp / Serial Code:',
           'Manufacturer Make *',
           'Testing Reason *',
           'Origin Division Received From'
@@ -1056,7 +1056,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Warp/Serial Number *</label>
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Warp / Serial Code:</label>
                 <input
                   type="text"
                   placeholder="e.g. SN-772183-A"
@@ -1292,7 +1292,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         <span>Receipt Columns Sequence</span>
                       </div>
                       <p className="text-[10.5px] text-slate-500 leading-relaxed font-bold">
-                        Requires columns: Account No, Consumer Name, Father Name, Meter Type, Meter No, Readings, Letter No, Make, Reason, Origin Division.
+                        Requires columns: Account No, Consumer Name, Father Name, Meter Type, Meter No, Readings, Warp / Serial Code, Make, Reason, Origin Division.
                       </p>
                     </div>
 
