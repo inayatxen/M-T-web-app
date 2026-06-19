@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Boxes, 
   Search, 
@@ -16,21 +16,40 @@ import {
   Database,
   Trash2,
   RefreshCw,
-  Cpu
+  Cpu,
+  ArrowRightLeft,
+  Check,
+  X
 } from 'lucide-react';
 import { Meter, StockStatus, MeterCategory } from '../types';
 
 interface InventoryViewProps {
   meters: Meter[];
   onUpdateStockStatus: (meterId: string, status: StockStatus) => void;
+  onUpdateBulkStockStatus?: (meterIds: string[], status: StockStatus) => void;
   currentUser: any;
 }
 
-export default function InventoryView({ meters, onUpdateStockStatus, currentUser }: InventoryViewProps) {
+export default function InventoryView({ 
+  meters, 
+  onUpdateStockStatus, 
+  onUpdateBulkStockStatus, 
+  currentUser 
+}: InventoryViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [editingMeterId, setEditingMeterId] = useState<string | null>(null);
+  
+  // Selection & Bulk State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<StockStatus>('In Store');
+  const [bulkSuccess, setBulkSuccess] = useState<string>('');
+
+  useEffect(() => {
+    // Clear selection when filters change to avoid accidental out-of-view bulk actions
+    setSelectedIds([]);
+  }, [searchQuery, selectedCategory, selectedStatus]);
   
   const categoriesList = [
     { value: 'all', label: 'All Categories' },
@@ -86,6 +105,20 @@ export default function InventoryView({ meters, onUpdateStockStatus, currentUser
   const handlesStatusChange = (meterId: string, status: StockStatus) => {
     onUpdateStockStatus(meterId, status);
     setEditingMeterId(null);
+  };
+
+  const handleBulkMove = () => {
+    if (selectedIds.length === 0) return;
+    if (onUpdateBulkStockStatus) {
+      onUpdateBulkStockStatus(selectedIds, bulkStatus);
+    } else {
+      selectedIds.forEach(id => onUpdateStockStatus(id, bulkStatus));
+    }
+    setBulkSuccess(`Successfully batch-moved ${selectedIds.length} meters to "${bulkStatus}" stage!`);
+    setSelectedIds([]);
+    setTimeout(() => {
+      setBulkSuccess('');
+    }, 4500);
   };
 
   return (
@@ -173,11 +206,91 @@ export default function InventoryView({ meters, onUpdateStockStatus, currentUser
           </div>
         </div>
 
+        {/* Bulk Action Panel */}
+        {selectedIds.length > 0 && isAuthorizedToEdit && (
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-1">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-600 text-white rounded-xl shrink-0 shadow-sm">
+                <ArrowRightLeft className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  Bulk Meter Movement Operator
+                  <span className="bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                    {selectedIds.length} Selected
+                  </span>
+                </h4>
+                <p className="text-[10px] text-slate-500 font-medium">Batch reassign the warehouse location or dispatch state for designated hardware assets instantly.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-indigo-100">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Move To:</span>
+                <select
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value as StockStatus)}
+                  className="text-xs font-bold text-slate-800 bg-transparent border-none p-0 focus:outline-none focus:ring-0 cursor-pointer min-w-[120px]"
+                >
+                  {stockStatuses.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleBulkMove}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] uppercase tracking-wide rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[34px]"
+              >
+                <Check className="w-4 h-4" />
+                Dispatch State
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds([])}
+                className="px-2.5 py-1.5 bg-slate-205 text-slate-600 hover:bg-slate-300 text-xs font-bold uppercase rounded-lg active:scale-95 transition-all cursor-pointer flex items-center gap-1 font-mono hover:text-slate-900"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        {bulkSuccess && (
+          <div className="bg-emerald-50 border-b border-emerald-100 p-3 text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in duration-200">
+            <Check className="w-4 h-4 text-emerald-600 animate-bounce" />
+            <span>{bulkSuccess}</span>
+          </div>
+        )}
+
         {/* Inventory Register Grid table */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-[10px] uppercase tracking-wider">
+                {isAuthorizedToEdit && (
+                  <th className="p-4 w-12 text-center">
+                    <input 
+                      type="checkbox"
+                      checked={filteredMeters.length > 0 && filteredMeters.every(m => selectedIds.includes(m.id))}
+                      onChange={() => {
+                        const allSelected = filteredMeters.every(m => selectedIds.includes(m.id));
+                        if (allSelected) {
+                          const filteredIds = filteredMeters.map(m => m.id);
+                          setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
+                        } else {
+                          const newIds = [...selectedIds];
+                          filteredMeters.forEach(m => {
+                            if (!newIds.includes(m.id)) {
+                              newIds.push(m.id);
+                            }
+                          });
+                          setSelectedIds(newIds);
+                        }
+                      }}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                    />
+                  </th>
+                )}
                 <th className="p-4">Meter ID</th>
                 <th className="p-4">Category Class</th>
                 <th className="p-4">Hardware Serial Code</th>
@@ -190,7 +303,7 @@ export default function InventoryView({ meters, onUpdateStockStatus, currentUser
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {filteredMeters.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-slate-400">
+                  <td colSpan={isAuthorizedToEdit ? 8 : 7} className="p-10 text-center text-slate-400">
                     <HelpCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="font-bold text-slate-700">No Hardware Found matching filters</p>
                     <p className="text-[11px] mt-1">Try resetting category specifications or query search keyword.</p>
@@ -198,7 +311,23 @@ export default function InventoryView({ meters, onUpdateStockStatus, currentUser
                 </tr>
               ) : (
                 filteredMeters.map(m => (
-                  <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={m.id} className={`hover:bg-slate-50/50 transition-colors ${selectedIds.includes(m.id) ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''}`}>
+                    {isAuthorizedToEdit && (
+                      <td className="p-4 text-center">
+                        <input 
+                          type="checkbox"
+                          checked={selectedIds.includes(m.id)}
+                          onChange={() => {
+                            if (selectedIds.includes(m.id)) {
+                              setSelectedIds(prev => prev.filter(id => id !== m.id));
+                            } else {
+                              setSelectedIds(prev => [...prev, m.id]);
+                            }
+                          }}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                        />
+                      </td>
+                    )}
                     <td className="p-4">
                       <span className="font-extrabold text-slate-900 font-mono text-xs">{m.meterNumber}</span>
                     </td>

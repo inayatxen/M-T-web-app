@@ -391,6 +391,24 @@ export default function App() {
     );
   };
 
+  const handleUpdateBulkStockStatus = (meterIds: string[], status: StockStatus) => {
+    const updated = meters.map(m => {
+      if (meterIds.includes(m.id)) {
+        return { ...m, stockStatus: status };
+      }
+      return m;
+    });
+
+    setMeters(updated);
+    saveState('meters', updated);
+
+    recordAuditTrail(
+      `Bulk dispatched stock condition for ${meterIds.length} meters`,
+      "Stock Status: Various",
+      `Stock Status: ${status}`
+    );
+  };
+
   // C. Core Calibration bench tester (Sign and issue certification)
   const handleAddReportAndVerifyMeter = (updatedMeter: Meter, report: TestReport) => {
     // 1. Update meters
@@ -1055,6 +1073,7 @@ export default function App() {
                 <InventoryView 
                   meters={meters} 
                   onUpdateStockStatus={handleUpdateStockStatus} 
+                  onUpdateBulkStockStatus={handleUpdateBulkStockStatus}
                   currentUser={currentUser} 
                 />
               )}
