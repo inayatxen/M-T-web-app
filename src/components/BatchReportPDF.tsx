@@ -87,6 +87,16 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
                 idx < reports.length - 1 ? 'print-page-break' : ''
               }`}
             >
+              {/* Centered Watermark Logo */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
+                <img 
+                  src={pescoLogo} 
+                  alt="Watermark Logo" 
+                  className="w-105 h-105 object-contain" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
               {/* Certificate Decorative Border */}
               <div className="absolute inset-4 border-2 border-indigo-700/20 pointer-events-none print:hidden" />
               <div className="absolute inset-5 border border-indigo-700/10 pointer-events-none print:hidden" />

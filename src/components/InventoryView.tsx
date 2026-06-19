@@ -19,9 +19,12 @@ import {
   Cpu,
   ArrowRightLeft,
   Check,
-  X
+  X,
+  Printer,
+  QrCode
 } from 'lucide-react';
 import { Meter, StockStatus, MeterCategory, EquipmentReceipt } from '../types';
+import BarcodeLabelModal from './BarcodeLabelModal';
 
 interface InventoryViewProps {
   meters: Meter[];
@@ -44,6 +47,10 @@ export default function InventoryView({
   const [editingMeterId, setEditingMeterId] = useState<string | null>(null);
   const [expandedMeterId, setExpandedMeterId] = useState<string | null>(null);
   
+  // Printing state triggers
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [metersToPrint, setMetersToPrint] = useState<Meter[]>([]);
+
   // Selection & Bulk State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<StockStatus>('In Store');
@@ -127,7 +134,7 @@ export default function InventoryView({
   return (
     <div className="space-y-6">
       {/* Header Profile Info */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
             <Boxes className="w-5 h-5 text-indigo-600" />
@@ -135,9 +142,23 @@ export default function InventoryView({
           </h2>
           <p className="text-xs text-slate-500">Track and dispatch electrical meters inside physical warehousing and calibration cells.</p>
         </div>
-        <div className="flex items-center gap-1.5 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-xs font-semibold text-indigo-800">
-          <Database className="w-4 h-4 text-indigo-600" />
-          Active Ledger: {meters.length} registered hardware modules
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMetersToPrint(filteredMeters);
+              setIsPrintModalOpen(true);
+            }}
+            title="Batch generate and print labels for matching search list results"
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-[10px] uppercase tracking-wide rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer h-[34px]"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print Ledger Labels ({filteredMeters.length})
+          </button>
+          <div className="flex items-center gap-1.5 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-xs font-semibold text-indigo-800 h-[34px]">
+            <Database className="w-4 h-4 text-indigo-600" />
+            Active Ledger: {meters.length} registered hardware modules
+          </div>
         </div>
       </div>
 
@@ -247,6 +268,18 @@ export default function InventoryView({
                 >
                   <Check className="w-4 h-4" />
                   Dispatch State
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selectedMetersList = meters.filter(m => selectedIds.includes(m.id));
+                    setMetersToPrint(selectedMetersList);
+                    setIsPrintModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] uppercase tracking-wide rounded-lg flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer min-h-[34px]"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Labels ({selectedIds.length})
                 </button>
                 <button
                   type="button"
@@ -448,6 +481,19 @@ export default function InventoryView({
                             )}
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMetersToPrint([m]);
+                              setIsPrintModalOpen(true);
+                            }}
+                            title="Generate and print formatted thermal label for this meter"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-indigo-650 dark:text-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-700 bg-indigo-50/10 hover:border-indigo-300 rounded-lg font-black text-[10px] border border-indigo-200/50 transition-all cursor-pointer shadow-xs active:scale-95"
+                          >
+                            <Printer className="w-3 h-3 shrink-0" />
+                            <span>Label</span>
+                          </button>
+
                           {isAuthorizedToEdit && (
                             editingMeterId === m.id ? (
                               <button
@@ -574,6 +620,16 @@ export default function InventoryView({
         </div>
 
       </div>
+
+      {/* Barcode & QR Sheet Tag Print Modal Overlay */}
+      <BarcodeLabelModal 
+        isOpen={isPrintModalOpen}
+        onClose={() => {
+          setIsPrintModalOpen(false);
+          setMetersToPrint([]);
+        }}
+        selectedMeters={metersToPrint}
+      />
     </div>
   );
 }

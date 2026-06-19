@@ -6,6 +6,7 @@
 import React from 'react';
 import { TestReport } from '../types';
 import { formatPKTDate } from '../utils';
+import pescoLogo from '../assets/images/pesco_logo.jpg';
 
 interface TwoPageCTReportProps {
   report: TestReport;
@@ -66,6 +67,16 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         className="bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
         style={{ pageBreakAfter: 'always' }}
       >
+        {/* Centered Watermark Logo */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
+          <img 
+            src={pescoLogo} 
+            alt="Watermark Logo" 
+            className="w-105 h-105 object-contain" 
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
         {/* Decorative Border */}
         <div className="absolute inset-4 border border-indigo-700/10 pointer-events-none print:hidden" />
 
@@ -450,6 +461,16 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
       <div 
         className="bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
       >
+        {/* Centered Watermark Logo */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
+          <img 
+            src={pescoLogo} 
+            alt="Watermark Logo" 
+            className="w-105 h-105 object-contain" 
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
         {/* Decorative Border */}
         <div className="absolute inset-4 border border-indigo-700/10 pointer-events-none print:hidden" />
 

@@ -82,6 +82,64 @@ import { getPKTISOString, getPKTDateString, formatPKTDateTime } from './utils';
 import SupabaseTodosView from './components/SupabaseTodosView';
 import pescoLogo from './assets/images/pesco_logo.jpg';
 
+interface ThemeColorPalette {
+  id: string;
+  name: string;
+  primary: string;
+  primaryHover: string;
+  primaryLight: string;
+  primaryLightBg: string;
+  darkAccent: string;
+}
+
+const COLOR_PALETTES: ThemeColorPalette[] = [
+  {
+    id: 'blue',
+    name: 'PESCO Ocean Blue',
+    primary: '#2563eb',
+    primaryHover: '#1d4ed8',
+    primaryLight: 'rgba(37, 99, 235, 0.15)',
+    primaryLightBg: 'rgba(37, 99, 235, 0.05)',
+    darkAccent: '#1e1b4b',
+  },
+  {
+    id: 'emerald',
+    name: 'Eco Forest Green',
+    primary: '#0d9488',
+    primaryHover: '#0f766e',
+    primaryLight: 'rgba(13, 148, 136, 0.15)',
+    primaryLightBg: 'rgba(13, 148, 136, 0.05)',
+    darkAccent: '#115e59',
+  },
+  {
+    id: 'amber',
+    name: 'Industrial Amber',
+    primary: '#d97706',
+    primaryHover: '#b45309',
+    primaryLight: 'rgba(217, 119, 6, 0.15)',
+    primaryLightBg: 'rgba(217, 119, 6, 0.05)',
+    darkAccent: '#78350f',
+  },
+  {
+    id: 'violet',
+    name: 'Royal Lab Violet',
+    primary: '#7c3aed',
+    primaryHover: '#6d28d9',
+    primaryLight: 'rgba(124, 58, 237, 0.15)',
+    primaryLightBg: 'rgba(124, 58, 237, 0.05)',
+    darkAccent: '#4c1d95',
+  },
+  {
+    id: 'rose',
+    name: 'Crimson Power Red',
+    primary: '#e11d48',
+    primaryHover: '#be123c',
+    primaryLight: 'rgba(225, 29, 72, 0.15)',
+    primaryLightBg: 'rgba(225, 29, 72, 0.05)',
+    darkAccent: '#881337',
+  }
+];
+
 export default function App() {
   // Live PKT clock state
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -96,6 +154,15 @@ export default function App() {
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [selectedPaletteId, setSelectedPaletteId] = useState<string>(() => {
+    return localStorage.getItem('mtlms_color_palette') || 'blue';
+  });
+
+  const handleSelectPalette = (id: string) => {
+    setSelectedPaletteId(id);
+    localStorage.setItem('mtlms_color_palette', id);
+  };
+
   const [activePageId, setActivePageId] = useState<string>('dashboard');
 
   // Master Database state registers
@@ -933,8 +1000,57 @@ export default function App() {
 
   const activeUser = currentUser;
 
+  const activePalette = COLOR_PALETTES.find(p => p.id === selectedPaletteId) || COLOR_PALETTES[0];
+
   return (
     <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
+      <style>{`
+        :root {
+          --primary-color: ${activePalette.primary};
+          --primary-hover: ${activePalette.primaryHover};
+          --primary-light: ${activePalette.primaryLight};
+          --primary-light-bg: ${activePalette.primaryLightBg};
+          --primary-dark: ${activePalette.darkAccent};
+        }
+
+        /* Force brand overrides across standard Tailwind classes dynamically */
+        .bg-blue-600, .bg-indigo-600 {
+          background-color: var(--primary-color) !important;
+        }
+        .hover\\:bg-blue-700:hover, .hover\\:bg-indigo-700:hover {
+          background-color: var(--primary-hover) !important;
+        }
+        .text-blue-600, .text-indigo-600, .text-indigo-700 {
+          color: var(--primary-color) !important;
+        }
+        .border-blue-600, .border-indigo-600 {
+          border-color: var(--primary-color) !important;
+        }
+        .border-blue-100, .border-indigo-100 {
+          border-color: var(--primary-light) !important;
+        }
+        .text-indigo-900, .text-indigo-950 {
+          color: var(--primary-dark) !important;
+        }
+        .from-blue-50, .from-indigo-50 {
+          background-image: linear-gradient(to right, var(--primary-light-bg), transparent) !important;
+        }
+        .to-blue-50, .to-indigo-50 {
+          background-image: linear-gradient(to left, var(--primary-light-bg), transparent) !important;
+        }
+        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/20, .bg-blue-50\\/20 {
+          background-color: var(--primary-light-bg) !important;
+        }
+        .accent-indigo-600, .accent-blue-600 {
+          accent-color: var(--primary-color) !important;
+        }
+        .ring-indigo-600, .ring-blue-650 {
+          --tw-ring-color: var(--primary-color) !important;
+        }
+        .focus\\:ring-indigo-500:focus, .focus\\:ring-blue-500:focus {
+          --tw-ring-color: var(--primary-color) !important;
+        }
+      `}</style>
       
       {/* LEFT NAVIGATION DRAWER (Utility Blue Sidebar) - Hidden during print */}
       <aside className={`w-60 border-r shrink-0 flex flex-col justify-between print:hidden h-screen sticky top-0 overflow-y-auto ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300'}`}>
@@ -1053,6 +1169,35 @@ export default function App() {
             <span className="text-[9px] px-1 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-bold uppercase">
               Secure Core
             </span>
+          </div>
+
+          {/* Color Scheme Picker */}
+          <div className="space-y-1.5 px-0.5 pb-1 border-b border-slate-800/60">
+            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">
+              App Color Scheme
+            </span>
+            <div className="flex items-center gap-1.5 justify-between">
+              {COLOR_PALETTES.map((pal) => {
+                const isSelected = selectedPaletteId === pal.id;
+                return (
+                  <button
+                    key={pal.id}
+                    onClick={() => handleSelectPalette(pal.id)}
+                    title={pal.name}
+                    className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all cursor-pointer ${
+                      isSelected 
+                        ? 'border-white scale-110 shadow-md ring-2 ring-blue-500/40 ring-offset-1 ring-offset-slate-950' 
+                        : 'border-slate-700/50 opacity-75 hover:opacity-100 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: pal.primary }}
+                  >
+                    {isSelected && (
+                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Theme Shift */}

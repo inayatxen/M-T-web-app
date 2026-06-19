@@ -28,7 +28,8 @@ import {
   Layers,
   ChevronDown,
   RefreshCw,
-  FileDown
+  FileDown,
+  Table
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -41,7 +42,7 @@ import {
   Legend, 
   Cell 
 } from 'recharts';
-import { TestReport, Meter, CTRecord, PTRecord, CommitteeCase } from '../types';
+import { TestReport, Meter, CTRecord, PTRecord, CommitteeCase, MeterCategory } from '../types';
 import { parseRegionalAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY, formatPKTDateTime, getPKTDateString, parseAccountNumber } from '../utils';
 
 interface ReportsArchiveViewProps {
@@ -66,8 +67,16 @@ export default function ReportsArchiveView({
   onOpenBatchReportPDF
 }: ReportsArchiveViewProps) {
   
-  const [activeSubTab, setActiveSubTab] = useState<'compilation' | 'archive' | 'search' | 'qr' | 'periodicLogs'>('archive');
+  const [activeSubTab, setActiveSubTab] = useState<'compilation' | 'archive' | 'search' | 'qr' | 'periodicLogs' | 'tabulatedResults'>('archive');
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+
+  // Tabulated results states
+  const [tabSearchQuery, setTabSearchQuery] = useState('');
+  const [tabCategoryFilter, setTabCategoryFilter] = useState<'all' | MeterCategory>('all');
+  const [tabVerdictFilter, setTabVerdictFilter] = useState<'all' | 'Pass' | 'Fail'>('all');
+  const [tabStartDate, setTabStartDate] = useState('');
+  const [tabEndDate, setTabEndDate] = useState('');
+  const [isTabulatedPrintOpen, setIsTabulatedPrintOpen] = useState(false);
 
   // Periodic and Jurisdictional Report states
   const [repLevel, setRepLevel] = useState<'pesco' | 'circle' | 'division' | 'subdivision'>('pesco');
@@ -504,6 +513,15 @@ export default function ReportsArchiveView({
           >
             <Layers className="w-3 h-3 text-blue-500" />
             <span>Periodic Reports</span>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('tabulatedResults')}
+            className={`px-3 py-1 text-xs font-bold rounded transition-all flex items-center gap-1 ${
+              activeSubTab === 'tabulatedResults' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Table className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Tabulated Results</span>
           </button>
         </div>
       </div>
@@ -2143,6 +2161,584 @@ export default function ReportsArchiveView({
                     </div>
 
                   </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        );
+      })()}
+
+      {/* TABULATED TEST RESULTS VIEW & PRINT COMPONENT */}
+      {activeSubTab === 'tabulatedResults' && (() => {
+        const getCategoryLabel = (cat: string) => {
+          switch (cat) {
+            case 'single_phase': return 'Single Phase Static';
+            case 'three_phase_whole': return '3-Phase Whole Current';
+            case 'three_phase_ct': return '3-Phase CT Operated';
+            case 'three_phase_ct_pt': return '3-Phase CT & PT';
+            case 'smart': return 'Smart AMR Meter';
+            default: return cat;
+          }
+        };
+
+        const tabulatedFilteredReports = reports.filter(r => {
+          if (tabSearchQuery.trim()) {
+            const q = tabSearchQuery.toLowerCase();
+            const matchReportNo = r.reportNumber.toLowerCase().includes(q);
+            const matchConsumer = r.consumerName.toLowerCase().includes(q);
+            const matchAccount = r.accountNumber.toLowerCase().includes(q);
+            const matchMeterNo = r.meterNumber.toLowerCase().includes(q);
+            const matchSerial = r.serialNumber.toLowerCase().includes(q);
+            const matchMake = r.meterMake.toLowerCase().includes(q);
+            const matchChecked = r.checkedBy.toLowerCase().includes(q);
+            if (!matchReportNo && !matchConsumer && !matchAccount && !matchMeterNo && !matchSerial && !matchMake && !matchChecked) {
+              return false;
+            }
+          }
+
+          if (tabCategoryFilter !== 'all') {
+            if (r.meterType !== tabCategoryFilter) return false;
+          }
+
+          if (tabVerdictFilter !== 'all') {
+            if (r.accuracyTest.passFail !== tabVerdictFilter) return false;
+          }
+
+          const reportDate = r.testDate || r.approvalDate || '';
+          if (tabStartDate && reportDate < tabStartDate) return false;
+          if (tabEndDate && reportDate > tabEndDate) return false;
+
+          return true;
+        });
+
+        const tabFilteredTotal = tabulatedFilteredReports.length;
+        const tabFilteredPassed = tabulatedFilteredReports.filter(r => r.accuracyTest.passFail === 'Pass').length;
+        const tabFilteredFailed = tabulatedFilteredReports.filter(r => r.accuracyTest.passFail === 'Fail').length;
+        const tabFilteredPassRate = tabFilteredTotal > 0 ? Math.round((tabFilteredPassed / tabFilteredTotal) * 100) : 0;
+
+        const handleExportTabulatedCSV = () => {
+          const rows: string[][] = [
+            ['PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO)'],
+            ['METERS TESTING LABORATORY & COMPLIANCE LEDGER'],
+            ['COMPREHENSIVE TABULATED ALL CALIBRATION AND TEST RESULTS'],
+            ['Exported On', formatPKTDateTime()],
+            ['Active Filters', `Search: ${tabSearchQuery || 'All'} | Type: ${tabCategoryFilter} | Verdict: ${tabVerdictFilter} | Range: ${tabStartDate || 'Any'} to ${tabEndDate || 'Any'}`],
+            [],
+            ['SNo', 'Report Number', 'Test Date', 'Account Number', 'Consumer Name', 'Meter Number', 'Serial Number', 'Make', 'Category', 'Test Load', 'PF', 'Error %', 'Limit', 'Verdict', 'Checked By']
+          ];
+
+          tabulatedFilteredReports.forEach((r, idx) => {
+            rows.push([
+              String(idx + 1),
+              r.reportNumber,
+              r.testDate || r.approvalDate,
+              r.accountNumber,
+              r.consumerName,
+              r.meterNumber,
+              r.serialNumber,
+              r.meterMake,
+              getCategoryLabel(r.meterType),
+              r.accuracyTest.testLoad,
+              r.accuracyTest.powerFactor,
+              r.accuracyTest.errorPercentage,
+              r.accuracyTest.standardLimit,
+              r.accuracyTest.passFail,
+              r.checkedBy
+            ]);
+          });
+
+          const inlineEscapeCsvCell = (val: string) => {
+            if (val === undefined || val === null) return '';
+            const valStr = String(val);
+            if (valStr.includes(',') || valStr.includes('"') || valStr.includes('\n') || valStr.includes('\r')) {
+              return `"${valStr.replace(/"/g, '""')}"`;
+            }
+            return valStr;
+          };
+
+          const csvContent = rows
+            .map(row => row.map(inlineEscapeCsvCell).join(','))
+            .join('\r\n');
+
+          const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], {
+            type: 'text/csv;charset=utf-8;'
+          });
+
+          const filename = `PESCO_Tabulated_Test_Results_${getPKTDateString()}.csv`;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', filename);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        return (
+          <div className="space-y-6">
+            
+            {/* Search & Setup Filters panel */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-805 rounded p-4 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row border-b border-slate-100 dark:border-slate-800 pb-3 justify-between items-start sm:items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <Table className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase text-slate-850 dark:text-white tracking-wider flex items-center gap-1.5">
+                      Tabulated Test Results Register
+                    </h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-450 leading-none">Filters, search, and bulk export, or preview a high-density, print-optimized ledger output.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleExportTabulatedCSV}
+                    disabled={tabFilteredTotal === 0}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-650 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export currently filtered rows to spreadsheet form"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>Export CSV</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setIsTabulatedPrintOpen(true)}
+                    disabled={tabFilteredTotal === 0}
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] rounded border border-indigo-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 duration-150"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print Tabulated Ledger ({tabFilteredTotal})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filtering Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {/* Search */}
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-widest block font-sans">
+                    Search Searchable Parameters
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search report, consumer, account, serial..."
+                      value={tabSearchQuery}
+                      onChange={(e) => setTabSearchQuery(e.target.value)}
+                      className="w-full text-xs pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white"
+                    />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  </div>
+                </div>
+
+                {/* Meter Type */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-widest block font-sans">
+                    Meter Category
+                  </label>
+                  <select
+                    value={tabCategoryFilter}
+                    onChange={(e) => setTabCategoryFilter(e.target.value as any)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-bold"
+                  >
+                    <option value="all">All categories</option>
+                    <option value="single_phase">Single Phase Static</option>
+                    <option value="three_phase_whole">3-Phase Whole Current</option>
+                    <option value="three_phase_ct">3-Phase CT Operated</option>
+                    <option value="three_phase_ct_pt">3-Phase CT & PT</option>
+                    <option value="smart">Smart AMR Meter</option>
+                  </select>
+                </div>
+
+                {/* Verdict */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-555 uppercase tracking-widest block font-sans">
+                    Bench Verdict Out
+                  </label>
+                  <select
+                    value={tabVerdictFilter}
+                    onChange={(e) => setTabVerdictFilter(e.target.value as any)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-bold"
+                  >
+                    <option value="all">All Verdicts</option>
+                    <option value="Pass">Passed / Approved</option>
+                    <option value="Fail">Defective / Rejected</option>
+                  </select>
+                </div>
+
+                {/* Filters Reset */}
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setTabSearchQuery('');
+                      setTabCategoryFilter('all');
+                      setTabVerdictFilter('all');
+                      setTabStartDate('');
+                      setTabEndDate('');
+                    }}
+                    className="w-full py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-805 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 rounded font-black text-xs text-center transition active:scale-95 flex items-center justify-center min-h-[30px]"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Filters block */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-widest block font-sans">
+                    Testing Interval Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={tabStartDate}
+                    onChange={(e) => setTabStartDate(e.target.value)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-450 dark:text-slate-550 uppercase tracking-widest block font-sans">
+                    Testing Interval End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={tabEndDate}
+                    onChange={(e) => setTabEndDate(e.target.value)}
+                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Breakdown Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded shadow-xs relative overflow-hidden">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider block font-sans">Total Filtered</span>
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-1 block">{tabFilteredTotal}</span>
+                <p className="text-[9.5px] mt-0.5 text-slate-450 font-sans">Units matching query</p>
+                <div className="absolute right-3 bottom-3 w-7 h-7 bg-blue-500/5 rounded-full flex items-center justify-center text-blue-500 text-xs font-mono">#</div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded shadow-xs relative overflow-hidden">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider block font-sans">Approved compliant</span>
+                <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">{tabFilteredPassed}</span>
+                <p className="text-[9.5px] mt-0.5 text-emerald-600/80 font-sans">Calibration passed</p>
+                <div className="absolute right-3 bottom-3 w-7 h-7 bg-emerald-500/5 rounded-full flex items-center justify-center text-emerald-500 text-xs font-bold leading-none">&check;</div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded shadow-xs relative overflow-hidden">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider block font-sans">Defective rejected</span>
+                <span className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1 block">{tabFilteredFailed}</span>
+                <p className="text-[9.5px] mt-0.5 text-rose-500/70 font-sans">WAPDA M&amp;T Class failure</p>
+                <div className="absolute right-3 bottom-3 w-7 h-7 bg-rose-500/5 rounded-full flex items-center justify-center text-rose-500 text-xs font-mono">&times;</div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 rounded shadow-xs relative overflow-hidden">
+                <span className="text-[9px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider block font-sans">Inspected Pass Rate</span>
+                <span className={`text-xl font-bold font-mono mt-1 block ${tabFilteredPassRate >= 85 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>{tabFilteredPassRate}%</span>
+                <p className="text-[9.5px] mt-0.5 text-slate-450 font-sans">Precision compliance</p>
+                <div className="absolute right-3 bottom-3 w-7 h-7 bg-purple-500/5 rounded-full flex items-center justify-center text-purple-500 text-[10px] font-bold">%</div>
+              </div>
+            </div>
+
+            {/* List Table Data Grid */}
+            <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+              <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-850/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-350">
+                  Tabulated Record Registry ({tabFilteredTotal} items)
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 select-none">Accuracy Class Reference limits: &plusmn;1.0%</span>
+              </div>
+
+              <div className="overflow-x-auto text-[11px] sm:text-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-850/60 text-slate-600 dark:text-slate-400 font-extrabold border-b border-slate-200 dark:border-slate-805 uppercase text-[9px] tracking-wider select-none">
+                      <th className="p-3 w-12 text-center">S.No</th>
+                      <th className="p-3">Report Number</th>
+                      <th className="p-3">Test Date</th>
+                      <th className="p-3">Consumer &amp; Location</th>
+                      <th className="p-3">Meter Hardware</th>
+                      <th className="p-3">Category</th>
+                      <th className="p-3">Applied test params</th>
+                      <th className="p-3 text-center">Accuracy Class Error</th>
+                      <th className="p-3 text-center">Bench Verdict</th>
+                      <th className="p-3">Calibration Eng</th>
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-805 dark:text-slate-300">
+                    {tabulatedFilteredReports.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="p-12 text-center text-slate-400">
+                          <HelpCircle className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+                          <p className="font-bold text-slate-700 dark:text-slate-300 text-xs">No Calibration Results Found</p>
+                          <p className="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">No test results registered inside standard database registry matched your filters. Alter query params or pick other categories to display results.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      tabulatedFilteredReports.map((r, idx) => {
+                        const isPass = r.accuracyTest.passFail === 'Pass';
+                        return (
+                          <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 duration-100 divide-x divide-transparent">
+                            <td className="p-3 text-center font-bold text-slate-550 dark:text-slate-400 font-mono text-[10px] select-none">{idx + 1}</td>
+                            <td className="p-3 font-black text-slate-900 dark:text-white font-mono tracking-tight">{r.reportNumber}</td>
+                            <td className="p-3 font-mono text-slate-650 dark:text-slate-350">{r.testDate || r.approvalDate}</td>
+                            <td className="p-3 max-w-[200px]">
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-slate-100 truncate block uppercase leading-tight text-[11px] font-sans">{r.consumerName}</span>
+                                <span className="text-[9.5px] font-mono text-slate-455 block leading-tight mt-0.5">Acc: {r.accountNumber}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-slate-100 truncate block leading-tight font-sans">No: {r.meterNumber}</span>
+                                <span className="text-[9.5px] text-slate-455 block leading-tight mt-0.5 font-mono">S/N: {r.serialNumber} • {r.meterMake}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 font-semibold text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-tighter font-sans">{getCategoryLabel(r.meterType)}</td>
+                            <td className="p-3 font-mono text-[10px]">
+                              <div>V: {r.accuracyTest.testVoltage || '230 V'}</div>
+                              <div>I: {r.accuracyTest.testCurrent || r.accuracyTest.testLoad || '10 A'} • PF: {r.accuracyTest.powerFactor || '1.0'}</div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-mono font-black text-xs text-blue-600 dark:text-blue-400">
+                                {r.accuracyTest.errorPercentage}
+                              </div>
+                              <div className="text-[8.5px] text-slate-450 mt-0.5 font-sans">Limit {r.accuracyTest.standardLimit}</div>
+                              {r.ctPtExtra?.resultsCheckingSlow && (
+                                <div className="text-[8px] font-bold text-rose-500 font-sans tracking-tight leading-none mt-1">Slow Check: {r.ctPtExtra.resultsCheckingSlow}%</div>
+                              )}
+                            </td>
+                            <td className="p-3 text-center select-none">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase leading-none tracking-wider font-sans ${
+                                isPass 
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650' 
+                                  : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600'
+                              }`}>
+                                <span className={`h-1 w-1 rounded-full ${isPass ? 'bg-emerald-650' : 'bg-rose-600'}`} />
+                                {isPass ? 'Pass' : 'Failed'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div>
+                                <span className="font-bold text-slate-705 dark:text-slate-300 block text-[10.5px] font-sans">{r.checkedBy}</span>
+                                <span className="text-[8.5px] text-slate-400 block tracking-tight font-sans">{r.checkedByDesignation || 'Testing Eng'}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => onOpenReportPDF(r)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-blue-650 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded border border-blue-200/50 hover:border-blue-300 font-bold text-[10px] uppercase cursor-pointer tracking-wider active:scale-95 transition"
+                              >
+                                <Printer className="w-3 h-3 shrink-0" />
+                                <span>Certificate</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* TABULATED PRINT LEADERSHIP OVERLAY MODAL */}
+            {isTabulatedPrintOpen && (
+              <div className="fixed inset-0 z-50 bg-slate-900/65 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                <div className="bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-6xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
+                  
+                  {/* Action row at bottom/top inside print modal overlay (hidden on physical paper) */}
+                  <div className="absolute top-4 right-4 flex gap-2 print:hidden z-10">
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Send to Printer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsTabulatedPrintOpen(false)}
+                      className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded transition border border-slate-300 cursor-pointer active:scale-95"
+                    >
+                      Close Preview
+                    </button>
+                  </div>
+
+                  {/* Header Letterhead for PESCO Official Regulatory Document */}
+                  <div className="space-y-6 text-slate-950 font-serif p-2">
+                    <div className="flex justify-between items-center border-b-4 border-double border-slate-900 pb-3">
+                      <div>
+                        <h1 className="text-xl font-black font-serif tracking-tight uppercase leading-none text-slate-900">
+                          Peshawar Electric Supply Company (PESCO)
+                        </h1>
+                        <p className="text-[11px] tracking-wide uppercase font-sans font-bold text-slate-650 mt-1 leading-tight">
+                          METERS TESTING LABORATORY &amp; COMPLIANCE DIVISION
+                        </p>
+                        <p className="text-[9.5px] text-slate-450 font-mono tracking-tight leading-none mt-0.5">
+                          Trace Reference: MTL-TABULATED-LOGS-{getPKTDateString()}
+                        </p>
+                      </div>
+
+                      <div className="text-right font-sans leading-tight">
+                        <span className="text-[9.5px] font-black uppercase text-white bg-slate-900 px-2.5 py-1 rounded leading-none block">
+                          CONSOLIDATED LEDGER DISPATCH
+                        </span>
+                        <p className="text-[10px] font-bold text-slate-700 mt-1.5 font-mono">
+                          Date: {getPKTDateString()}
+                        </p>
+                        <p className="text-[9.5px] text-slate-500 font-mono">
+                          Time: {formatPKTDateTime()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Meta Parameter card context details */}
+                    <div className="bg-slate-50 p-3.5 border border-slate-300 rounded space-y-1 font-sans">
+                      <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                        Master Tabulated Meter Calibration ledger record sheet
+                      </h2>
+                      <div className="grid grid-cols-4 gap-4 text-[10px] font-medium text-slate-600">
+                        <div>
+                          <span className="text-slate-450 block text-[8px] uppercase tracking-wider font-extrabold">Active Category Scope</span>
+                          <span className="font-bold text-slate-800 uppercase">{tabCategoryFilter === 'all' ? 'All Hardware Categories' : getCategoryLabel(tabCategoryFilter)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-455 block text-[8px] uppercase tracking-wider font-extrabold">Verdict Filter</span>
+                          <span className="font-bold text-slate-800 uppercase">{tabVerdictFilter === 'all' ? 'All Verdicts' : (tabVerdictFilter === 'Pass' ? 'Approved' : 'Failed')}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-455 block text-[8px] uppercase tracking-wider font-extrabold">Date Interval</span>
+                          <span className="font-bold text-slate-800">{tabStartDate || tabEndDate ? `${tabStartDate || 'Any'} - ${tabEndDate || 'Any'}` : 'All historic registries'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-455 block text-[8px] uppercase tracking-wider font-extrabold">Total Matched Records</span>
+                          <span className="font-black text-slate-950 font-mono">{tabFilteredTotal} items matched</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Official Dispatch Introductory Narrative Text */}
+                    <div className="text-[11px] leading-relaxed font-sans text-slate-800">
+                      We hereby record and certify the official calibration outcomes and measurement verdicts for consumers electrical energy meters tested inside PESCO primary compliance and calibration grid boards. Standard calibrations are mapped against trace comparator models Class 0.05 under continuous verification.
+                    </div>
+
+                    {/* Summary figures of printed sheet */}
+                    <div className="grid grid-cols-4 gap-2 border border-slate-400 rounded font-sans text-center bg-slate-50 py-2.5">
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Inspected Qty</span>
+                        <span className="text-base font-mono font-bold text-slate-900">{tabFilteredTotal}</span>
+                      </div>
+                      <div className="border-l border-slate-300">
+                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">Passed Qty</span>
+                        <span className="text-base font-mono font-bold text-emerald-700">{tabFilteredPassed}</span>
+                      </div>
+                      <div className="border-l border-slate-300">
+                        <span className="text-[8px] font-bold text-slate-550 uppercase tracking-widest block">Defective Qty</span>
+                        <span className="text-base font-mono font-bold text-rose-700">{tabFilteredFailed}</span>
+                      </div>
+                      <div className="border-l border-slate-300">
+                        <span className="text-[8px] font-bold text-slate-550 uppercase tracking-widest block">Compliance Rate</span>
+                        <span className="text-base font-mono font-bold text-slate-950">{tabFilteredPassRate}%</span>
+                      </div>
+                    </div>
+
+                    {/* High-density, print-optimized document table with thin borders */}
+                    <div className="space-y-1 font-sans">
+                      <table className="w-full text-left font-sans text-[10px] border-collapse" style={{ pageBreakInside: 'auto' }}>
+                        <thead>
+                          <tr className="border-y border-slate-700 text-[8.5px] font-black uppercase text-slate-700 font-sans tracking-wide bg-slate-100">
+                            <th className="p-1 px-1.5 text-center w-8">SN</th>
+                            <th className="p-1 px-1.5">Report No</th>
+                            <th className="p-1 px-1.5">Test Date</th>
+                            <th className="p-1 px-1.5">Consumer &amp; Account</th>
+                            <th className="p-1 px-1.5">Meter Hardware Params</th>
+                            <th className="p-1 px-1.5">Category</th>
+                            <th className="p-1 px-1.5">Test Load</th>
+                            <th className="p-1 px-1.5 font-mono text-center">Error %</th>
+                            <th className="p-1 px-1.5 text-center">Verdict</th>
+                            <th className="p-1 px-1.5">Signature Officer</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-300 text-slate-950">
+                          {tabulatedFilteredReports.map((r, idx) => (
+                            <tr key={r.id} style={{ pageBreakInside: 'avoid', pageBreakAfter: 'auto' }}>
+                              <td className="p-1.5 px-1 text-center font-bold font-mono text-[9px] text-slate-550">{idx + 1}</td>
+                              <td className="p-1.5 px-1.5 font-bold font-mono text-slate-950">{r.reportNumber}</td>
+                              <td className="p-1.5 px-1.5 font-mono">{r.testDate || r.approvalDate}</td>
+                              <td className="p-1.5 px-1.5 uppercase font-medium">
+                                <span className="font-extrabold block text-[9.5px] max-w-[130px] truncate">{r.consumerName}</span>
+                                <span className="text-[8.5px] font-mono text-slate-600 block mt-0.5 font-mono">Acc: {r.accountNumber}</span>
+                              </td>
+                              <td className="p-1.5 px-1.5">
+                                <span className="font-bold block text-[9.5px]">No: {r.meterNumber}</span>
+                                <span className="text-[8px] font-mono text-slate-655 block font-mono">S/N: {r.serialNumber} • {r.meterMake}</span>
+                              </td>
+                              <td className="p-1.5 px-1.5 uppercase text-[8.5px] font-bold text-slate-605">{getCategoryLabel(r.meterType)}</td>
+                              <td className="p-1.5 px-1.5 text-[8.5px] font-mono font-mono">
+                                Load: {r.accuracyTest.testLoad || '10A'} @ {r.accuracyTest.testVoltage || '230V'}
+                              </td>
+                              <td className="p-1.5 px-1.5 text-center font-mono font-black text-xs text-blue-900 font-mono">
+                                {r.accuracyTest.errorPercentage}
+                                {r.ctPtExtra?.resultsCheckingSlow && (
+                                  <div className="text-[7.5px] text-rose-700 font-sans tracking-tighter block leading-none mt-0.5">Slow: {r.ctPtExtra.resultsCheckingSlow}%</div>
+                                )}
+                              </td>
+                              <td className="p-1.5 px-1.5 text-center uppercase tracking-wider font-extrabold text-[8.5px]">
+                                <span className={r.accuracyTest.passFail === 'Pass' ? 'text-emerald-800' : 'text-rose-800'}>
+                                  {r.accuracyTest.passFail === 'Pass' ? 'PASSED' : 'DEFECTIVE'}
+                                </span>
+                              </td>
+                              <td className="p-1.5 px-1.5">
+                                <span className="font-bold block text-[9px]">{r.checkedBy}</span>
+                                <span className="text-[8px] text-slate-500 block leading-none">{r.checkedByDesignation || 'M&T Engineer'}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Official Sign sections for document authenticator seal space */}
+                    <div className="grid grid-cols-2 gap-10 pt-10 font-sans text-[11px]" style={{ pageBreakInside: 'avoid' }}>
+                      <div className="space-y-10">
+                        <p className="text-slate-500 select-none">
+                          Ledger Entries Compiled &amp; Audited By:
+                        </p>
+                        <div className="border-t border-slate-300 pt-1">
+                          <p className="font-bold text-slate-900">M. ABDULLAH KHAN</p>
+                          <p className="text-[9.5px] text-slate-500 font-medium leading-none">Director, Quality Assurance &amp; Grid Bench Compliance</p>
+                          <p className="text-[8.5px] text-slate-400 font-mono mt-0.5">ID No: QA-MTL-2601</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-10 text-right">
+                        <p className="text-slate-500 select-none font-sans">
+                          Authorized Signatures Counter-Sealed For Field Release:
+                        </p>
+                        <div className="border-t border-slate-300 pt-1">
+                          <p className="font-bold text-slate-900">CHIEF TESTING ENGINEER</p>
+                          <p className="text-[9.5px] text-slate-500 font-medium leading-none">Peshawar Grid Compliance Laboratory Master, PESCO</p>
+                          <p className="text-[8.5px] text-slate-400 font-mono mt-0.5">Class 0.05 Verification Seal Authority: PESCO-0099</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Security Verification disclaimer footer */}
+                    <div className="border-t border-slate-200 pt-3 text-[9px] text-slate-450 text-center font-sans">
+                      This formal master calibration journal is electronically compiled from verified and signed laboratory benches. It is protected under secure digital seals with WAPDA regulatory compliance keys.
+                    </div>
+
+                  </div>
+
                 </div>
               </div>
             )}
