@@ -994,6 +994,11 @@ export default function App() {
         onLoginSuccess={(user) => {
           setCurrentUser(user);
           localStorage.setItem('mtlms_currentUser', JSON.stringify(user));
+          // Check if on a mobile device to display the Laboratory Analytics Page (id: 'dashboard')
+          const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          if (isMobile) {
+            setActivePageId('dashboard');
+          }
         }} 
         isDarkMode={isDarkMode} 
         users={users}
