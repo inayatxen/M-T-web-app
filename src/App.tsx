@@ -32,7 +32,8 @@ import {
   Database,
   Trash2,
   Menu,
-  X
+  X,
+  Smartphone
 } from 'lucide-react';
 
 // Shared type signatures
@@ -79,6 +80,7 @@ import ReportsArchiveView from './components/ReportsArchiveView';
 import ManagementView from './components/ManagementView';
 import SupabaseSyncView from './components/SupabaseSyncView';
 import LoginView from './components/LoginView';
+import AndroidMeterApp from './components/AndroidMeterApp';
 import { supabase } from './utils/supabase';
 import { getPKTISOString, getPKTDateString, formatPKTDateTime } from './utils';
 import SupabaseTodosView from './components/SupabaseTodosView';
@@ -167,6 +169,7 @@ export default function App() {
 
   const [activePageId, setActivePageId] = useState<string>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isAndroidAppMode, setIsAndroidAppMode] = useState<boolean>(false);
 
   // Master Database state registers
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
@@ -988,23 +991,67 @@ export default function App() {
     setActivePageId(targetPage);
   };
 
-  if (!currentUser) {
+  if (isAndroidAppMode) {
     return (
-      <LoginView 
+      <AndroidMeterApp
+        currentUser={currentUser}
+        users={users}
+        receipts={receipts}
+        onAddReceipt={(record) => {
+          const newRecs = [record, ...receipts];
+          setReceipts(newRecs);
+          localStorage.setItem('mtlms_receipts', JSON.stringify(newRecs));
+          recordAuditTrail('Item Received (Android)', `S/N: ${record.deviceDetails}`, `Added new inward receipt via mobile`);
+        }}
+        onAddBulkReceipts={(records) => {
+          const newRecs = [...records, ...receipts];
+          setReceipts(newRecs);
+          localStorage.setItem('mtlms_receipts', JSON.stringify(newRecs));
+          recordAuditTrail('Bulk Intake (Android)', `${records.length} items`, `Processed batch registry array via mobile`);
+        }}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
           localStorage.setItem('mtlms_currentUser', JSON.stringify(user));
-          // Check if on a mobile device to display the Laboratory Analytics Page (id: 'dashboard')
-          const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          if (isMobile) {
-            setActivePageId('dashboard');
-            setIsMobileSidebarOpen(false);
-          }
-        }} 
-        isDarkMode={isDarkMode} 
-        users={users}
-        syncStatus={syncStatus}
+        }}
+        onSignOut={() => {
+          setCurrentUser(null);
+          localStorage.removeItem('mtlms_currentUser');
+        }}
+        onExitAndroidMode={() => setIsAndroidAppMode(false)}
       />
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <React.Fragment>
+        <div className="fixed top-4 right-4 z-[9999]">
+          <button 
+            onClick={() => setIsAndroidAppMode(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-full shadow backdrop-blur-md font-semibold text-xs border border-indigo-500/30 transition-all active:scale-95"
+            title="Launch native-feel Android App explicitly for Meter Inward Registry"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span className="hidden sm:inline">Android App Mode</span>
+            <span className="sm:hidden">App</span>
+          </button>
+        </div>
+        <LoginView 
+          onLoginSuccess={(user) => {
+            setCurrentUser(user);
+            localStorage.setItem('mtlms_currentUser', JSON.stringify(user));
+            // Check if on a mobile device to display the Laboratory Analytics Page (id: 'dashboard')
+            const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+              setActivePageId('dashboard');
+              setIsMobileSidebarOpen(false);
+            }
+          }} 
+          isDarkMode={isDarkMode} 
+          users={users}
+          syncStatus={syncStatus}
+        />
+      </React.Fragment>
     );
   }
 
@@ -1320,6 +1367,14 @@ export default function App() {
 
           {/* Dynamic notifications bell alarm indicator */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAndroidAppMode(true)}
+              className="text-[10px] hidden sm:flex items-center gap-1 px-2 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition"
+              title="Launch standalone mobile inward app"
+            >
+              <Smartphone className="w-3 h-3" />
+              <span>Android App</span>
+            </button>
             <Notifications 
               meters={meters} 
               cts={cts} 
