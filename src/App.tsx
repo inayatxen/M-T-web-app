@@ -30,7 +30,9 @@ import {
   ShieldCheck,
   Award,
   Database,
-  Trash2
+  Trash2,
+  Menu,
+  X
 } from 'lucide-react';
 
 // Shared type signatures
@@ -164,6 +166,7 @@ export default function App() {
   };
 
   const [activePageId, setActivePageId] = useState<string>('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   // Master Database state registers
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
@@ -940,6 +943,7 @@ export default function App() {
   const handleNavigateToPage = (pageId: string) => {
     setActivePageId(pageId);
     setActivePdfReport(null); // Clear preview when shifting
+    setIsMobileSidebarOpen(false); // Close responsive sidebar on tap
   };
 
   // List of active menu items corresponding with the requested 17 dashboards page
@@ -1000,75 +1004,34 @@ export default function App() {
 
   const activeUser = currentUser;
 
-  const activePalette = COLOR_PALETTES.find(p => p.id === selectedPaletteId) || COLOR_PALETTES[0];
-
-  return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
-      <style>{`
-        :root {
-          --primary-color: ${activePalette.primary};
-          --primary-hover: ${activePalette.primaryHover};
-          --primary-light: ${activePalette.primaryLight};
-          --primary-light-bg: ${activePalette.primaryLightBg};
-          --primary-dark: ${activePalette.darkAccent};
-        }
-
-        /* Force brand overrides across standard Tailwind classes dynamically */
-        .bg-blue-600, .bg-indigo-600 {
-          background-color: var(--primary-color) !important;
-        }
-        .hover\\:bg-blue-700:hover, .hover\\:bg-indigo-700:hover {
-          background-color: var(--primary-hover) !important;
-        }
-        .text-blue-600, .text-indigo-600, .text-indigo-700 {
-          color: var(--primary-color) !important;
-        }
-        .border-blue-600, .border-indigo-600 {
-          border-color: var(--primary-color) !important;
-        }
-        .border-blue-100, .border-indigo-100 {
-          border-color: var(--primary-light) !important;
-        }
-        .text-indigo-900, .text-indigo-950 {
-          color: var(--primary-dark) !important;
-        }
-        .from-blue-50, .from-indigo-50 {
-          background-image: linear-gradient(to right, var(--primary-light-bg), transparent) !important;
-        }
-        .to-blue-50, .to-indigo-50 {
-          background-image: linear-gradient(to left, var(--primary-light-bg), transparent) !important;
-        }
-        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/20, .bg-blue-50\\/20 {
-          background-color: var(--primary-light-bg) !important;
-        }
-        .accent-indigo-600, .accent-blue-600 {
-          accent-color: var(--primary-color) !important;
-        }
-        .ring-indigo-600, .ring-blue-650 {
-          --tw-ring-color: var(--primary-color) !important;
-        }
-        .focus\\:ring-indigo-500:focus, .focus\\:ring-blue-500:focus {
-          --tw-ring-color: var(--primary-color) !important;
-        }
-      `}</style>
-      
-      {/* LEFT NAVIGATION DRAWER (Utility Blue Sidebar) - Hidden during print */}
-      <aside className={`w-60 border-r shrink-0 flex flex-col justify-between print:hidden h-screen sticky top-0 overflow-y-auto ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300'}`}>
+  const renderSidebarContent = (isDrawer = false) => {
+    return (
+      <>
         <div className="p-3.5 space-y-4">
           {/* Main utilities banner logo block header */}
-          <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-            <div className="w-14 h-14 bg-white rounded-full overflow-hidden flex items-center justify-center shadow shrink-0 border border-slate-700">
-              <img 
-                src={pescoLogo} 
-                alt="PESCO Logo" 
-                className="w-full h-full object-cover" 
-                referrerPolicy="no-referrer"
-              />
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-12 h-12 bg-white rounded-full overflow-hidden flex items-center justify-center shadow shrink-0 border border-slate-700">
+                <img 
+                  src={pescoLogo} 
+                  alt="PESCO Logo" 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="overflow-hidden">
+                <h1 className="text-xs font-black tracking-tight leading-none uppercase text-white truncate">PESCO MTLMS</h1>
+                <p className="text-[9px] text-blue-400 font-bold tracking-wider mt-0.5">METERS TESTING LAB</p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <h1 className="text-xs font-black tracking-tight leading-none uppercase text-white truncate">PESCO MTLMS</h1>
-              <p className="text-[9px] text-blue-400 font-bold tracking-wider mt-0.5">METERS TESTING LAB</p>
-            </div>
+            {isDrawer && (
+              <button
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/80 cursor-pointer md:hidden"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* User profile identifier block info */}
@@ -1108,7 +1071,7 @@ export default function App() {
                 <span className={`w-1.5 h-1.5 rounded-full ${
                   syncStatus === 'synced' ? 'bg-emerald-500 animate-pulse' :
                   syncStatus === 'syncing' ? 'bg-amber-500 animate-ping' :
-                  syncStatus === 'error' ? 'bg-rose-500' : 'bg-slate-500'
+                  syncStatus === 'error' ? 'bg-rose-500' : 'bg-slate-400'
                 }`}></span>
                 <span className={`text-[9.5px] font-black uppercase tracking-wider ${
                   syncStatus === 'synced' ? 'text-emerald-400 animate-pulse' :
@@ -1144,7 +1107,7 @@ export default function App() {
                         <button
                           key={item.id}
                           onClick={() => handleNavigateToPage(item.id)}
-                          className={`w-full text-left py-1 px-2 rounded flex items-center gap-2 transition-all ${
+                          className={`w-full text-left py-1 px-2 rounded flex items-center gap-2 transition-all cursor-pointer ${
                             isActive 
                               ? 'bg-blue-600 text-white font-bold' 
                               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -1203,7 +1166,7 @@ export default function App() {
           {/* Theme Shift */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700/30"
+            className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-slate-700/30 cursor-pointer"
           >
             {isDarkMode ? (
               <>
@@ -1221,7 +1184,7 @@ export default function App() {
           {/* Clear Local Data Action */}
           <button
             onClick={() => setIsClearDataModalOpen(true)}
-            className="w-full py-1 bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-amber-900/30"
+            className="w-full py-1 bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-amber-900/30 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Clear Local Data
@@ -1233,12 +1196,86 @@ export default function App() {
               setCurrentUser(null);
               localStorage.removeItem('mtlms_currentUser');
             }}
-            className="w-full py-1 bg-red-950/40 hover:bg-red-900/50 text-red-300 hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-red-900/30"
+            className="w-full py-1 bg-red-950/40 hover:bg-red-900/50 text-red-300 hover:text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-red-900/30 cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign Out
           </button>
         </div>
+      </>
+    );
+  };
+
+  const activePalette = COLOR_PALETTES.find(p => p.id === selectedPaletteId) || COLOR_PALETTES[0];
+
+  return (
+    <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
+      <style>{`
+        :root {
+          --primary-color: ${activePalette.primary};
+          --primary-hover: ${activePalette.primaryHover};
+          --primary-light: ${activePalette.primaryLight};
+          --primary-light-bg: ${activePalette.primaryLightBg};
+          --primary-dark: ${activePalette.darkAccent};
+        }
+
+        /* Force brand overrides across standard Tailwind classes dynamically */
+        .bg-blue-600, .bg-indigo-600 {
+          background-color: var(--primary-color) !important;
+        }
+        .hover\\:bg-blue-700:hover, .hover\\:bg-indigo-700:hover {
+          background-color: var(--primary-hover) !important;
+        }
+        .text-blue-600, .text-indigo-600, .text-indigo-700 {
+          color: var(--primary-color) !important;
+        }
+        .border-blue-600, .border-indigo-600 {
+          border-color: var(--primary-color) !important;
+        }
+        .border-blue-100, .border-indigo-100 {
+          border-color: var(--primary-light) !important;
+        }
+        .text-indigo-900, .text-indigo-950 {
+          color: var(--primary-dark) !important;
+        }
+        .from-blue-50, .from-indigo-50 {
+          background-image: linear-gradient(to right, var(--primary-light-bg), transparent) !important;
+        }
+        .to-blue-50, .to-indigo-50 {
+          background-image: linear-gradient(to left, var(--primary-light-bg), transparent) !important;
+        }
+        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/20, .bg-blue-50\\/20 {
+          background-color: var(--primary-light-bg) !important;
+        }
+        .accent-indigo-600, .accent-blue-600 {
+          accent-color: var(--primary-color) !important;
+        }
+        .ring-indigo-600, .ring-blue-650 {
+          --tw-ring-color: var(--primary-color) !important;
+        }
+        .focus\\:ring-indigo-500:focus, .focus\\:ring-blue-500:focus {
+          --tw-ring-color: var(--primary-color) !important;
+        }
+      `}</style>
+      
+      {/* MOBILE TRIGGER BACKDROP */}
+      {isMobileSidebarOpen && (
+        <div 
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden"
+        />
+      )}
+
+      {/* MOBILE SIDEBAR/DRAWER */}
+      <aside className={`fixed inset-y-0 left-0 w-64 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300'} border-r z-50 flex flex-col justify-between overflow-y-auto transition-transform duration-200 ease-out transform md:hidden print:hidden ${
+        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {renderSidebarContent(true)}
+      </aside>
+
+      {/* LEFT NAVIGATION DRAWER (Utility Blue Sidebar) - Hidden during print */}
+      <aside className={`hidden md:flex w-60 border-r shrink-0 flex-col justify-between print:hidden h-screen sticky top-0 overflow-y-auto ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300'}`}>
+        {renderSidebarContent(false)}
       </aside>
 
       {/* RIGHT VIEWPORT VIEW CANVAS CONTAINER */}
@@ -1247,6 +1284,13 @@ export default function App() {
         {/* TOP STATUS HEADER PANEL - Hidden during print */}
         <header className={`h-11 px-4 border-b flex items-center justify-between shrink-0 print:hidden z-10 sticky top-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'}`}>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-1 px-1.5 rounded mr-1 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 md:hidden cursor-pointer"
+              title="Open Navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded font-black uppercase tracking-wider">
               Verification Node-3
             </span>

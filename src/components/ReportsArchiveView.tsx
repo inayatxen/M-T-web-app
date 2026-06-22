@@ -1899,43 +1899,45 @@ export default function ReportsArchiveView({
                       </span>
                     </div>
 
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50/80 dark:bg-slate-850/20 text-slate-450 dark:text-slate-500 uppercase text-[9px] font-extrabold border-b border-slate-200/50 dark:border-slate-800/70">
-                          <th className="p-2.5">Code</th>
-                          <th className="p-2.5">Area / Region Name</th>
-                          <th className="p-2.5 text-center">Inspected</th>
-                          <th className="p-2.5 text-center text-emerald-600 dark:text-emerald-500">Passed</th>
-                          <th className="p-2.5 text-center text-rose-600 dark:text-rose-500">Failed</th>
-                          <th className="p-2.5 text-center">Pass Rate</th>
-                          <th className="p-2.5 text-right font-mono">Avg Calibration Error</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-805 text-slate-800 dark:text-slate-350">
-                        {summaryBreakdown.map((row, idx) => {
-                          const rate = row.total > 0 ? Math.round((row.passed / row.total) * 100) : 0;
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
-                              <td className="p-2.5 font-bold font-mono text-slate-900 dark:text-white">{row.code}</td>
-                              <td className="p-2.5 font-bold text-slate-700 dark:text-slate-300 uppercase">{row.name}</td>
-                              <td className="p-2.5 text-center font-mono font-semibold">{row.total}</td>
-                              <td className="p-2.5 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">{row.passed}</td>
-                              <td className="p-2.5 text-center font-mono font-semibold text-rose-600 dark:text-rose-400">{row.failed}</td>
-                              <td className="p-2.5 text-center">
-                                <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                  rate >= 90 ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650' : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600'
-                                }`}>
-                                  {rate}%
-                                </span>
-                              </td>
-                              <td className="p-2.5 text-right font-mono font-bold text-slate-705 dark:text-slate-400">
-                                &plusmn;{row.avgError.toFixed(3)}%
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs min-w-[650px]">
+                        <thead>
+                          <tr className="bg-slate-50/80 dark:bg-slate-850/20 text-slate-450 dark:text-slate-500 uppercase text-[9px] font-extrabold border-b border-slate-200/50 dark:border-slate-800/70">
+                            <th className="p-2.5">Code</th>
+                            <th className="p-2.5">Area / Region Name</th>
+                            <th className="p-2.5 text-center">Inspected</th>
+                            <th className="p-2.5 text-center text-emerald-600 dark:text-emerald-500">Passed</th>
+                            <th className="p-2.5 text-center text-rose-600 dark:text-rose-500">Failed</th>
+                            <th className="p-2.5 text-center">Pass Rate</th>
+                            <th className="p-2.5 text-right font-mono">Avg Calibration Error</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-805 text-slate-800 dark:text-slate-350">
+                          {summaryBreakdown.map((row, idx) => {
+                            const rate = row.total > 0 ? Math.round((row.passed / row.total) * 100) : 0;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
+                                <td className="p-2.5 font-bold font-mono text-slate-900 dark:text-white">{row.code}</td>
+                                <td className="p-2.5 font-bold text-slate-700 dark:text-slate-300 uppercase">{row.name}</td>
+                                <td className="p-2.5 text-center font-mono font-semibold">{row.total}</td>
+                                <td className="p-2.5 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">{row.passed}</td>
+                                <td className="p-2.5 text-center font-mono font-semibold text-rose-600 dark:text-rose-400">{row.failed}</td>
+                                <td className="p-2.5 text-center">
+                                  <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                    rate >= 90 ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650' : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600'
+                                  }`}>
+                                    {rate}%
+                                  </span>
+                                </td>
+                                <td className="p-2.5 text-right font-mono font-bold text-slate-705 dark:text-slate-400">
+                                  &plusmn;{row.avgError.toFixed(3)}%
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Detailed Consumers Logs matching scope */}
@@ -1947,8 +1949,8 @@ export default function ReportsArchiveView({
                         </span>
                       </div>
 
-                      <div className="max-h-60 overflow-y-auto">
-                        <table className="w-full text-left border-collapse text-[11px] font-semibold">
+                      <div className="max-h-60 overflow-auto">
+                        <table className="w-full text-left border-collapse text-[11px] font-semibold min-w-[650px]">
                           <thead className="bg-slate-50 dark:bg-slate-850/40 text-slate-450 dark:text-slate-500 uppercase text-[9px] font-black border-b border-slate-200 dark:border-slate-800 sticky top-0">
                             <tr>
                               <th className="p-2">Report No.</th>
