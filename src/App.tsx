@@ -998,6 +998,7 @@ export default function App() {
           const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           if (isMobile) {
             setActivePageId('dashboard');
+            setIsMobileSidebarOpen(false);
           }
         }} 
         isDarkMode={isDarkMode} 
@@ -1296,12 +1297,25 @@ export default function App() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded font-black uppercase tracking-wider">
+            <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded font-black uppercase tracking-wider hidden sm:inline-block">
               Verification Node-3
             </span>
             <div className="text-[10px] text-slate-400 font-medium hidden md:inline">
               Laboratory Calibration Terminal • Active connection • Latency 12ms
             </div>
+          </div>
+
+          {/* Centered logo container for mobile viewposts */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 md:hidden select-none">
+            <img 
+              src={pescoLogo} 
+              alt="PESCO Logo" 
+              className="w-5.5 h-5.5 rounded-full object-cover border border-slate-200 dark:border-slate-800 shrink-0 shadow-xs" 
+              referrerPolicy="no-referrer"
+            />
+            <span className="text-[10px] font-black tracking-tight uppercase text-slate-800 dark:text-slate-100">
+              PESCO MTL
+            </span>
           </div>
 
           {/* Dynamic notifications bell alarm indicator */}
