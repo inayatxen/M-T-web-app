@@ -32,7 +32,8 @@ import {
   CommitteeCase, 
   TestReport, 
   AuditLog, 
-  CalibrationStandard 
+  CalibrationStandard,
+  AvailableSIM
 } from '../types';
 
 interface SupabaseSyncViewProps {
@@ -56,6 +57,8 @@ interface SupabaseSyncViewProps {
   setStandards: React.Dispatch<React.SetStateAction<CalibrationStandard[]>>;
   todos?: any[];
   setTodos?: React.Dispatch<React.SetStateAction<any[]>>;
+  availableSims: AvailableSIM[];
+  setAvailableSims: (updated: AvailableSIM[] | ((prev: AvailableSIM[]) => AvailableSIM[])) => void;
 }
 
 export default function SupabaseSyncView({
@@ -69,7 +72,9 @@ export default function SupabaseSyncView({
   auditLogs, setAuditLogs,
   standards, setStandards,
   todos = [],
-  setTodos
+  setTodos,
+  availableSims = [],
+  setAvailableSims
 }: SupabaseSyncViewProps) {
   const [dbStatus, setDbStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
   const [dbMessage, setDbMessage] = useState<string>('');
@@ -90,6 +95,7 @@ export default function SupabaseSyncView({
     auditLogs: 'Click test',
     standards: 'Click test',
     todos: 'Click test',
+    available_sims: 'Click test',
   });
 
   const checkConnection = async () => {
@@ -110,7 +116,7 @@ export default function SupabaseSyncView({
   };
 
   const fetchSupabaseCounts = async () => {
-    const tables = ['users', 'meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos'];
+    const tables = ['users', 'meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos', 'available_sims'];
     const updated: { [key: string]: number | string } = {};
 
     for (const t of tables) {
@@ -292,6 +298,13 @@ CREATE TABLE IF NOT EXISTS todos (
   completed BOOLEAN DEFAULT FALSE
 );
 
+-- 10. Create available_sims Table
+CREATE TABLE IF NOT EXISTS available_sims (
+  iccid TEXT PRIMARY KEY,
+  "simNumber" TEXT,
+  provider TEXT
+);
+
 -- ==========================================
 -- DISABLE ROW LEVEL SECURITY (RLS) FOR PIPELINE BYPASS
 -- ==========================================
@@ -305,6 +318,7 @@ ALTER TABLE IF EXISTS reports DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS "auditLogs" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS standards DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS todos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS available_sims DISABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- REAL-TIME FALLBACK POLICIES IF YOU RE-ENABLE RLS OR TO BYPASS RESTRICTIONS
@@ -339,6 +353,9 @@ CREATE POLICY "allow_anon_todos" ON todos FOR ALL TO anon USING (true) WITH CHEC
 DROP POLICY IF EXISTS "allow_anon_users" ON users;
 CREATE POLICY "allow_anon_users" ON users FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "allow_anon_available_sims" ON available_sims;
+CREATE POLICY "allow_anon_available_sims" ON available_sims FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- =========================================================================
 -- RECOVERY / PATCH MIGRATION (RUN THIS SECURELY TO PATCH ALREADY-BUILT TABLES)
 -- =========================================================================
@@ -371,6 +388,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
       { name: 'auditLogs', data: auditLogs },
       { name: 'standards', data: standards },
       { name: 'todos', data: todos },
+      { name: 'available_sims', data: availableSims },
     ];
 
     for (const item of items) {
@@ -420,6 +438,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
       { name: 'auditLogs', stateSetter: setAuditLogs },
       { name: 'standards', stateSetter: setStandards },
       { name: 'todos', stateSetter: setTodos || (() => {}) },
+      { name: 'available_sims', stateSetter: setAvailableSims },
     ];
 
     for (const job of pullingJobs) {
@@ -612,7 +631,8 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
                 { label: 'Signed Reports Archive', name: 'reports', localCount: reports.length },
                 { label: 'Lab Audit Logs', name: 'auditLogs', localCount: auditLogs.length },
                 { label: 'Calibration Standards', name: 'standards', localCount: standards.length },
-                { label: 'Live Todo Tasks', name: 'todos', localCount: todos.length }
+                { label: 'Live Todo Tasks', name: 'todos', localCount: todos.length },
+                { label: 'Available SIM Stock', name: 'available_sims', localCount: availableSims.length }
               ].map((row, idx) => (
                 <div key={idx} className="p-2.5 px-3 flex justify-between items-center hover:bg-slate-50/55 dark:hover:bg-slate-850/20 transition">
                   <div className="flex items-center gap-2">

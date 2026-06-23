@@ -604,21 +604,21 @@ export default function ReportsArchiveView({
               {/* Company */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-                  Company (3-7)
+                  Company
                 </label>
                 <select
                   value={regCompany}
                   onChange={(e) => setRegCompany(e.target.value)}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="26">PESCO (26)</option>
+                  <option value="26">PESCO</option>
                 </select>
               </div>
 
               {/* Circle */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-                  Circle Code (8)
+                  Circle Code
                 </label>
                 <select
                   value={regCircle}
@@ -632,7 +632,7 @@ export default function ReportsArchiveView({
                   <option value="all">All Circles</option>
                   {PESCO_HIERARCHY.map(c => (
                     <option key={c.code} value={c.code.substring(2)}>
-                      {c.name} ({c.code.substring(2)})
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -641,7 +641,7 @@ export default function ReportsArchiveView({
               {/* Division */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-                  Division (9)
+                  Division
                 </label>
                 <select
                   value={regDivision}
@@ -655,7 +655,7 @@ export default function ReportsArchiveView({
                   }}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="all">All Divisions (33)</option>
+                  <option value="all">All Divisions</option>
                   {(() => {
                     const seen = new Set();
                     const list = regCircle === 'all'
@@ -667,7 +667,7 @@ export default function ReportsArchiveView({
                       return true;
                     }).map(d => (
                       <option key={d.code} value={d.code}>
-                        {d.name} ({d.code})
+                        {d.name}
                       </option>
                     ));
                   })()}
@@ -677,7 +677,7 @@ export default function ReportsArchiveView({
               {/* Sub-division */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-                  Sub-Division (10)
+                  Sub-Division
                 </label>
                 <select
                   value={regSubdivision}
@@ -691,7 +691,7 @@ export default function ReportsArchiveView({
                   }}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="all">All Sub-Divisions (160)</option>
+                  <option value="all">All Sub-Divisions</option>
                   {(() => {
                     const seen = new Set();
                     let list = [];
@@ -712,7 +712,7 @@ export default function ReportsArchiveView({
                       return true;
                     }).map(s => (
                       <option key={s.code} value={s.code}>
-                        {s.name} ({s.code})
+                        {s.name}
                       </option>
                     ));
                   })()}

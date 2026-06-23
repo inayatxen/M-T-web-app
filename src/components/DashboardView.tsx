@@ -140,6 +140,7 @@ export default function DashboardView({
   const reportsIssued = filteredMeters.filter(m => m.status === 'report_issued').length;
   
   const pendingSIM = filteredMeters.filter(m => m.category === 'smart' && m.simInstallStatus === 'Pending').length;
+  const activeSIMs = filteredMeters.filter(m => m.category === 'smart' && m.simInstallStatus === 'Installed').length;
   // Since CT/PT records do not have direct client accounts in raw logs, we scale/filter if linked to filteredMeters.
   // We can filter if their serial number matches any in filteredMeters or keep them matched to make the dashboard organic.
   const ctsPending = cts.filter(c => c.testResult === 'pending').length;
@@ -289,6 +290,49 @@ export default function DashboardView({
         </div>
       </div>
 
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded border border-slate-205 shadow-xs flex flex-col">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Meters Received</span>
+          <div className="flex items-end justify-between mt-auto">
+            <span className="text-2xl font-black text-slate-800">{totalReceived}</span>
+            <div className="p-1.5 bg-blue-50 text-blue-600 rounded">
+              <Layers className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded border border-slate-205 shadow-xs flex flex-col">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Meters Pending Testing</span>
+          <div className="flex items-end justify-between mt-auto">
+            <span className="text-2xl font-black text-slate-800">{pendingTesting}</span>
+            <div className="p-1.5 bg-amber-50 text-amber-600 rounded">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded border border-slate-205 shadow-xs flex flex-col">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Meters Passed</span>
+          <div className="flex items-end justify-between mt-auto">
+            <span className="text-2xl font-black text-slate-800">{passedCount}</span>
+            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
+              <CheckCircle className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded border border-slate-205 shadow-xs flex flex-col">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Active SIMs</span>
+          <div className="flex items-end justify-between mt-auto">
+            <span className="text-2xl font-black text-slate-800">{activeSIMs}</span>
+            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded">
+              <Radio className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* REGIONAL ANALYSIS CONTROL PANEL */}
       <div className="bg-white dark:bg-slate-900 p-3.5 rounded border border-slate-205 dark:border-slate-800 shadow-xs space-y-3.5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -341,25 +385,24 @@ export default function DashboardView({
               ))}
             </select>
           </div>
-
-          {/* Company Code */}
+          {/* Company */}
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-              Company (3-7)
+              Company
             </label>
             <select
               value={regCompany}
               onChange={(e) => setRegCompany(e.target.value)}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="26">PESCO (26)</option>
+              <option value="26">PESCO</option>
             </select>
           </div>
 
           {/* Circle Code */}
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-              Circle Code (8)
+              Circle Code
             </label>
             <select
               value={regCircle}
@@ -373,7 +416,7 @@ export default function DashboardView({
               <option value="all">All Circles</option>
               {PESCO_HIERARCHY.map(c => (
                 <option key={c.code} value={c.code.substring(2)}>
-                  {c.name} ({c.code.substring(2)})
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -382,7 +425,7 @@ export default function DashboardView({
           {/* Division Code */}
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-              Division (9)
+              Division
             </label>
             <select
               value={regDivision}
@@ -396,7 +439,7 @@ export default function DashboardView({
               }}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="all">All Divisions (33)</option>
+              <option value="all">All Divisions</option>
               {(() => {
                 const seen = new Set();
                 const list = regCircle === 'all'
@@ -408,7 +451,7 @@ export default function DashboardView({
                   return true;
                 }).map(d => (
                   <option key={d.code} value={d.code}>
-                    {d.name} ({d.code})
+                    {d.name}
                   </option>
                 ));
               })()}
@@ -418,7 +461,7 @@ export default function DashboardView({
           {/* Sub-division Code */}
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-              Sub-Division (10)
+              Sub-Division
             </label>
             <select
               value={regSubdivision}
@@ -432,7 +475,7 @@ export default function DashboardView({
               }}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="all">All Sub-Divisions (160)</option>
+              <option value="all">All Sub-Divisions</option>
               {(() => {
                 const seen = new Set();
                 let list = [];
@@ -453,7 +496,7 @@ export default function DashboardView({
                   return true;
                 }).map(s => (
                   <option key={s.code} value={s.code}>
-                    {s.name} ({s.code})
+                    {s.name}
                   </option>
                 ));
               })()}

@@ -257,3 +257,10 @@ export interface CalibrationStandard {
   standardValue: string;
   multiplier: number;
 }
+
+export interface AvailableSIM {
+  id?: string; // Optional database key
+  simNumber: string;
+  iccid: string;
+  provider: string;
+}

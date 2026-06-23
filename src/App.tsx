@@ -48,7 +48,8 @@ import {
   CalibrationStandard, 
   StockStatus, 
   MeterStatus,
-  UserRole 
+  UserRole,
+  AvailableSIM
 } from './types';
 
 // Predefined seed data
@@ -186,6 +187,7 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [standards, setStandards] = useState<CalibrationStandard[]>([]);
   const [todos, setTodos] = useState<any[]>([]);
+  const [availableSims, setAvailableSims] = useState<AvailableSIM[]>([]);
   
   // Real-time dynamic Users directory synchronized from Supabase
   const [users, setUsers] = useState<UserType[]>(() => {
@@ -283,6 +285,7 @@ export default function App() {
       setReports(getOrSeed<TestReport[]>('reports', SEED_REPORTS));
       setAuditLogs(getOrSeed<AuditLog[]>('auditLogs', SEED_AUDIT_LOGS));
       setStandards(getOrSeed<CalibrationStandard[]>('standards', SEED_CALIBRATION_STANDARDS));
+      setAvailableSims(getOrSeed<AvailableSIM[]>('available_sims', []));
     } catch (e) {
       console.error('LocalStorage hydration failed, falling back to default seed.', e);
       setMeters(SEED_METERS);
@@ -293,6 +296,7 @@ export default function App() {
       setReports(SEED_REPORTS);
       setAuditLogs(SEED_AUDIT_LOGS);
       setStandards(SEED_CALIBRATION_STANDARDS);
+      setAvailableSims([]);
     }
   }, []);
 
@@ -324,7 +328,8 @@ export default function App() {
           { key: 'cases', stateSetter: setCases, localSeed: SEED_COMMITTEE_CASES },
           { key: 'reports', stateSetter: setReports, localSeed: SEED_REPORTS },
           { key: 'auditLogs', stateSetter: setAuditLogs, localSeed: SEED_AUDIT_LOGS },
-          { key: 'standards', stateSetter: setStandards, localSeed: SEED_CALIBRATION_STANDARDS }
+          { key: 'standards', stateSetter: setStandards, localSeed: SEED_CALIBRATION_STANDARDS },
+          { key: 'available_sims', stateSetter: setAvailableSims, localSeed: [] }
         ];
 
         for (const tbl of tablesToSync) {
@@ -597,6 +602,14 @@ export default function App() {
   };
 
   // D. ICCID Smart SIM Provisioning linking
+  const handleUpdateAvailableSims = (valueOrUpdater: AvailableSIM[] | ((prev: AvailableSIM[]) => AvailableSIM[])) => {
+    setAvailableSims(prev => {
+      const next = typeof valueOrUpdater === 'function' ? valueOrUpdater(prev) : valueOrUpdater;
+      saveState('available_sims', next);
+      return next;
+    });
+  };
+
   const handleUpdateSIMDetails = (meterId: string, updatedFields: Partial<Meter>) => {
     const targetMeter = meters.find(m => m.id === meterId);
     const previousSIMMsg = targetMeter?.simNumber ? `SIM: ${targetMeter.simNumber}` : 'Pending SIM installation';
@@ -1430,8 +1443,11 @@ export default function App() {
               {activePageId === 'smart_sim' && (
                 <SIMView 
                   meters={meters} 
+                  receipts={receipts}
                   onUpdateSIMDetails={handleUpdateSIMDetails} 
                   currentUser={currentUser} 
+                  availableSims={availableSims}
+                  onUpdateAvailableSims={handleUpdateAvailableSims}
                 />
               )}
 
@@ -1541,6 +1557,8 @@ export default function App() {
                   setStandards={setStandards}
                   todos={todos}
                   setTodos={setTodos}
+                  availableSims={availableSims}
+                  setAvailableSims={handleUpdateAvailableSims}
                 />
               )}
 

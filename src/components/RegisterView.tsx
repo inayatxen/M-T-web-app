@@ -298,9 +298,67 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
           }).join(',');
         });
         
-        // We set the bulkText to the formatted CSV lines so existing review/edit works flawlessly
-        setBulkText(formattedLines.join('\n'));
-        setSuccessMsg(`Spreadsheet "${file.name}" uploaded. ${populatedDataRows.length} equipment entries successfully loaded into queue!`);
+        const parsedRows = parseBulkInput(formattedLines.join('\n'));
+        const validRows = parsedRows.filter(r => r.isValid);
+        
+        if (validRows.length === 0) {
+          setErrorMsg('No valid rows found to import. Verify your fields format.');
+          return;
+        }
+
+        const newReceiptsList: EquipmentReceipt[] = [];
+        const associatedMetersList: Meter[] = [];
+        const today = getPKTDateString();
+
+        validRows.forEach((row, i) => {
+          const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+          const generatedNum = `REC-2026-B${randomSuffix}-${i}`;
+
+          const newReceipt: EquipmentReceipt = {
+            id: `r-gen-bulk-${Date.now()}-${i}`,
+            receiptNumber: generatedNum,
+            dateReceived: today,
+            consumerAccount: row.consumerAccount,
+            consumerName: row.consumerName,
+            fatherName: row.fatherName,
+            meterType: row.meterType,
+            meterNumber: row.meterNumber,
+            serialNumber: row.serialNumber,
+            make: row.make,
+            receivedFrom: row.receivedFrom,
+            reasonForTesting: row.reasonForTesting,
+            newOrUsed: 'Used',
+            receivedBy: currentUser.name,
+            remarks: row.readings ? `Readings: ${row.readings}` : undefined
+          };
+
+          const associatedMeter: Meter = {
+            id: `m-gen-bulk-${Date.now()}-${i}`,
+            meterNumber: row.meterNumber,
+            serialNumber: row.serialNumber,
+            manufacturer: row.make,
+            accuracyClass: row.meterType === 'single_phase' ? 'Class 1.0' : 
+                           row.meterType === 'three_phase_whole' ? 'Class 1.0' :
+                           row.meterType === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
+            category: row.meterType,
+            status: 'received',
+            stockStatus: 'In Store',
+            purchaseDate: today,
+            remarks: `Bulk intake registered via receipt ${generatedNum}.`,
+            consumerAccount: row.consumerAccount
+          };
+
+          newReceiptsList.push(newReceipt);
+          associatedMetersList.push(associatedMeter);
+        });
+
+        if (onAddBulkReceipts) {
+          onAddBulkReceipts(newReceiptsList, associatedMetersList);
+          setSuccessMsg(`Spreadsheet "${file.name}" uploaded. ${validRows.length} equipment entries mapped directly to schema!`);
+          setTimeout(() => setSuccessMsg(''), 4050);
+        } else {
+          setErrorMsg('Bulk receipt processing is unavailable.');
+        }
       } catch (err: any) {
         console.error(err);
         setErrorMsg(`Failed to parse spreadsheet file: ${err.message || err}`);
@@ -687,7 +745,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-50 dark:bg-slate-850/50 p-3 rounded border border-slate-200 dark:border-slate-800 animate-in fade-in duration-150">
                   {/* Segmented Inputs */}
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Batch No (2d) *</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Batch No *</label>
                     <input
                       type="text"
                       maxLength={2}
@@ -720,7 +778,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Company (2d) *</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Company *</label>
                     <select
                       value={consumerAccount.substring(2, 4)}
                       onChange={(e) => {
@@ -745,23 +803,23 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       }}
                       className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
                     >
-                      <option value="26">PESCO (26)</option>
-                      <option value="11">LESCO (11)</option>
-                      <option value="22">FESCO (22)</option>
-                      <option value="14">IESCO (14)</option>
-                      <option value="15">MEPCO (15)</option>
-                      <option value="25">HESCO (25)</option>
-                      <option value="18">PESCO (18)</option>
-                      <option value="31">SEPCO (31)</option>
-                      <option value="24">QESCO (24)</option>
-                      <option value="35">TESCO (35)</option>
-                      <option value="09">PESCO (09)</option>
-                      <option value="02">Local (02)</option>
+                      <option value="26">PESCO</option>
+                      <option value="11">LESCO</option>
+                      <option value="22">FESCO</option>
+                      <option value="14">IESCO</option>
+                      <option value="15">MEPCO</option>
+                      <option value="25">HESCO</option>
+                      <option value="18">PESCO</option>
+                      <option value="31">SEPCO</option>
+                      <option value="24">QESCO</option>
+                      <option value="35">TESCO</option>
+                      <option value="09">PESCO</option>
+                      <option value="02">Local</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Circle (1d) *</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Circle *</label>
                     <select
                       value={consumerAccount.substring(4, 5)}
                       onChange={(e) => {
@@ -800,7 +858,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         const val = c.code.substring(2) || '3';
                         return (
                           <option key={c.code} value={val}>
-                            {c.name} ({val})
+                            {c.name}
                           </option>
                         );
                       })}
@@ -808,7 +866,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Division (1d) *</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Division *</label>
                     <select
                       value={consumerAccount.substring(5, 6)}
                       onChange={(e) => {
@@ -859,7 +917,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                           const val = d.code.slice(-1) || '1';
                           return (
                             <option key={d.code} value={val}>
-                              {d.name} ({val})
+                              {d.name}
                             </option>
                           );
                         });
@@ -868,7 +926,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Sub-Div (1d) *</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Sub-Div *</label>
                     <select
                       value={consumerAccount.substring(6, 7)}
                       onChange={(e) => {
@@ -921,7 +979,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                           const val = s.code.slice(-1) || '1';
                           return (
                             <option key={s.code} value={val}>
-                              {s.name} ({val})
+                              {s.name}
                             </option>
                           );
                         });
@@ -930,7 +988,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Consumer No (7d)*</label>
+                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Consumer No *</label>
                     <input
                       type="text"
                       maxLength={7}
@@ -977,7 +1035,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       <span className="font-mono font-black text-slate-800 dark:text-white">{parsedAccount.batchNumber || '—'}</span>
                     </div>
                     <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Company (26000)</span>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Company</span>
                       <span className="font-sans font-extrabold text-blue-600 dark:text-blue-400 truncate block" title={parsedAccount.companyName}>
                         {parsedAccount.companyCode ? `${parsedAccount.companyCode} (${parsedAccount.companyName.split(' ')[0]})` : '—'}
                       </span>
@@ -1542,7 +1600,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   onChange={(e) => setFilterCompany(e.target.value)}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="26">PESCO (26)</option>
+                  <option value="26">PESCO</option>
                 </select>
               </div>
 
@@ -1560,7 +1618,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   <option value="all">All Circles</option>
                   {PESCO_HIERARCHY.map(c => (
                     <option key={c.code} value={c.code.substring(2)}>
-                      {c.name} ({c.code.substring(2)})
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -1580,7 +1638,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="all">All Divisions (33)</option>
+                  <option value="all">All Divisions</option>
                   {(() => {
                     const seen = new Set();
                     const list = filterCircle === 'all'
@@ -1592,7 +1650,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       return true;
                     }).map(d => (
                       <option key={d.code} value={d.code}>
-                        {d.name} ({d.code})
+                        {d.name}
                       </option>
                     ));
                   })()}
@@ -1613,7 +1671,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   }}
                   className="w-full text-[10px] p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-700 dark:text-slate-200 font-semibold cursor-pointer"
                 >
-                  <option value="all">All Sub-Divisions (160)</option>
+                  <option value="all">All Sub-Divisions</option>
                   {(() => {
                     const seen = new Set();
                     let list = [];
@@ -1634,7 +1692,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                       return true;
                     }).map(s => (
                       <option key={s.code} value={s.code}>
-                        {s.name} ({s.code})
+                        {s.name}
                       </option>
                     ));
                   })()}
