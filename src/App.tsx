@@ -1215,7 +1215,7 @@ export default function App() {
   const activePalette = COLOR_PALETTES.find(p => p.id === selectedPaletteId) || COLOR_PALETTES[0];
 
   return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
+    <div className={`min-h-[100dvh] flex ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'light bg-slate-50 text-slate-800'}`}>
       <style>{`
         :root {
           --primary-color: ${activePalette.primary};
@@ -1285,7 +1285,7 @@ export default function App() {
       </aside>
 
       {/* RIGHT VIEWPORT VIEW CANVAS CONTAINER */}
-      <main className="flex-grow flex flex-col min-h-screen overflow-x-hidden relative">
+      <main className="flex-grow flex flex-col min-h-[100dvh] overflow-x-hidden relative max-w-full">
         
         {/* TOP STATUS HEADER PANEL - Hidden during print */}
         <header className={`h-11 px-4 border-b flex items-center justify-between shrink-0 print:hidden z-10 sticky top-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'}`}>
@@ -1334,7 +1334,7 @@ export default function App() {
         </header>
 
         {/* WORKSPACE VIEW CONTENT AREA PAGE LAYOUT */}
-        <div className={`p-4 flex-grow overflow-y-auto print:p-0 print:bg-white relative ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
+        <div className={`p-2 sm:p-4 flex-grow overflow-y-auto print:p-0 print:bg-white relative ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
           
           {/* Certificate PDF View Cover Overlay */}
           {batchPdfReports && batchPdfReports.length > 0 ? (

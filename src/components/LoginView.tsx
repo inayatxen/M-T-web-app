@@ -202,7 +202,7 @@ export default function LoginView({
   const currentSelectedUser = users.find(u => u.id === selectedUserId) || SEED_USERS.find(u => u.id === selectedUserId);
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 transition-all relative overflow-hidden ${
+    <div className={`min-h-[100dvh] flex items-center justify-center p-4 transition-all relative overflow-hidden ${
       isDarkMode 
         ? 'dark bg-slate-950 text-slate-100' 
         : 'bg-slate-50 text-slate-800'

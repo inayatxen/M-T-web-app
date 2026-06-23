@@ -4,6 +4,8 @@
  */
 
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 import { TestReport } from '../types';
 import { formatPKTDate } from '../utils';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
@@ -641,21 +643,30 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
 
             {/* Inspector Signature and QR alignment */}
             <div className="grid grid-cols-2 gap-4 items-end pt-4">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 bg-white border border-slate-300 rounded p-1 flex items-center justify-center">
-                  <svg className="w-full h-full text-slate-900" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="0" y="0" width="30" height="30" fill="currentColor" />
-                    <rect x="5" y="5" width="20" height="20" fill="white" />
-                    <rect x="70" y="0" width="30" height="30" fill="currentColor" />
-                    <rect x="75" y="5" width="20" height="20" fill="white" />
-                    <rect x="0" y="70" width="30" height="30" fill="currentColor" />
-                    <rect x="5" y="75" width="20" height="20" fill="white" />
-                    <rect x="40" y="40" width="20" height="20" fill="currentColor" />
-                  </svg>
+              <div className="flex flex-col items-start gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 bg-white border border-slate-300 rounded p-1 flex items-center justify-center">
+                    <QRCodeSVG 
+                      value={JSON.stringify({ reportNo: report.reportNumber, meterNo: report.meterNumber, date: report.testDate })}
+                      size={52}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <span className="text-[8.5px] text-slate-400 font-sans max-w-[140px] leading-snug">
+                    Scan for master verification ledger index online (Mardan Compliance Hub).
+                  </span>
                 </div>
-                <span className="text-[8.5px] text-slate-400 font-sans max-w-[140px] leading-snug">
-                  Scan for master verification ledger index online (Mardan Compliance Hub).
-                </span>
+                <div className="w-full max-w-[140px]">
+                  <Barcode 
+                    value={report.reportNumber} 
+                    height={20} 
+                    width={1} 
+                    displayValue={false}
+                    background="transparent"
+                    lineColor="#334155"
+                  />
+                </div>
               </div>
 
               <div className="text-right space-y-1">

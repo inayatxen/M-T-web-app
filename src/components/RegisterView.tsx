@@ -332,7 +332,7 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
 
   // QR Scanner States & Handlers
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-  const [qrScanMode, setQRScanMode] = useState<'search' | 'intake'>('search');
+  const [qrScanMode, setQRScanMode] = useState<'search' | 'intake' | 'meterNumber' | 'serialNumber'>('search');
   const [qrNotification, setQrNotification] = useState('');
 
   const handleQRScanResult = (decodedText: string) => {
@@ -350,7 +350,17 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
       // not a json string
     }
 
-    if (qrScanMode === 'intake') {
+    if (qrScanMode === 'meterNumber') {
+      const trimmed = decodedText.trim().toUpperCase();
+      setMeterNumber(trimmed);
+      setSuccessMsg(`Meter Number scanned: "${trimmed}"`);
+      setTimeout(() => setSuccessMsg(""), 4050);
+    } else if (qrScanMode === 'serialNumber') {
+      const trimmed = decodedText.trim().toUpperCase();
+      setSerialNumber(trimmed);
+      setSuccessMsg(`Serial Number scanned: "${trimmed}"`);
+      setTimeout(() => setSuccessMsg(""), 4050);
+    } else if (qrScanMode === 'intake') {
       if (isJson && parsedData) {
         // Autofill full intake form fields if json keys exist
         if (parsedData.consumerAccount) setConsumerAccount(parsedData.consumerAccount);
@@ -1044,7 +1054,20 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Meter ID / Number *</label>
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
+                  Meter ID / Number *
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQRScanMode('meterNumber');
+                      setIsQRScannerOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
+                  >
+                    <Camera className="w-3 h-3" />
+                    Scan Label
+                  </button>
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. MTR-982103"
@@ -1056,7 +1079,20 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Warp / Serial Code:</label>
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
+                  Warp / Serial Code:
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQRScanMode('serialNumber');
+                      setIsQRScannerOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
+                  >
+                    <Camera className="w-3 h-3" />
+                    Scan Label
+                  </button>
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. SN-772183-A"
@@ -1354,8 +1390,8 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         </div>
                       </div>
 
-                      <div className="max-h-[220px] overflow-y-auto border border-slate-205 dark:border-slate-800/80 rounded">
-                        <table className="w-full text-[10.5px] text-left border-collapse bg-white dark:bg-slate-905">
+                      <div className="max-h-[220px] overflow-y-auto overflow-x-auto border border-slate-205 dark:border-slate-800/80 rounded">
+                        <table className="w-full text-[10.5px] text-left border-collapse bg-white dark:bg-slate-905 min-w-[700px]">
                           <thead className="bg-slate-50 dark:bg-slate-850 text-slate-400 dark:text-slate-550 font-black uppercase text-[8.5px] border-b border-slate-100 dark:border-slate-800 select-none">
                             <tr>
                               <th className="p-2 border-r border-slate-100 dark:border-slate-800">L#</th>

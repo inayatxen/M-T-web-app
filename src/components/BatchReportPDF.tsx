@@ -5,6 +5,8 @@
 
 import React from 'react';
 import { ShieldCheck, Printer, ArrowLeft } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 import { TestReport, MeterCategory } from '../types';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 import { formatPKTDate } from '../utils';
@@ -365,42 +367,22 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
                 {/* QR Verification System */}
                 <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
                   <div className="w-24 h-24 bg-white border border-slate-300 rounded-lg p-1.5 shadow-sm flex items-center justify-center relative">
-                    {/* Scalable vector QR Code */}
-                    <svg className="w-full h-full text-indigo-955" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="0" y="0" width="30" height="30" fill="currentColor" />
-                      <rect x="5" y="5" width="20" height="20" fill="white" />
-                      <rect x="10" y="10" width="10" height="10" fill="currentColor" />
-
-                      <rect x="70" y="0" width="30" height="30" fill="currentColor" />
-                      <rect x="75" y="5" width="20" height="20" fill="white" />
-                      <rect x="80" y="10" width="10" height="10" fill="currentColor" />
-
-                      <rect x="0" y="70" width="30" height="30" fill="currentColor" />
-                      <rect x="5" y="75" width="20" height="20" fill="white" />
-                      <rect x="10" y="80" width="10" height="10" fill="currentColor" />
-
-                      <rect x="40" y="10" width="5" height="5" fill="currentColor" />
-                      <rect x="50" y="5" width="5" height="15" fill="currentColor" />
-                      <rect x="60" y="10" width="5" height="5" fill="currentColor" />
-                      <rect x="40" y="25" width="10" height="5" fill="currentColor" />
-
-                      <rect x="15" y="40" width="5" height="15" fill="currentColor" />
-                      <rect x="25" y="50" width="15" height="5" fill="currentColor" />
-                      <rect x="5" y="55" width="5" height="5" fill="currentColor" />
-
-                      <rect x="85" y="40" width="10" height="5" fill="currentColor" />
-                      <rect x="75" y="50" width="5" height="15" fill="currentColor" />
-                      <rect x="90" y="55" width="5" height="10" fill="currentColor" />
-
-                      <rect x="45" y="45" width="10" height="10" fill="currentColor" />
-                      <rect x="40" y="60" width="15" height="5" fill="currentColor" />
-                      <rect x="50" y="75" width="5" height="15" fill="currentColor" />
-                      <rect x="65" y="70" width="5" height="5" fill="currentColor" />
-
-                      <rect x="80" y="80" width="15" height="5" fill="currentColor" />
-                      <rect x="75" y="85" width="5" height="10" fill="currentColor" />
-                      <rect x="90" y="90" width="10" height="5" fill="currentColor" />
-                    </svg>
+                    <QRCodeSVG 
+                      value={JSON.stringify({ reportNo: report.reportNumber, meterNo: report.meterNumber, date: report.testDate })}
+                      size={80}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <div className="mt-3 w-full max-w-[200px]">
+                    <Barcode 
+                      value={report.reportNumber} 
+                      height={20} 
+                      width={1} 
+                      displayValue={false}
+                      background="transparent"
+                      lineColor="#334155"
+                    />
                   </div>
                   <p className="text-[9px] text-slate-400 mt-2 font-medium tracking-wide">
                     Scan QR for Cryptographic Master Verification Ledger Online

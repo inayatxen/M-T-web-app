@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import jsQR from 'jsqr';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { 
   X, 
   Camera, 
@@ -29,8 +29,8 @@ export default function QRScannerModal({
   isOpen,
   onClose,
   onScan,
-  title = "QR Code Laboratory Scanner",
-  placeholderText = "Center a meter ID card or laboratory seal QR code within the frame"
+  title = "Barcode & QR Laboratory Scanner",
+  placeholderText = "Center a meter ID card, barcode, or laboratory seal QR code within the frame"
 }: QRScannerModalProps) {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -42,19 +42,13 @@ export default function QRScannerModal({
   const [fileError, setFileError] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const requestRef = useRef<number | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   // Stop camera stream helper
   const stopCameraStream = () => {
-    if (requestRef.current) {
-      cancelAnimationFrame(requestRef.current);
-      requestRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
     }
     setIsScanning(false);
   };
@@ -66,46 +60,65 @@ export default function QRScannerModal({
     setIsScanning(true);
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: deviceId 
-          ? { deviceId: { exact: deviceId } } 
-          : { facingMode: { ideal: 'environment' } }
-      };
+      // Enumerate other video sources
+      const allDevices = await BrowserMultiFormatReader.listVideoInputDevices();
+      setDevices(allDevices);
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
+      let targetDeviceId = deviceId;
+      if (!targetDeviceId && allDevices.length > 0) {
+        // Prefer rear camera if available
+        const backCamera = allDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+        targetDeviceId = backCamera ? backCamera.deviceId : allDevices[0].deviceId;
+      }
+
+      if (targetDeviceId) {
+        setSelectedDeviceId(targetDeviceId);
+      }
+
       setHasCameraPermission(true);
 
+      const codeReader = new BrowserMultiFormatReader();
+      
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true'); // Required for iOS
-        videoRef.current.play();
+        controlsRef.current = await codeReader.decodeFromVideoDevice(
+          targetDeviceId,
+          videoRef.current,
+          (result, error) => {
+            if (result) {
+              const resultText = result.getText().trim();
+              setScanResult(resultText);
+              
+              // Audio feedback if allowed by user context
+              try {
+                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const osc = context.createOscillator();
+                const gainNode = context.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(context.destination);
+                osc.frequency.setValueAtTime(880, context.currentTime); // high tone beep
+                gainNode.gain.setValueAtTime(0.08, context.currentTime);
+                osc.start();
+                osc.stop(context.currentTime + 0.1);
+              } catch (e) {
+                // mute audio failures
+              }
+
+              // Trigger decode completion
+              stopCameraStream();
+              onScan(resultText);
+            }
+            if (error && error.name !== 'NotFoundException') {
+               // Log actual errors, not finding a barcode is expected
+            }
+          }
+        );
       }
-
-      // Enumerate other video sources
-      const allDevices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = allDevices.filter(d => d.kind === 'videoinput');
-      setDevices(videoDevices);
-
-      // Match current device ID if not explicitly requested
-      if (!deviceId && videoDevices.length > 0) {
-        const activeTrack = stream.getVideoTracks()[0];
-        const activeSettings = activeTrack ? activeTrack.getSettings() : null;
-        if (activeSettings && activeSettings.deviceId) {
-          setSelectedDeviceId(activeSettings.deviceId);
-        } else if (videoDevices.length > 0) {
-          setSelectedDeviceId(videoDevices[0].deviceId);
-        }
-      }
-
-      // Start the frame analysis loop
-      requestAnimationFrame(tick);
     } catch (err: any) {
       console.error("Camera access error:", err);
       setHasCameraPermission(false);
       setIsScanning(false);
       setScannerError(
-        err.name === 'NotAllowedError' 
+        err.name === 'NotAllowedError' || err.message?.includes('Permission')
           ? 'Camera access denied by user. Refer to browser site permissions.' 
           : `Failed to acquire video stream: ${err.message || err}`
       );
@@ -124,64 +137,6 @@ export default function QRScannerModal({
     return () => stopCameraStream();
   }, [isOpen]);
 
-  // Frame processing loop using jsQR
-  const tick = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas) {
-      requestRef.current = requestAnimationFrame(tick);
-      return;
-    }
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // Match canvas to video stream resolution
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Draw current video frame to canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // Analyze canvas image buffer
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert"
-        });
-
-        if (code && code.data.trim()) {
-          const resultText = code.data.trim();
-          setScanResult(resultText);
-          
-          // Audio feedback if allowed by user context
-          try {
-            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = context.createOscillator();
-            const gainNode = context.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(context.destination);
-            osc.frequency.setValueAtTime(880, context.currentTime); // high tone beep
-            gainNode.gain.setValueAtTime(0.08, context.currentTime);
-            osc.start();
-            osc.stop(context.currentTime + 0.1);
-          } catch (e) {
-            // mute audio failures
-          }
-
-          // Trigger decode completion
-          stopCameraStream();
-          onScan(resultText);
-          return;
-        }
-      }
-    }
-
-    if (streamRef.current) {
-      requestRef.current = requestAnimationFrame(tick);
-    }
-  };
-
   // Device change handler
   const handleDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const deviceId = e.target.value;
@@ -190,44 +145,27 @@ export default function QRScannerModal({
   };
 
   // File upload reader fallback
-  const processImageFile = (file: File) => {
+  const processImageFile = async (file: File) => {
     setFileError('');
     if (!file.type.startsWith('image/')) {
       setFileError('The selected file must be an image.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setFileError('Failed to initialize canvas decoder context.');
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code && code.data.trim()) {
-          const resultText = code.data.trim();
-          setScanResult(resultText);
-          onScan(resultText);
-        } else {
-          setFileError('Could not decode a valid QR code in this image. Ensure it is crisp, centered, and well-lit.');
-        }
-      };
-      img.onerror = () => {
-        setFileError('Failed to parse image file format.');
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const imgUrl = URL.createObjectURL(file);
+      const codeReader = new BrowserMultiFormatReader();
+      const result = await codeReader.decodeFromImageUrl(imgUrl);
+      if (result) {
+        const resultText = result.getText().trim();
+        setScanResult(resultText);
+        onScan(resultText);
+      } else {
+        setFileError('Could not decode a valid barcode/QR code in this image. Ensure it is crisp, centered, and well-lit.');
+      }
+    } catch (err) {
+      setFileError('Could not decode a valid barcode/QR code in this image. Ensure it is crisp, centered, and well-lit.');
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -314,9 +252,6 @@ export default function QRScannerModal({
                 muted
                 playsInline
               />
-
-              {/* Invisible parser buffer canvas */}
-              <canvas ref={canvasRef} className="hidden" />
             </div>
           )}
 
