@@ -1279,41 +1279,94 @@ export default function App() {
         .bg-blue-700, .bg-indigo-700 {
           background-color: var(--primary-hover) !important;
         }
-        .bg-blue-800, .bg-indigo-800, .bg-blue-900, .bg-indigo-900, .bg-blue-950, .bg-indigo-950 {
+
+        /* Ambient colored cards and deep highlights */
+        .light .bg-blue-800, .light .bg-indigo-800, .light .bg-blue-900, .light .bg-indigo-900, .light .bg-blue-950, .light .bg-indigo-950 {
           background-color: var(--primary-dark) !important;
         }
-        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/10, .bg-blue-50\\/10, .bg-indigo-50\\/20, .bg-blue-50\\/20, .bg-blue-500\\/10, .bg-indigo-500\\/10, .bg-indigo-600\\/10, .bg-indigo-650\\/10, .bg-blue-600\\/10, .bg-indigo-900\\/5, .bg-indigo-950\\/5, .bg-indigo-950\\/20, .bg-blue-950\\/20, .bg-indigo-950\\/40, .bg-blue-950\\/40 {
-          background-color: var(--primary-light-bg) !important;
-        }
-        .hover\\:bg-indigo-50:hover, .hover\\:bg-blue-50:hover, .hover\\:bg-indigo-100:hover, .hover\\:bg-blue-100:hover {
-          background-color: var(--primary-light-bg) !important;
+        .dark .bg-blue-800, .dark .bg-indigo-800, .dark .bg-blue-900, .dark .bg-indigo-900, .dark .bg-blue-950, .dark .bg-indigo-950 {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
 
-        /* Text Colors */
-        .text-blue-600, .text-indigo-600, .text-indigo-700, .text-blue-750, .text-indigo-650, .text-blue-500, .text-indigo-500, .text-blue-700, .text-blue-400, .text-indigo-400 {
+        /* Tinted block background helpers */
+        .light .bg-indigo-50, .light .bg-blue-50, .light .bg-indigo-50\\/10, .light .bg-blue-50\\/10, .light .bg-indigo-50\\/20, .light .bg-blue-50\\/20, .light .bg-blue-500\\/10, .light .bg-indigo-500\\/10, .light .bg-indigo-600\\/10, .light .bg-indigo-650\\/10, .light .bg-blue-600\\/10, .light .bg-indigo-900\\/5, .light .bg-indigo-950\\/5, .light .bg-indigo-950\\/20, .light .bg-blue-950\\/20, .light .bg-indigo-950\\/40, .light .bg-blue-950\\/40 {
+          background-color: var(--primary-light-bg) !important;
+        }
+        .dark .bg-indigo-50, .dark .bg-blue-50, .dark .bg-indigo-50\\/10, .dark .bg-blue-50\\/10, .dark .bg-indigo-50\\/20, .dark .bg-blue-50\\/20, .dark .bg-blue-500\\/10, .dark .bg-indigo-500\\/10, .dark .bg-indigo-600\\/10, .dark .bg-indigo-650\\/10, .dark .bg-blue-600\\/10, .dark .bg-indigo-900\\/5, .dark .bg-indigo-950\\/5, .dark .bg-indigo-950\\/20, .dark .bg-blue-950\\/20, .dark .bg-indigo-950\\/40, .dark .bg-blue-950\\/40 {
+          background-color: rgba(255, 255, 255, 0.04) !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .light .hover\\:bg-indigo-50:hover, .light .hover\\:bg-blue-50:hover, .light .hover\\:bg-indigo-100:hover, .light .hover\\:bg-blue-100:hover {
+          background-color: var(--primary-light-bg) !important;
+        }
+        .dark .hover\\:bg-indigo-50:hover, .dark .hover\\:bg-blue-50:hover, .dark .hover\\:bg-indigo-100:hover, .dark .hover\\:bg-blue-100:hover {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Dynamic High-Contrast Text Rules */
+        /* LIGHT MODE */
+        .light .text-blue-600, .light .text-indigo-600, .light .text-indigo-700, .light .text-blue-750, .light .text-indigo-650, .light .text-blue-500, .light .text-indigo-500, .light .text-blue-700, .light .text-blue-400, .light .text-indigo-400 {
           color: var(--primary-color) !important;
         }
-        .text-indigo-800, .text-blue-800, .text-indigo-900, .text-blue-900, .text-indigo-950, .text-blue-950, .text-indigo-905 {
+        .light .text-indigo-800, .light .text-blue-800, .light .text-indigo-900, .light .text-blue-900, .light .text-indigo-950, .light .text-blue-950, .light .text-indigo-905 {
           color: var(--primary-dark) !important;
         }
-        .text-indigo-300, .text-blue-300 {
-          color: var(--primary-light) !important;
+        .light .text-indigo-300, .light .text-blue-300 {
+          color: var(--primary-color) !important;
+          font-weight: 700 !important;
+        }
+
+        /* DARK MODE */
+        .dark {
+          --brand-bright: ${selectedPaletteId === 'blue' ? '#38bdf8' : 
+                            selectedPaletteId === 'teal' ? '#2dd4bf' : 
+                            selectedPaletteId === 'orange' ? '#fb923c' : 
+                            selectedPaletteId === 'violet' ? '#a78bfa' : 
+                            selectedPaletteId === 'indigo' ? '#818cf8' : 
+                            selectedPaletteId === 'amber' ? '#f59e0b' : 
+                            selectedPaletteId === 'rose' ? '#f87171' : '#94a3b8'};
+        }
+        .dark .text-blue-600, .dark .text-indigo-600, .dark .text-indigo-700, .dark .text-blue-750, .dark .text-indigo-650, .dark .text-blue-500, .dark .text-indigo-500, .dark .text-blue-700, .dark .text-blue-400, .dark .text-indigo-400 {
+          color: var(--brand-bright) !important;
+        }
+        .dark .text-indigo-800, .dark .text-blue-800, .dark .text-indigo-900, .dark .text-blue-900, .dark .text-indigo-950, .dark .text-blue-950, .dark .text-indigo-905 {
+          color: #f8fafc !important;
+        }
+        .dark .text-indigo-300, .dark .text-blue-300 {
+          color: var(--brand-bright) !important;
+          opacity: 0.95 !important;
         }
 
         /* Border Colors */
-        .border-blue-600, .border-indigo-600, .border-blue-500, .border-indigo-500 {
+        .light .border-blue-600, .light .border-indigo-600, .light .border-blue-500, .light .border-indigo-500 {
           border-color: var(--primary-color) !important;
         }
-        .border-blue-100, .border-indigo-100, .border-blue-200, .border-indigo-200, .border-blue-300, .border-indigo-300, .border-indigo-700\\/10, .border-indigo-700\\/20, .border-indigo-900\\/30, .border-indigo-900\\/40, .border-blue-400\\/15, .hover\\:border-indigo-500:hover, .hover\\:border-blue-500:hover, .hover\\:border-indigo-600:hover, .hover\\:border-blue-600:hover {
+        .dark .border-blue-600, .dark .border-indigo-600, .dark .border-blue-500, .dark .border-indigo-500 {
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        .light .border-blue-100, .light .border-indigo-100, .light .border-blue-200, .light .border-indigo-200, .light .border-blue-300, .light .border-indigo-300, .light .border-indigo-700\\/10, .light .border-indigo-700\\/20, .light .border-indigo-900\\/30, .light .border-indigo-900\\/40, .light .border-blue-400\\/15, .light .hover\\:border-indigo-500:hover, .light .hover\\:border-blue-500:hover, .light .hover\\:border-indigo-600:hover, .light .hover\\:border-blue-600:hover {
           border-color: var(--primary-light) !important;
+        }
+        .dark .border-blue-100, .dark .border-indigo-100, .dark .border-blue-200, .dark .border-indigo-200, .dark .border-blue-300, .dark .border-indigo-300, .dark .border-indigo-700\\/10, .dark .border-indigo-700\\/20, .dark .border-indigo-900\\/30, .dark .border-indigo-900\\/40, .dark .border-blue-400\\/15, .dark .hover\\:border-indigo-500:hover, .dark .hover\\:border-blue-500:hover, .dark .hover\\:border-indigo-600:hover, .dark .hover\\:border-blue-600:hover {
+          border-color: rgba(255, 255, 255, 0.12) !important;
         }
 
         /* Gradients */
-        .from-blue-50, .from-indigo-50 {
+        .light .from-blue-50, .light .from-indigo-50 {
           background-image: linear-gradient(to right, var(--primary-light-bg), transparent) !important;
         }
-        .to-blue-50, .to-indigo-50 {
+        .dark .from-blue-50, .dark .from-indigo-50 {
+          background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent) !important;
+        }
+
+        .light .to-blue-50, .light .to-indigo-50 {
           background-image: linear-gradient(to left, var(--primary-light-bg), transparent) !important;
+        }
+        .dark .to-blue-50, .dark .to-indigo-50 {
+          background-image: linear-gradient(to left, rgba(255, 255, 255, 0.05), transparent) !important;
         }
 
         /* Interaction Utilities */
