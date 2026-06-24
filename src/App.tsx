@@ -106,8 +106,8 @@ const COLOR_PALETTES: ThemeColorPalette[] = [
     darkAccent: '#1e1b4b',
   },
   {
-    id: 'emerald',
-    name: 'Eco Forest Green',
+    id: 'teal',
+    name: 'Cyber Teal Aura',
     primary: '#0d9488',
     primaryHover: '#0f766e',
     primaryLight: 'rgba(13, 148, 136, 0.15)',
@@ -115,13 +115,13 @@ const COLOR_PALETTES: ThemeColorPalette[] = [
     darkAccent: '#115e59',
   },
   {
-    id: 'amber',
-    name: 'Industrial Amber',
-    primary: '#d97706',
-    primaryHover: '#b45309',
-    primaryLight: 'rgba(217, 119, 6, 0.15)',
-    primaryLightBg: 'rgba(217, 119, 6, 0.05)',
-    darkAccent: '#78350f',
+    id: 'orange',
+    name: 'Solar Tangerine',
+    primary: '#ea580c',
+    primaryHover: '#c2410c',
+    primaryLight: 'rgba(234, 88, 12, 0.15)',
+    primaryLightBg: 'rgba(234, 88, 12, 0.05)',
+    darkAccent: '#7c2d12',
   },
   {
     id: 'violet',
@@ -133,6 +133,24 @@ const COLOR_PALETTES: ThemeColorPalette[] = [
     darkAccent: '#4c1d95',
   },
   {
+    id: 'indigo',
+    name: 'Deep Indigo Navy',
+    primary: '#4f46e5',
+    primaryHover: '#4338ca',
+    primaryLight: 'rgba(79, 70, 229, 0.15)',
+    primaryLightBg: 'rgba(79, 70, 229, 0.05)',
+    darkAccent: '#312e81',
+  },
+  {
+    id: 'amber',
+    name: 'Industrial Amber',
+    primary: '#d97706',
+    primaryHover: '#b45309',
+    primaryLight: 'rgba(217, 119, 6, 0.15)',
+    primaryLightBg: 'rgba(217, 119, 6, 0.05)',
+    darkAccent: '#78350f',
+  },
+  {
     id: 'rose',
     name: 'Crimson Power Red',
     primary: '#e11d48',
@@ -140,6 +158,15 @@ const COLOR_PALETTES: ThemeColorPalette[] = [
     primaryLight: 'rgba(225, 29, 72, 0.15)',
     primaryLightBg: 'rgba(225, 29, 72, 0.05)',
     darkAccent: '#881337',
+  },
+  {
+    id: 'slate',
+    name: 'Tech Slate Obsidian',
+    primary: '#475569',
+    primaryHover: '#334155',
+    primaryLight: 'rgba(71, 85, 105, 0.15)',
+    primaryLightBg: 'rgba(71, 85, 105, 0.05)',
+    darkAccent: '#1e293b',
   }
 ];
 
@@ -1154,11 +1181,11 @@ export default function App() {
           </div>
 
           {/* Color Scheme Picker */}
-          <div className="space-y-1.5 px-0.5 pb-1 border-b border-slate-800/60">
+          <div className="space-y-1.5 px-0.5 pb-2 border-b border-slate-800/60">
             <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">
               App Color Scheme
             </span>
-            <div className="flex items-center gap-1.5 justify-between">
+            <div className="grid grid-cols-4 gap-2 py-1">
               {COLOR_PALETTES.map((pal) => {
                 const isSelected = selectedPaletteId === pal.id;
                 return (
@@ -1166,16 +1193,19 @@ export default function App() {
                     key={pal.id}
                     onClick={() => handleSelectPalette(pal.id)}
                     title={pal.name}
-                    className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all cursor-pointer ${
+                    className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center border transition-all cursor-pointer relative group ${
                       isSelected 
-                        ? 'border-white scale-110 shadow-md ring-2 ring-blue-500/40 ring-offset-1 ring-offset-slate-950' 
-                        : 'border-slate-700/50 opacity-75 hover:opacity-100 hover:scale-105'
+                        ? 'border-white scale-110 shadow-md ring-2 ring-indigo-500/50 ring-offset-1 ring-offset-slate-900' 
+                        : 'border-slate-700/60 opacity-80 hover:opacity-100 hover:scale-110'
                     }`}
                     style={{ backgroundColor: pal.primary }}
                   >
                     {isSelected && (
                       <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
                     )}
+                    <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-slate-950 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                      {pal.name}
+                    </span>
                   </button>
                 );
               })}
@@ -1239,33 +1269,54 @@ export default function App() {
         }
 
         /* Force brand overrides across standard Tailwind classes dynamically */
-        .bg-blue-600, .bg-indigo-600 {
+        /* Background Colors */
+        .bg-blue-600, .bg-indigo-600, .bg-blue-500, .bg-indigo-500 {
           background-color: var(--primary-color) !important;
         }
-        .hover\\:bg-blue-700:hover, .hover\\:bg-indigo-700:hover {
+        .hover\\:bg-blue-700:hover, .hover\\:bg-indigo-700:hover, .hover\\:bg-blue-600:hover, .hover\\:bg-indigo-600:hover, .hover\\:bg-indigo-700\\/90:hover {
           background-color: var(--primary-hover) !important;
         }
-        .text-blue-600, .text-indigo-600, .text-indigo-700 {
+        .bg-blue-700, .bg-indigo-700 {
+          background-color: var(--primary-hover) !important;
+        }
+        .bg-blue-800, .bg-indigo-800, .bg-blue-900, .bg-indigo-900, .bg-blue-950, .bg-indigo-950 {
+          background-color: var(--primary-dark) !important;
+        }
+        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/10, .bg-blue-50\\/10, .bg-indigo-50\\/20, .bg-blue-50\\/20, .bg-blue-500\\/10, .bg-indigo-500\\/10, .bg-indigo-600\\/10, .bg-indigo-650\\/10, .bg-blue-600\\/10, .bg-indigo-900\\/5, .bg-indigo-950\\/5, .bg-indigo-950\\/20, .bg-blue-950\\/20, .bg-indigo-950\\/40, .bg-blue-950\\/40 {
+          background-color: var(--primary-light-bg) !important;
+        }
+        .hover\\:bg-indigo-50:hover, .hover\\:bg-blue-50:hover, .hover\\:bg-indigo-100:hover, .hover\\:bg-blue-100:hover {
+          background-color: var(--primary-light-bg) !important;
+        }
+
+        /* Text Colors */
+        .text-blue-600, .text-indigo-600, .text-indigo-700, .text-blue-750, .text-indigo-650, .text-blue-500, .text-indigo-500, .text-blue-700, .text-blue-400, .text-indigo-400 {
           color: var(--primary-color) !important;
         }
-        .border-blue-600, .border-indigo-600 {
-          border-color: var(--primary-color) !important;
-        }
-        .border-blue-100, .border-indigo-100 {
-          border-color: var(--primary-light) !important;
-        }
-        .text-indigo-900, .text-indigo-950 {
+        .text-indigo-800, .text-blue-800, .text-indigo-900, .text-blue-900, .text-indigo-950, .text-blue-950, .text-indigo-905 {
           color: var(--primary-dark) !important;
         }
+        .text-indigo-300, .text-blue-300 {
+          color: var(--primary-light) !important;
+        }
+
+        /* Border Colors */
+        .border-blue-600, .border-indigo-600, .border-blue-500, .border-indigo-500 {
+          border-color: var(--primary-color) !important;
+        }
+        .border-blue-100, .border-indigo-100, .border-blue-200, .border-indigo-200, .border-blue-300, .border-indigo-300, .border-indigo-700\\/10, .border-indigo-700\\/20, .border-indigo-900\\/30, .border-indigo-900\\/40, .border-blue-400\\/15, .hover\\:border-indigo-500:hover, .hover\\:border-blue-500:hover, .hover\\:border-indigo-600:hover, .hover\\:border-blue-600:hover {
+          border-color: var(--primary-light) !important;
+        }
+
+        /* Gradients */
         .from-blue-50, .from-indigo-50 {
           background-image: linear-gradient(to right, var(--primary-light-bg), transparent) !important;
         }
         .to-blue-50, .to-indigo-50 {
           background-image: linear-gradient(to left, var(--primary-light-bg), transparent) !important;
         }
-        .bg-indigo-50, .bg-blue-50, .bg-indigo-50\\/20, .bg-blue-50\\/20 {
-          background-color: var(--primary-light-bg) !important;
-        }
+
+        /* Interaction Utilities */
         .accent-indigo-600, .accent-blue-600 {
           accent-color: var(--primary-color) !important;
         }
