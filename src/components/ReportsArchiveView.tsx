@@ -109,7 +109,7 @@ export default function ReportsArchiveView({
 
   // 14-digit Account Number Regional Analysis Filter states
   const [regBatch, setRegBatch] = useState('all');
-  const [regCompany, setRegCompany] = useState('26');
+  const [regCompany, setRegCompany] = useState('all');
   const [regCircle, setRegCircle] = useState('all');
   const [regDivision, setRegDivision] = useState('all');
   const [regSubdivision, setRegSubdivision] = useState('all');
@@ -611,7 +611,8 @@ export default function ReportsArchiveView({
                   onChange={(e) => setRegCompany(e.target.value)}
                   className="w-full text-[11px] p-1 bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-medium"
                 >
-                  <option value="26">PESCO</option>
+                  <option value="all">All Companies</option>
+                  <option value="26">PESCO (26)</option>
                 </select>
               </div>
 

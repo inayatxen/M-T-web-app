@@ -293,6 +293,69 @@ export default function App() {
 
   // Cloud database real-time sync status
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('offline');
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>(() => {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  });
+
+  const handlePullAllFromDatabase = async (): Promise<boolean> => {
+    setSyncStatus('syncing');
+    try {
+      const { error: testError } = await supabase.from('meters').select('id').limit(1);
+      if (testError) {
+        if (testError.code === '42P01') {
+          console.warn('[Supabase Auto-Sync] Connected but schema or tables do not exist yet in Supabase.');
+          setSyncStatus('error');
+        } else {
+          console.warn('[Supabase Auto-Sync] Supabase unreachable or wrong credentials:', testError.message);
+          setSyncStatus('offline');
+        }
+        return false;
+      }
+
+      console.log('[Supabase Auto-Sync] Connected successfully. Performing database pulling and sync...');
+      
+      const tablesToSync = [
+        { key: 'meters', stateSetter: setMeters, localSeed: SEED_METERS },
+        { key: 'receipts', stateSetter: setReceipts, localSeed: SEED_RECEIPTS },
+        { key: 'cts', stateSetter: setCts, localSeed: SEED_CTS },
+        { key: 'pts', stateSetter: setPts, localSeed: SEED_PTS },
+        { key: 'cases', stateSetter: setCases, localSeed: SEED_COMMITTEE_CASES },
+        { key: 'reports', stateSetter: setReports, localSeed: SEED_REPORTS },
+        { key: 'auditLogs', stateSetter: setAuditLogs, localSeed: SEED_AUDIT_LOGS },
+        { key: 'standards', stateSetter: setStandards, localSeed: SEED_CALIBRATION_STANDARDS },
+        { key: 'available_sims', stateSetter: setAvailableSims, localSeed: [] }
+      ];
+
+      for (const tbl of tablesToSync) {
+        const { data: remoteData, error } = await supabase.from(tbl.key).select('*');
+        if (error) {
+          console.warn(`[Supabase Auto-Sync] Fail pulling table [${tbl.key}]:`, error.message);
+          continue;
+        }
+
+        if (remoteData && remoteData.length > 0) {
+          tbl.stateSetter(remoteData);
+          localStorage.setItem(`mtlms_${tbl.key}`, JSON.stringify(remoteData));
+          console.log(`[Supabase Auto-Sync] Hydrated state for tbl [${tbl.key}] directly with ${remoteData.length} remote cloud entries.`);
+        } else {
+          // Postgres table was fully queryable but empty. Let's seed/push local records up so they're in sync!
+          const storedLocal = localStorage.getItem(`mtlms_${tbl.key}`);
+          const dataToInsert = storedLocal ? JSON.parse(storedLocal) : tbl.localSeed;
+          if (dataToInsert && dataToInsert.length > 0) {
+            console.log(`[Supabase Auto-Sync] Remote table [${tbl.key}] is empty. Seeding with ${dataToInsert.length} local cache entries...`);
+            await supabase.from(tbl.key).upsert(dataToInsert);
+          }
+        }
+      }
+      setSyncStatus('synced');
+      setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      return true;
+    } catch (err: any) {
+      console.error('[Supabase Auto-Sync Exception]', err);
+      setSyncStatus('error');
+      return false;
+    }
+  };
 
   // 1. Initial hydration from localStorage (Offline-first persistence matching "Local Storage")
   useEffect(() => {
@@ -327,68 +390,13 @@ export default function App() {
     }
   }, []);
 
-  // 1b. Supabase Bi-directional Auto Sync on startup
+  // 1b. Supabase Bi-directional Auto Sync on startup (keeps analytics and tables updated as per database)
   useEffect(() => {
-    const runStartupSync = async () => {
-      setSyncStatus('syncing');
-      try {
-        // Quick connection test using a light tables check
-        const { error: testError } = await supabase.from('meters').select('id').limit(1);
-        if (testError) {
-          if (testError.code === '42P01') {
-            console.warn('[Supabase Auto-Sync] Connected but schema or tables do not exist yet in Supabase.');
-            setSyncStatus('error');
-          } else {
-            console.warn('[Supabase Auto-Sync] Supabase unreachable or wrong credentials:', testError.message);
-            setSyncStatus('offline');
-          }
-          return;
-        }
-
-        console.log('[Supabase Auto-Sync] Connected successfully. Performing startup bi-directional sync...');
-        
-        const tablesToSync = [
-          { key: 'meters', stateSetter: setMeters, localSeed: SEED_METERS },
-          { key: 'receipts', stateSetter: setReceipts, localSeed: SEED_RECEIPTS },
-          { key: 'cts', stateSetter: setCts, localSeed: SEED_CTS },
-          { key: 'pts', stateSetter: setPts, localSeed: SEED_PTS },
-          { key: 'cases', stateSetter: setCases, localSeed: SEED_COMMITTEE_CASES },
-          { key: 'reports', stateSetter: setReports, localSeed: SEED_REPORTS },
-          { key: 'auditLogs', stateSetter: setAuditLogs, localSeed: SEED_AUDIT_LOGS },
-          { key: 'standards', stateSetter: setStandards, localSeed: SEED_CALIBRATION_STANDARDS },
-          { key: 'available_sims', stateSetter: setAvailableSims, localSeed: [] }
-        ];
-
-        for (const tbl of tablesToSync) {
-          const { data: remoteData, error } = await supabase.from(tbl.key).select('*');
-          if (error) {
-            console.warn(`[Supabase Auto-Sync] Fail pulling table [${tbl.key}]:`, error.message);
-            continue;
-          }
-
-          if (remoteData && remoteData.length > 0) {
-            tbl.stateSetter(remoteData);
-            localStorage.setItem(`mtlms_${tbl.key}`, JSON.stringify(remoteData));
-            console.log(`[Supabase Auto-Sync] Hydrated state for tbl [${tbl.key}] directly with ${remoteData.length} remote cloud entries.`);
-          } else {
-            // Postgres table was fully queryable but empty. Let's seed/push local records up so they're in sync!
-            const storedLocal = localStorage.getItem(`mtlms_${tbl.key}`);
-            const dataToInsert = storedLocal ? JSON.parse(storedLocal) : tbl.localSeed;
-            if (dataToInsert && dataToInsert.length > 0) {
-              console.log(`[Supabase Auto-Sync] Remote table [${tbl.key}] is empty. Seeding with ${dataToInsert.length} local cache entries...`);
-              await supabase.from(tbl.key).upsert(dataToInsert);
-            }
-          }
-        }
-        setSyncStatus('synced');
-      } catch (err: any) {
-        console.error('[Supabase Auto-Sync Exception]', err);
-        setSyncStatus('error');
-      }
+    const timeout = setTimeout(handlePullAllFromDatabase, 800);
+    
+    return () => {
+      clearTimeout(timeout);
     };
-
-    const timeout = setTimeout(runStartupSync, 800);
-    return () => clearTimeout(timeout);
   }, []);
 
   // Sync back to local storage whenever Master state registers mutate
@@ -469,6 +477,40 @@ export default function App() {
       `Bulk Imported ${newReceiptsList.length} Receipts`, 
       'N/A: Bulk Equipment Intake', 
       `Assigned ${associatedMetersList.length} Meters to warehouse queue`
+    );
+  };
+
+  const handlePushMeterToInventory = (associatedMeter: Meter) => {
+    if (meters.some(m => m.meterNumber === associatedMeter.meterNumber || m.serialNumber === associatedMeter.serialNumber)) {
+      return;
+    }
+    const updatedMeters = [associatedMeter, ...meters];
+    setMeters(updatedMeters);
+    saveState('meters', updatedMeters);
+
+    recordAuditTrail(
+      `Pushed Meter ${associatedMeter.meterNumber} to Inventory`,
+      'N/A: Manual Register Push',
+      `Registered Meter ${associatedMeter.meterNumber} in Hardware Inventory Vault`,
+      updatedMeters
+    );
+  };
+
+  const handlePushBulkMetersToInventory = (metersToPush: Meter[]) => {
+    const newMeters = metersToPush.filter(meter => 
+      !meters.some(m => m.meterNumber === meter.meterNumber || m.serialNumber === meter.serialNumber)
+    );
+    if (newMeters.length === 0) return;
+    
+    const updatedMeters = [...newMeters, ...meters];
+    setMeters(updatedMeters);
+    saveState('meters', updatedMeters);
+
+    recordAuditTrail(
+      `Pushed ${newMeters.length} Meters to Inventory`,
+      'N/A: Manual Bulk Register Push',
+      `Registered ${newMeters.length} Meters in Hardware Inventory Vault`,
+      updatedMeters
     );
   };
 
@@ -1477,6 +1519,10 @@ export default function App() {
                   receipts={receipts}
                   reports={reports}
                   onNavigateToPage={handleNavigateToPage} 
+                  syncStatus={syncStatus}
+                  lastSyncedTime={lastSyncedTime}
+                  onRefreshAllData={handlePullAllFromDatabase}
+                  availableSims={availableSims}
                 />
               )}
 
@@ -1486,6 +1532,9 @@ export default function App() {
                   onAddReceipt={handleAddReceipt} 
                   onAddBulkReceipts={handleAddBulkReceipts}
                   currentUser={currentUser} 
+                  meters={meters}
+                  onPushMeterToInventory={handlePushMeterToInventory}
+                  onPushBulkMetersToInventory={handlePushBulkMetersToInventory}
                 />
               )}
 

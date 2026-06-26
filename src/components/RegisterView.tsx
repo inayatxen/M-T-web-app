@@ -24,7 +24,9 @@ import {
   UploadCloud,
   Download,
   QrCode,
-  Camera
+  Camera,
+  Boxes,
+  ArrowUpRight
 } from 'lucide-react';
 import QRScannerModal from './QRScannerModal';
 import { read, utils, write } from 'xlsx';
@@ -190,11 +192,45 @@ interface RegisterViewProps {
   onAddReceipt: (newReceipt: EquipmentReceipt, associatedMeter: Meter) => void;
   onAddBulkReceipts?: (newReceipts: EquipmentReceipt[], associatedMeters: Meter[]) => void;
   currentUser: any;
+  meters?: Meter[];
+  onPushMeterToInventory?: (associatedMeter: Meter) => void;
+  onPushBulkMetersToInventory?: (metersToPush: Meter[]) => void;
 }
 
-export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts, currentUser }: RegisterViewProps) {
+export default function RegisterView({ 
+  receipts, 
+  onAddReceipt, 
+  onAddBulkReceipts, 
+  currentUser,
+  meters = [],
+  onPushMeterToInventory,
+  onPushBulkMetersToInventory
+}: RegisterViewProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Find receipts that are NOT in meters (Inventory Vault)
+  const pendingPushReceipts = receipts.filter(r => 
+    !meters.some(m => m.meterNumber === r.meterNumber || m.serialNumber === r.serialNumber)
+  );
+
+  const getMeterFromReceipt = (r: EquipmentReceipt): Meter => {
+    return {
+      id: `m-push-${r.id}-${Date.now()}`,
+      meterNumber: r.meterNumber,
+      serialNumber: r.serialNumber,
+      manufacturer: r.make,
+      accuracyClass: r.meterType === 'single_phase' ? 'Class 1.0' : 
+                     r.meterType === 'three_phase_whole' ? 'Class 1.0' :
+                     r.meterType === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
+      category: r.meterType,
+      status: 'received',
+      stockStatus: 'In Store',
+      purchaseDate: r.dateReceived,
+      remarks: `Manually pushed to inventory from register receipt ${r.receiptNumber}.`,
+      consumerAccount: r.consumerAccount
+    };
+  };
   
   // Intake Form Mode configuration: Single record entry vs Bulk intake sheets import
   const [formMode, setFormMode] = useState<'single' | 'bulk'>('single');
@@ -1554,6 +1590,31 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                 <span>{qrNotification}</span>
               </div>
             )}
+            
+            {pendingPushReceipts.length > 0 && (
+              <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/5 text-blue-800 dark:text-blue-400 border border-blue-500/20 text-[11px] font-bold rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center gap-2">
+                  <Boxes className="w-4 h-4 text-blue-500 shrink-0 animate-bounce" />
+                  <div>
+                    <span>Found {pendingPushReceipts.length} inward record{pendingPushReceipts.length > 1 ? 's' : ''} not present in the Hardware Inventory Vault.</span>
+                    <p className="text-[9.5px] font-normal text-slate-500 dark:text-slate-400 mt-0.5">Pushing maps records to central stores, enabling testing workflows.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onPushBulkMetersToInventory) {
+                      const listToPush = pendingPushReceipts.map(getMeterFromReceipt);
+                      onPushBulkMetersToInventory(listToPush);
+                    }
+                  }}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5 text-[10.5px] cursor-pointer"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>Push All to Vault ({pendingPushReceipts.length})</span>
+                </button>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="relative w-full sm:max-w-xs flex items-center">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1747,12 +1808,13 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                   <th className="p-2 sm:p-2.5">Serial Number</th>
                   <th className="p-2 sm:p-2.5">Classification</th>
                   <th className="p-2 sm:p-2.5">Receiving Officer</th>
+                  <th className="p-2 sm:p-2.5">Vault Status / Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-300">
                 {filteredReceipts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={8} className="p-6 text-center text-slate-400 dark:text-slate-500">
                       <HelpCircle className="w-6 h-6 text-slate-350 mx-auto mb-1.5" />
                       <p className="font-bold text-slate-700 dark:text-slate-350">No Matching Intake Receipts</p>
                       <p className="text-[10px] mt-0.5">Try resetting search filters or register a new incoming meter.</p>
@@ -1811,6 +1873,33 @@ export default function RegisterView({ receipts, onAddReceipt, onAddBulkReceipts
                         <td className="p-2 sm:p-2.5">
                           <p className="font-medium text-slate-800 dark:text-slate-250 leading-tight">{r.receivedBy}</p>
                           <p className="text-[10.5px] text-slate-450 dark:text-slate-500">Officer desk</p>
+                        </td>
+                        <td className="p-2 sm:p-2.5">
+                          {(() => {
+                            const isSynced = meters.some(m => m.meterNumber === r.meterNumber || m.serialNumber === r.serialNumber);
+                            if (isSynced) {
+                              return (
+                                <div className="flex items-center gap-1 text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/5 px-2 py-1 rounded border border-emerald-500/20 w-fit">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>In Vault</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <button
+                                onClick={() => {
+                                  if (onPushMeterToInventory) {
+                                    onPushMeterToInventory(getMeterFromReceipt(r));
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 text-[9.5px] font-bold text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white bg-blue-500/10 hover:bg-blue-600 dark:bg-blue-500/5 dark:hover:bg-blue-500 px-2.5 py-1 rounded border border-blue-500/25 hover:border-transparent transition-all cursor-pointer w-fit"
+                                title="Push this inward entry directly to the Hardware Inventory Vault"
+                              >
+                                <Boxes className="w-3 h-3" />
+                                <span>Push to Vault</span>
+                              </button>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );

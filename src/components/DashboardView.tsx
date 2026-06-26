@@ -20,9 +20,13 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  Database,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
-import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport } from '../types';
+import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport, AvailableSIM } from '../types';
 import {
   ResponsiveContainer,
   LineChart,
@@ -45,6 +49,10 @@ interface DashboardViewProps {
   receipts: EquipmentReceipt[];
   reports: TestReport[];
   onNavigateToPage: (pageId: string) => void;
+  syncStatus?: 'synced' | 'syncing' | 'offline' | 'error';
+  lastSyncedTime?: string;
+  onRefreshAllData?: () => Promise<boolean>;
+  availableSims?: AvailableSIM[];
 }
 
 export default function DashboardView({ 
@@ -54,12 +62,16 @@ export default function DashboardView({
   cases, 
   receipts, 
   reports,
-  onNavigateToPage 
+  onNavigateToPage,
+  syncStatus = 'offline',
+  lastSyncedTime = 'N/A',
+  onRefreshAllData,
+  availableSims = []
 }: DashboardViewProps) {
 
   // Regional configuration filters
   const [regBatch, setRegBatch] = useState('all');
-  const [regCompany, setRegCompany] = useState('26');
+  const [regCompany, setRegCompany] = useState('all');
   const [regCircle, setRegCircle] = useState('all');
   const [regDivision, setRegDivision] = useState('all');
   const [regSubdivision, setRegSubdivision] = useState('all');
@@ -97,7 +109,7 @@ export default function DashboardView({
   const dynamicDivisions = Array.from(new Set(allAccountsReg.map(a => a.division))).filter(Boolean).sort();
   const dynamicSubdivisions = Array.from(new Set(allAccountsReg.map(a => a.subdivision))).filter(Boolean).sort();
 
-  const isRegionFiltered = regBatch !== 'all' || regCompany !== '26' || regCircle !== 'all' || regDivision !== 'all' || regSubdivision !== 'all';
+  const isRegionFiltered = regBatch !== 'all' || regCompany !== 'all' || regCircle !== 'all' || regDivision !== 'all' || regSubdivision !== 'all';
 
   const matchesRegion = (accountNo: string): boolean => {
     if (!accountNo) return false;
@@ -137,9 +149,10 @@ export default function DashboardView({
   const underTesting = filteredMeters.filter(m => m.status === 'under_testing').length;
   const passedCount = filteredMeters.filter(m => m.status === 'passed').length;
   const failedCount = filteredMeters.filter(m => m.status === 'failed').length;
-  const reportsIssued = filteredMeters.filter(m => m.status === 'report_issued').length;
+  const reportsIssued = filteredReports.length;
+  const passedAndIssuedCount = filteredMeters.filter(m => m.status === 'passed' || m.status === 'report_issued').length;
   
-  const pendingSIM = filteredMeters.filter(m => m.category === 'smart' && m.simInstallStatus === 'Pending').length;
+  const pendingSIM = availableSims.length;
   const activeSIMs = filteredMeters.filter(m => m.category === 'smart' && m.simInstallStatus === 'Installed').length;
   // Since CT/PT records do not have direct client accounts in raw logs, we scale/filter if linked to filteredMeters.
   // We can filter if their serial number matches any in filteredMeters or keep them matched to make the dashboard organic.
@@ -167,7 +180,7 @@ export default function DashboardView({
     Math.round(39 * ratio),
     Math.round(52 * ratio),
     Math.round(58 * ratio),
-    passedCount + failedCount + reportsIssued
+    passedAndIssuedCount + failedCount
   ];
 
   const categoryDistribution = filteredMeters.reduce((acc: Record<string, number>, curr) => {
@@ -183,7 +196,7 @@ export default function DashboardView({
     { month: 'Mar', 'Pass Rate (%)': 82, 'Fail Rate (%)': 18, passed: Math.round(32 * ratio), failed: Math.round(7 * ratio) },
     { month: 'Apr', 'Pass Rate (%)': 86, 'Fail Rate (%)': 14, passed: Math.round(45 * ratio), failed: Math.round(7 * ratio) },
     { month: 'May', 'Pass Rate (%)': 88, 'Fail Rate (%)': 12, passed: Math.round(51 * ratio), failed: Math.round(7 * ratio) },
-    { month: 'Jun', 'Pass Rate (%)': totalReceived > 0 ? Math.round(((passedCount + reportsIssued) / totalReceived) * 105) > 100 ? 100 : Math.round(((passedCount + reportsIssued) / totalReceived) * 100) : 80, 'Fail Rate (%)': totalReceived > 0 ? Math.round((failedCount / totalReceived) * 100) : 20, passed: passedCount + reportsIssued, failed: failedCount },
+    { month: 'Jun', 'Pass Rate (%)': totalReceived > 0 ? Math.round((passedAndIssuedCount / totalReceived) * 105) > 100 ? 100 : Math.round((passedAndIssuedCount / totalReceived) * 100) : 80, 'Fail Rate (%)': totalReceived > 0 ? Math.round((failedCount / totalReceived) * 100) : 20, passed: passedAndIssuedCount, failed: failedCount },
   ];
 
   // 30-day Pass vs Fail Trend (Dynamic aggregation from active reports data)
@@ -286,6 +299,80 @@ export default function DashboardView({
           >
             <Cpu className="w-3.5 h-3.5" />
             Register Equipment
+          </button>
+        </div>
+      </div>
+
+      {/* LIVE DATABASE SYNCHRONIZATION & ANALYTICS UPDATE PANEL */}
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl text-white shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-1">
+        {/* Glow behind */}
+        <div className={`absolute top-1/2 left-4 w-40 h-40 rounded-full blur-3xl -translate-y-1/2 pointer-events-none transition-all duration-500 ${
+          syncStatus === 'synced' ? 'bg-emerald-500/10' :
+          syncStatus === 'syncing' ? 'bg-amber-500/10' :
+          syncStatus === 'error' ? 'bg-rose-500/10' : 'bg-slate-500/10'
+        }`} />
+
+        <div className="flex items-start sm:items-center gap-3.5 relative z-10 w-full md:w-auto">
+          <div className={`p-2.5 rounded-xl shrink-0 border transition-all ${
+            syncStatus === 'synced' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+            syncStatus === 'syncing' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse' :
+            syncStatus === 'error' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            {syncStatus === 'synced' ? <Wifi className="w-5 h-5 animate-pulse" /> :
+             syncStatus === 'syncing' ? <RefreshCw className="w-5 h-5 animate-spin" /> :
+             syncStatus === 'error' ? <WifiOff className="w-5 h-5" /> : <Database className="w-5 h-5" />}
+          </div>
+          <div className="text-left space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-100 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-blue-400" />
+                Live Laboratory Database Sync
+              </h3>
+              {syncStatus === 'synced' && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase border border-emerald-500/15 animate-pulse">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                  Active
+                </span>
+              )}
+              {syncStatus === 'syncing' && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase border border-amber-500/15">
+                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping"></span>
+                  Syncing
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              {syncStatus === 'synced' && `Analytics are fully reconciled and updated with the cloud database. Live auto-sync refreshes statistics automatically.`}
+              {syncStatus === 'syncing' && `Fetching and recalculating latest laboratory analytics directly from Supabase DB tables...`}
+              {syncStatus === 'offline' && `Currently displaying offline cached data. Run manual reconciliation to fetch central database records.`}
+              {syncStatus === 'error' && `Error communicating with database server. Please verify credentials or schema settings.`}
+            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400 font-semibold pt-0.5">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-500" />
+                Last Checked: <strong className="text-slate-200">{lastSyncedTime}</strong>
+              </span>
+              <span className="flex items-center gap-1">
+                <Layers className="w-3 h-3 text-slate-500" />
+                Tables Synchronized: <strong className="text-slate-200">9 Active Registers</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 relative z-10 w-full md:w-auto shrink-0 md:self-center">
+          <button
+            type="button"
+            onClick={async () => {
+              if (onRefreshAllData) {
+                await onRefreshAllData();
+              }
+            }}
+            disabled={syncStatus === 'syncing'}
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer w-full md:w-auto"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+            <span>{syncStatus === 'syncing' ? 'Recalculating...' : 'Sync & Update Analytics Now'}</span>
           </button>
         </div>
       </div>
@@ -395,7 +482,8 @@ export default function DashboardView({
               onChange={(e) => setRegCompany(e.target.value)}
               className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-855 border border-slate-300 dark:border-slate-800 rounded focus:outline-none dark:text-white cursor-pointer font-semibold"
             >
-              <option value="26">PESCO</option>
+              <option value="all">All Companies</option>
+              <option value="26">PESCO (26)</option>
             </select>
           </div>
 
@@ -724,7 +812,7 @@ export default function DashboardView({
                   fill="none" 
                   stroke="#10b981" 
                   strokeWidth="2.7" 
-                  strokeDasharray={`${totalReceived > 0 ? ((passedCount + reportsIssued) / totalReceived) * 100 : 75} ${totalReceived > 0 ? 100 - (((passedCount + reportsIssued) / totalReceived) * 100) : 25}`}
+                  strokeDasharray={`${totalReceived > 0 ? (passedAndIssuedCount / totalReceived) * 100 : 75} ${totalReceived > 0 ? 100 - ((passedAndIssuedCount / totalReceived) * 100) : 25}`}
                   strokeDashoffset="0" 
                 />
                 {/* Rose circle for Failed */}
@@ -736,12 +824,12 @@ export default function DashboardView({
                   stroke="#ef4444" 
                   strokeWidth="2.7" 
                   strokeDasharray={`${totalReceived > 0 ? (failedCount / totalReceived) * 100 : 25} ${totalReceived > 0 ? 100 - (failedCount / totalReceived) * 100 : 75}`}
-                  strokeDashoffset={`${totalReceived > 0 ? -(((passedCount + reportsIssued) / totalReceived) * 100) : -75}`} 
+                  strokeDashoffset={`${totalReceived > 0 ? -((passedAndIssuedCount / totalReceived) * 100) : -75}`} 
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-lg font-black text-slate-900 dark:text-white">
-                  {totalReceived > 0 ? Math.round(((passedCount + reportsIssued) / totalReceived) * 100) : 80}%
+                  {totalReceived > 0 ? Math.round((passedAndIssuedCount / totalReceived) * 100) : 80}%
                 </span>
                 <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Pass Rate</span>
               </div>
@@ -750,7 +838,7 @@ export default function DashboardView({
             <div className="grid grid-cols-2 gap-2 w-full mt-3 text-[10px] text-center border-t border-slate-100 dark:border-slate-800 pt-2">
               <div>
                 <span className="text-emerald-500 block font-bold">Passed & Issued</span>
-                <span className="text-slate-800 dark:text-slate-200 font-black text-sm">{passedCount + reportsIssued}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-black text-sm">{passedAndIssuedCount}</span>
               </div>
               <div>
                 <span className="text-rose-500 block font-bold">Failed / Defective</span>
