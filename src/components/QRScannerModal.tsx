@@ -294,7 +294,7 @@ export default function QRScannerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs transition-opacity overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
+      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-2xl md:max-w-3xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
         
         {/* Header bar */}
         <div className="bg-slate-950 px-5 py-4 border-b border-slate-850 flex items-center justify-between">
@@ -356,23 +356,23 @@ export default function QRScannerModal({
         </div>
 
         {/* Scrollable Container Box */}
-        <div className="p-5 flex-1 flex flex-col space-y-5 overflow-y-auto max-h-[50vh]">
+        <div className="p-5 flex-1 flex flex-col space-y-5 overflow-y-auto max-h-[75vh]">
           
           {activeTab === 'camera' ? (
             <>
               {/* TAB 1: ACTIVE CAMERA SCANNING */}
               {hasCameraPermission !== false && !scannerError ? (
-                <div className="relative aspect-video rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
+                <div className="relative h-[290px] sm:h-[390px] md:h-[460px] rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
                   {isScanning && (
                     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
                       
                       {/* Glowing Laser Scan Target Rect */}
-                      <div className="relative w-44 h-44 sm:w-52 sm:h-52 border-2 border-dashed border-indigo-400/60 rounded-xl flex items-center justify-center">
+                      <div className="relative w-52 h-52 sm:w-64 sm:h-64 md:w-76 md:h-76 border-2 border-dashed border-indigo-400/60 rounded-xl flex items-center justify-center">
                         {/* Focus ticks */}
-                        <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-indigo-400 -mt-1.5 -ml-1.5 rounded-tl-md" />
-                        <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-indigo-400 -mt-1.5 -mr-1.5 rounded-tr-md" />
-                        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-indigo-400 -mb-1.5 -ml-1.5 rounded-bl-md" />
-                        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-indigo-400 -mb-1.5 -mr-1.5 rounded-br-md" />
+                        <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-indigo-400 -mt-1.5 -ml-1.5 rounded-tl-md" />
+                        <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-indigo-400 -mt-1.5 -mr-1.5 rounded-tr-md" />
+                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-indigo-400 -mb-1.5 -ml-1.5 rounded-bl-md" />
+                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-indigo-400 -mb-1.5 -mr-1.5 rounded-br-md" />
 
                         {/* Laser overlay bar */}
                         <div className="absolute w-full h-[2px] bg-emerald-400 shadow-[0_0_12px_3px_rgba(52,211,153,0.7)] animate-bounce" />

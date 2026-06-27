@@ -33,8 +33,8 @@ const CODE39_MAP: { [key: string]: string } = {
   '/': '010100010', '+': '010001010', '%': '000101010', '*': '010010100'
 };
 
-// Generates an SVG path for a Code 39 Barcode
-function generateCode39Svg(text: string): React.ReactNode {
+// Generates an SVG path for a Code 39 Barcode with custom height
+function generateCode39Svg(text: string, height: number = 48): React.ReactNode {
   const sanitized = text.toUpperCase().replace(/[^A-Z0-9\-\.\s\$\/\+\%\*]/g, '');
   const barcodeStr = `*${sanitized}*`;
   
@@ -61,7 +61,7 @@ function generateCode39Svg(text: string): React.ReactNode {
             x={currentX} 
             y={0} 
             width={width} 
-            height={48} 
+            height={height} 
             fill="#000" 
           />
         );
@@ -74,8 +74,9 @@ function generateCode39Svg(text: string): React.ReactNode {
   
   return (
     <svg 
-      className="w-full h-12 select-none" 
-      viewBox={`0 0 ${currentX} 48`} 
+      className="w-full select-none" 
+      style={{ height: `${height}px` }}
+      viewBox={`0 0 ${currentX} ${height}`} 
       preserveAspectRatio="none" 
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -293,18 +294,48 @@ export default function BarcodeLabelModal({
     document.head.removeChild(styleEl);
   };
 
-  // Dimensions classes helper based on label size selection
+  // Dimensions classes helper based on label size selection - increased sizes as requested!
   const getSizeDimensionsClass = () => {
     switch (labelSize) {
       case 'compact':
-        return 'w-[260px] h-[130px] p-2';
+        return 'w-[310px] h-[175px] p-3';
       case 'large':
-        return 'w-[420px] h-[220px] p-6';
+        return 'w-[480px] h-[270px] p-7';
       case 'sticker_sheet':
-        return 'w-[320px] h-[170px] p-4';
+        return 'w-[360px] h-[200px] p-4.5';
       case 'standard':
       default:
-        return 'w-[340px] h-[160px] p-3.5';
+        return 'w-[410px] h-[215px] p-5';
+    }
+  };
+
+  // Helper to get QR code size classes based on selected label size - increased sizes!
+  const getQrSizeClass = () => {
+    switch (labelSize) {
+      case 'compact':
+        return 'w-[76px] h-[76px] p-[3px]';
+      case 'large':
+        return 'w-[125px] h-[125px] p-[5px]';
+      case 'sticker_sheet':
+        return 'w-[92px] h-[92px] p-[4px]';
+      case 'standard':
+      default:
+        return 'w-[100px] h-[100px] p-[4px]';
+    }
+  };
+
+  // Helper to get barcode height based on selected label size - increased heights!
+  const getBarcodeHeight = () => {
+    switch (labelSize) {
+      case 'compact':
+        return 45;
+      case 'large':
+        return 80;
+      case 'sticker_sheet':
+        return 60;
+      case 'standard':
+      default:
+        return 65;
     }
   };
 
@@ -546,33 +577,33 @@ export default function BarcodeLabelModal({
                         {/* Static Label Brand Header */}
                         {includeLogo && (
                           <div className="flex items-center justify-between border-b-2 border-slate-950 pb-1 pr-1 bg-slate-50">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-950 pl-2">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-950 pl-2">
                               PESCO M&amp;T MARDAN
                             </span>
-                            <span className="text-[7.5px] font-mono font-black text-slate-700 uppercase tracking-tighter bg-amber-100 border border-amber-300 px-1 rounded">
+                            <span className="text-[8px] font-mono font-black text-slate-700 uppercase tracking-tighter bg-amber-100 border border-amber-300 px-1.5 rounded">
                               LAB APPROVED SECURE
                             </span>
                           </div>
                         )}
 
                         {/* Middle Info & Graphic Panels */}
-                        <div className="flex-1 flex gap-3 pt-1.5 font-sans justify-between overflow-hidden">
+                        <div className="flex-1 flex gap-3 pt-2 font-sans justify-between overflow-hidden">
                           
                           {/* Metadata Left Block */}
                           <div className="flex-1 flex flex-col justify-between min-w-0 pr-1">
                             <div>
-                              <div className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter block leading-tight">
+                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter block leading-tight">
                                 METER NUMBER
                               </div>
-                              <div className="text-sm font-black font-mono tracking-tight text-slate-950 truncate">
+                              <div className="text-base font-black font-mono tracking-tight text-slate-950 truncate">
                                 {meter.meterNumber}
                               </div>
-                              <div className="text-[8px] font-mono font-medium text-slate-600 truncate mt-0.5">
+                              <div className="text-[9px] font-mono font-medium text-slate-600 truncate mt-0.5">
                                 Acc: {meter.consumerAccount || 'GENERAL STOCK'}
                               </div>
                             </div>
 
-                            <div className="mt-1 space-y-0.5 text-[8.5px]">
+                            <div className="mt-1 space-y-0.5 text-[9px]">
                               {includeClass && (
                                 <div className="flex justify-between text-slate-800">
                                   <span className="font-medium text-slate-400 truncate">CLASS:</span>
@@ -582,7 +613,7 @@ export default function BarcodeLabelModal({
                               {includeStatus && (
                                 <div className="flex justify-between text-slate-805">
                                   <span className="font-medium text-slate-400 truncate">STAGE:</span>
-                                  <span className="font-black truncate uppercase text-indigo-950 bg-indigo-50 px-1 rounded max-w-[80px] text-right">
+                                  <span className="font-black truncate uppercase text-indigo-950 bg-indigo-50 px-1.5 rounded max-w-[85px] text-right">
                                     {meter.stockStatus}
                                   </span>
                                 </div>
@@ -595,7 +626,7 @@ export default function BarcodeLabelModal({
                             
                             {/* SVG QR Code Rendering block */}
                             {(labelType === 'duo' || labelType === 'qr') && (
-                              <div className="w-[66px] h-[66px] border border-slate-950 p-[3px] bg-white rounded flex items-center justify-center shrink-0">
+                              <div className={`border-2 border-slate-950 bg-white rounded flex items-center justify-center shrink-0 ${getQrSizeClass()}`}>
                                 <svg 
                                   className="w-full h-full text-black select-none pointer-events-none" 
                                   viewBox={`0 0 ${qrSize} ${qrSize}`} 
@@ -615,13 +646,13 @@ export default function BarcodeLabelModal({
                         </div>
 
                         {/* Bottom Barcode / Text Footer block */}
-                        <div className="pt-1.5 border-t border-slate-100 flex flex-col justify-end">
+                        <div className="pt-2 border-t border-slate-100 flex flex-col justify-end">
                           {(labelType === 'duo' || labelType === 'barcode') && (
                             <div className="px-1.5">
-                              {generateCode39Svg(meter.serialNumber)}
+                              {generateCode39Svg(meter.serialNumber, getBarcodeHeight())}
                             </div>
                           )}
-                          <div className="flex items-center justify-between text-[7px] font-mono text-slate-500 pt-0.5 px-2">
+                          <div className="flex items-center justify-between text-[7.5px] font-mono text-slate-500 pt-0.5 px-2">
                             <span className="font-bold tracking-widest text-[#111]">W/S: {meter.serialNumber}</span>
                             {includeDate && <span className="font-sans">{dateString}</span>}
                           </div>
