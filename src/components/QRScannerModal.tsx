@@ -56,6 +56,7 @@ export default function QRScannerModal({
   const [zoom, setZoom] = useState<number>(1);
   const [uploadedImageSrc, setUploadedImageSrc] = useState<string>('');
   const [isDecodingImage, setIsDecodingImage] = useState<boolean>(false);
+  const [scanSuccessOverlay, setScanSuccessOverlay] = useState<boolean>(false);
 
   // Reset zoom and uploaded image when modal opens/closes
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function QRScannerModal({
       setZoom(1);
       setUploadedImageSrc('');
       setIsDecodingImage(false);
+      setScanSuccessOverlay(false);
     }
   }, [isOpen]);
 
@@ -115,14 +117,7 @@ export default function QRScannerModal({
           (result, error) => {
             if (result) {
               const resultText = result.getText().trim();
-              setScanResult(resultText);
-              
-              // Audio feedback if allowed by user context
-              triggerBeep();
-
-              // Trigger decode completion
-              stopCameraStream();
-              onScan(resultText);
+              handleScanSuccess(resultText);
             }
           }
         );
@@ -190,6 +185,29 @@ export default function QRScannerModal({
     } catch (e) {
       // ignore audio errors
     }
+  };
+
+  // Reusable helper to handle decodes with an elegant success delay and overlay animation
+  const handleScanSuccess = (text: string, skipDelay: boolean = false) => {
+    setScanResult(text);
+    triggerBeep();
+
+    if (skipDelay) {
+      onScan(text);
+      return;
+    }
+
+    // Stop active camera scan scanning so the feed freezes nicely
+    stopCameraStream();
+
+    // Trigger visual feedback overlay
+    setScanSuccessOverlay(true);
+
+    // Short satisfying delay so the user clearly sees the visual confirmation overlay
+    setTimeout(() => {
+      setScanSuccessOverlay(false);
+      onScan(text);
+    }, 1000);
   };
 
   // Start scanning on open (or when switching tabs)
@@ -385,9 +403,7 @@ export default function QRScannerModal({
       }
 
       if (decodedText) {
-        setScanResult(decodedText);
-        triggerBeep();
-        onScan(decodedText);
+        handleScanSuccess(decodedText);
       } else {
         setFileError('No high-quality QR Code or Barcode pattern could be identified. Please ensure the image is bright, highly focused, and not blurry.');
       }
@@ -428,8 +444,7 @@ export default function QRScannerModal({
       return;
     }
     
-    triggerBeep();
-    onScan(trimmed);
+    handleScanSuccess(trimmed, true);
   };
 
   // Demo Simulation Presets
@@ -576,7 +591,7 @@ export default function QRScannerModal({
             <>
               {/* TAB 1: ACTIVE CAMERA SCANNING */}
               {hasCameraPermission !== false && !scannerError ? (
-                <div className="relative h-[400px] sm:h-[500px] md:h-[620px] rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
+                <div className={`relative h-[400px] sm:h-[500px] md:h-[620px] rounded-xl bg-black overflow-hidden shadow-inner group transition-all duration-300 ${scanSuccessOverlay ? 'border-2 border-emerald-500 ring-4 ring-emerald-500/20' : 'border border-slate-850'}`}>
                   {isScanning && (
                     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
                       
@@ -603,11 +618,23 @@ export default function QRScannerModal({
                   {/* Video Stream */}
                   <video 
                     ref={videoRef}
-                    className="w-full h-full object-cover transition-transform duration-300"
+                    className={`w-full h-full object-cover transition-all duration-300 ${scanSuccessOverlay ? 'brightness-50' : ''}`}
                     style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
                     muted
                     playsInline
                   />
+
+                  {/* Success Overlay Checkmark */}
+                  {scanSuccessOverlay && (
+                    <div className="absolute inset-0 bg-emerald-950/40 z-30 flex flex-col items-center justify-center animate-in fade-in duration-250">
+                      <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-in zoom-in-75 duration-250 ring-8 ring-emerald-400/20">
+                        <Check className="w-10 h-10 stroke-[3]" />
+                      </div>
+                      <span className="mt-4 text-emerald-400 font-black tracking-widest uppercase text-xs bg-slate-950/95 border border-emerald-500/30 px-4 py-1.5 rounded-full shadow-lg">
+                        Success Decoded!
+                      </span>
+                    </div>
+                  )}
 
                   {/* Zoom Controls Overlay */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-3.5 py-1 rounded-full border border-slate-800 shadow-xl pointer-events-auto transition-all">
@@ -686,14 +713,14 @@ export default function QRScannerModal({
                 
                 <div className={uploadedImageSrc ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : "space-y-2"}>
                   {uploadedImageSrc && (
-                    <div className="border border-slate-800 bg-slate-950/60 rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div className={`rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300 ${scanSuccessOverlay ? 'border-2 border-emerald-500 bg-emerald-950/10 ring-4 ring-emerald-500/10' : 'border border-slate-800 bg-slate-950/60'}`}>
                       <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 mb-1.5 absolute top-3 left-3 bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-800 z-10 flex items-center gap-1">
-                        <span className={`w-1.5 h-1.5 rounded-full ${isDecodingImage ? 'bg-amber-500 animate-ping' : 'bg-indigo-500 animate-pulse'}`}></span>
-                        {isDecodingImage ? 'Analyzing Image...' : 'Uploaded Photo Preview'}
+                        <span className={`w-1.5 h-1.5 rounded-full ${isDecodingImage ? 'bg-amber-500 animate-ping' : scanSuccessOverlay ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-500 animate-pulse'}`}></span>
+                        {isDecodingImage ? 'Analyzing Image...' : scanSuccessOverlay ? 'Successfully Decoded!' : 'Uploaded Photo Preview'}
                       </span>
                       <button
                         type="button"
-                        disabled={isDecodingImage}
+                        disabled={isDecodingImage || scanSuccessOverlay}
                         onClick={() => setUploadedImageSrc('')}
                         className="absolute top-3 right-3 p-1 bg-slate-900/90 hover:bg-rose-950 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-900/40 rounded-lg transition-colors cursor-pointer z-10 text-[10px] font-black uppercase px-2 flex items-center gap-1 active:scale-95 duration-100 disabled:opacity-50"
                       >
@@ -704,21 +731,34 @@ export default function QRScannerModal({
                         <img 
                           src={uploadedImageSrc} 
                           alt="Uploaded snapshot QR" 
-                          className={`max-h-full max-w-full object-contain transition-all duration-300 ${isDecodingImage ? 'brightness-50 blur-[1px]' : ''}`}
+                          className={`max-h-full max-w-full object-contain transition-all duration-300 ${isDecodingImage ? 'brightness-50 blur-[1px]' : ''} ${scanSuccessOverlay ? 'brightness-40' : ''}`}
                           referrerPolicy="no-referrer"
                         />
                         {isDecodingImage && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/40">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/40 animate-in fade-in">
                             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
                             <span className="text-[10px] font-mono font-black text-indigo-300 tracking-wide uppercase">Running Multi-Pass Decoders</span>
+                          </div>
+                        )}
+                        {scanSuccessOverlay && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-emerald-950/45 animate-in fade-in duration-200">
+                            <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-75 ring-4 ring-emerald-400/20">
+                              <Check className="w-6 h-6 stroke-[3]" />
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-slate-950/95 px-2.5 py-1 rounded border border-emerald-500/30 shadow">Success!</span>
                           </div>
                         )}
                       </div>
                       <div className="w-full mt-3">
                         {isDecodingImage ? (
-                          <p className="text-[10px] font-bold text-amber-400 flex items-center justify-center gap-1.5 bg-amber-950/20 py-1.5 rounded-lg border border-amber-900/30">
+                          <p className="text-[10px] font-bold text-amber-400 flex items-center justify-center gap-1.5 bg-amber-950/20 py-1.5 rounded-lg border border-amber-900/30 animate-pulse">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             Applying High-Contrast Filter Matrix...
+                          </p>
+                        ) : scanSuccessOverlay ? (
+                          <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/30 py-1.5 rounded-lg border border-emerald-500/40">
+                            <Check className="w-3.5 h-3.5" />
+                            Success: Decoded Successfully!
                           </p>
                         ) : (
                           <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/20 py-1.5 rounded-lg border border-emerald-900/30">
@@ -834,8 +874,7 @@ export default function QRScannerModal({
                       onClick={() => {
                         setManualText(preset.value);
                         // Instantly fire search or fill
-                        triggerBeep();
-                        onScan(preset.value);
+                        handleScanSuccess(preset.value, true);
                       }}
                       className="p-3 text-left bg-slate-950/40 hover:bg-indigo-950/20 border border-slate-850 hover:border-indigo-900/60 rounded-xl transition-all flex flex-col justify-between group cursor-pointer duration-100"
                     >
