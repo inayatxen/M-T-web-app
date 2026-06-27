@@ -67,6 +67,7 @@ export default function QRScannerModal({
   const [imagePanY, setImagePanY] = useState<number>(0);
   const [isDecodingImage, setIsDecodingImage] = useState<boolean>(false);
   const [scanSuccessOverlay, setScanSuccessOverlay] = useState<boolean>(false);
+  const [pendingScanResult, setPendingScanResult] = useState<string | null>(null);
 
   // Reset zoom and uploaded image when modal opens/closes
   useEffect(() => {
@@ -80,6 +81,7 @@ export default function QRScannerModal({
       setImagePanY(0);
       setIsDecodingImage(false);
       setScanSuccessOverlay(false);
+      setPendingScanResult(null);
     }
   }, [isOpen]);
 
@@ -208,7 +210,7 @@ export default function QRScannerModal({
     triggerBeep();
 
     if (skipDelay) {
-      onScan(text);
+      setPendingScanResult(text);
       return;
     }
 
@@ -221,8 +223,24 @@ export default function QRScannerModal({
     // Short satisfying delay so the user clearly sees the visual confirmation overlay
     setTimeout(() => {
       setScanSuccessOverlay(false);
-      onScan(text);
+      setPendingScanResult(text);
     }, 1000);
+  };
+
+  const handleCancelScan = () => {
+    setPendingScanResult(null);
+    setScanResult('');
+    if (activeTab === 'camera') {
+      startCamera(selectedDeviceId);
+    }
+  };
+
+  const handleConfirmScan = () => {
+    if (pendingScanResult) {
+      onScan(pendingScanResult);
+      setPendingScanResult(null);
+      setScanResult('');
+    }
   };
 
   // Start scanning on open (or when switching tabs)
@@ -546,6 +564,61 @@ export default function QRScannerModal({
     }
   ];
 
+  const renderDecodedDataAlert = (dataStr: string) => {
+    let parsed: any = null;
+    let isJson = false;
+    try {
+      const trimmed = dataStr.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        parsed = JSON.parse(trimmed);
+        isJson = true;
+      }
+    } catch (e) {
+      // not JSON
+    }
+
+    if (isJson && parsed) {
+      return (
+        <div className="space-y-3">
+          <div className="text-[10px] uppercase font-black text-indigo-400 tracking-wider">Scanned Equipment Specifications:</div>
+          <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+            {Object.entries(parsed).map(([key, val]) => {
+              if (typeof val === 'object' && val !== null) {
+                return (
+                  <div key={key} className="col-span-2 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[9px] uppercase font-bold text-slate-500 block mb-1">{key}</span>
+                    <pre className="text-[10px] font-mono text-slate-300 whitespace-pre-wrap">{JSON.stringify(val, null, 2)}</pre>
+                  </div>
+                );
+              }
+              return (
+                <div key={key} className="bg-slate-950 p-2.5 rounded-lg border border-slate-850 flex flex-col">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider truncate">
+                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                  </span>
+                  <span className="text-xs font-mono font-black text-slate-100 mt-1 truncate" title={String(val)}>
+                    {String(val)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase font-black text-indigo-400 tracking-wider">Raw Decoded String/Tag Value:</div>
+        <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-850 text-center">
+          <p className="text-sm font-mono font-black text-emerald-400 break-all select-all tracking-wider">
+            {dataStr}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   // Detect if pasted text looks like JSON
@@ -560,7 +633,7 @@ export default function QRScannerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs transition-opacity overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-4xl lg:max-w-5xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
+      <div className="relative bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-4xl lg:max-w-5xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
         
         {/* Header bar */}
         <div className="bg-slate-950 px-5 py-4 border-b border-slate-850 flex items-center justify-between">
@@ -1127,6 +1200,59 @@ export default function QRScannerModal({
             Close Panel
           </button>
         </div>
+
+        {/* Verification Alert Overlay before adding any entry */}
+        {pendingScanResult !== null && (
+          <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-md w-full p-6 space-y-5 animate-in zoom-in-95 duration-150">
+              
+              {/* Alert Header */}
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/15 rounded-xl border border-emerald-500/30 text-emerald-400">
+                  <Check className="w-6 h-6 stroke-[3]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black uppercase tracking-widest text-slate-100">Verify Decoded Entry</h4>
+                  <p className="text-[10px] text-slate-400">Review scanned details before adding/saving entry</p>
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-800"></div>
+
+              {/* Alert Content */}
+              <div className="space-y-4">
+                <p className="text-[11px] text-slate-300 leading-relaxed text-left">
+                  The scanner has captured a valid code. Would you like to proceed and import/apply this decoded entry to the laboratory registry?
+                </p>
+
+                {renderDecodedDataAlert(pendingScanResult)}
+              </div>
+
+              <div className="h-px bg-slate-800"></div>
+
+              {/* Alert Footer Buttons */}
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleCancelScan}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700/60 flex items-center justify-center gap-1.5 active:scale-95 transition-all duration-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4 text-slate-400" />
+                  Cancel &amp; Rescan
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmScan}
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-xl flex items-center justify-center gap-1.5 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-100 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  Confirm &amp; Apply
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
