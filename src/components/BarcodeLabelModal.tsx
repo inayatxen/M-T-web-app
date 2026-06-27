@@ -190,40 +190,106 @@ export default function BarcodeLabelModal({
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    const printContent = printAreaRef.current?.innerHTML;
-    const originalBody = document.body.innerHTML;
+    const printCanvas = printAreaRef.current;
+    if (!printCanvas) return;
 
     // Create dynamic print-friendly stylesheet for seamless thermal label wrapping
     const styleEl = document.createElement('style');
+    styleEl.id = 'label-print-style';
+    
+    // Dynamic page break rule: For 1-column layout, break pages after every single label!
+    // For grid sheet layouts, let standard layout flow, avoiding page breaks inside individual stickers.
+    const pageBreakRule = printColumns === 1 
+      ? 'page-break-after: always !important; break-after: page !important;' 
+      : 'page-break-inside: avoid !important; break-inside: avoid !important;';
+
     styleEl.innerHTML = `
       @media print {
-        body {
-          background-color: white !important;
-          color: black !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-        #p-root, header, footer, aside, .print\\:hidden, button, nav {
+        /* Hide absolutely everything else to avoid blank pages and overlays */
+        body > *:not(.print-canvas-wrapper),
+        #root,
+        .fixed,
+        .backdrop-blur-md,
+        button,
+        header,
+        aside,
+        nav {
           display: none !important;
         }
-        .print-canvas {
+        
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background-color: white !important;
+          color: black !important;
+          overflow: visible !important;
+        }
+        
+        /* Bring the label print canvas wrapper to the top */
+        .print-canvas-wrapper {
           display: block !important;
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
+          visibility: visible !important;
         }
+
+        /* Force proper columns layout in print */
+        .print-canvas-wrapper .grid {
+          display: grid !important;
+          grid-template-columns: ${printColumns === 1 ? '1fr' : `repeat(${printColumns}, minmax(0, 1fr))` } !important;
+          gap: 12px !important;
+          justify-items: center !important;
+          width: 100% !important;
+        }
+        
         .print-label-item {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          border: 1px solid #ddd !important;
-          box-shadow: none !important;
-          background: white !important;
+          ${pageBreakRule}
+          margin: 6px !important;
+          border: 2px solid #000000 !important;
+          background-color: white !important;
           color: black !important;
+          box-shadow: none !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Force all children texts & svgs to be highly contrasting for barcode scanner compatibility */
+        .print-label-item div,
+        .print-label-item span,
+        .print-label-item h1,
+        .print-label-item h2,
+        .print-label-item h3,
+        .print-label-item p {
+          color: black !important;
+          background-color: white !important;
+        }
+        
+        /* Ensure SVGs rendering QR matrices are solid black */
+        .print-label-item svg {
+          color: black !important;
+        }
+        .print-label-item rect {
+          fill: black !important;
         }
       }
     `;
     document.head.appendChild(styleEl);
+
+    // Clone print container to body root to bypass React CSS/scrolling constraints
+    const tempWrapper = document.createElement('div');
+    tempWrapper.className = 'print-canvas-wrapper';
+    tempWrapper.innerHTML = printCanvas.innerHTML;
+    document.body.appendChild(tempWrapper);
+    
+    // Fire browser native print frame
     window.print();
+    
+    // Cleanup DOM afterward
+    document.body.removeChild(tempWrapper);
     document.head.removeChild(styleEl);
   };
 

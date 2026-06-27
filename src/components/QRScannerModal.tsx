@@ -14,7 +14,12 @@ import {
   Loader2, 
   RefreshCw, 
   HelpCircle,
-  QrCode
+  QrCode,
+  Keyboard,
+  Sparkles,
+  FileJson,
+  Zap,
+  Search
 } from 'lucide-react';
 
 interface QRScannerModalProps {
@@ -32,6 +37,7 @@ export default function QRScannerModal({
   title = "Barcode & QR Laboratory Scanner",
   placeholderText = "Center a meter ID card, barcode, or laboratory seal QR code within the frame"
 }: QRScannerModalProps) {
+  const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -40,6 +46,10 @@ export default function QRScannerModal({
   const [scanResult, setScanResult] = useState<string>('');
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [fileError, setFileError] = useState<string>('');
+  
+  // Manual Input state
+  const [manualText, setManualText] = useState<string>('');
+  const [manualInputError, setManualInputError] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -47,7 +57,11 @@ export default function QRScannerModal({
   // Stop camera stream helper
   const stopCameraStream = () => {
     if (controlsRef.current) {
-      controlsRef.current.stop();
+      try {
+        controlsRef.current.stop();
+      } catch (e) {
+        // Suppress stop errors
+      }
       controlsRef.current = null;
     }
     setIsScanning(false);
@@ -89,45 +103,47 @@ export default function QRScannerModal({
               setScanResult(resultText);
               
               // Audio feedback if allowed by user context
-              try {
-                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-                const osc = context.createOscillator();
-                const gainNode = context.createGain();
-                osc.connect(gainNode);
-                gainNode.connect(context.destination);
-                osc.frequency.setValueAtTime(880, context.currentTime); // high tone beep
-                gainNode.gain.setValueAtTime(0.08, context.currentTime);
-                osc.start();
-                osc.stop(context.currentTime + 0.1);
-              } catch (e) {
-                // mute audio failures
-              }
+              triggerBeep();
 
               // Trigger decode completion
               stopCameraStream();
               onScan(resultText);
             }
-            if (error && error.name !== 'NotFoundException') {
-               // Log actual errors, not finding a barcode is expected
-            }
           }
         );
       }
     } catch (err: any) {
-      console.error("Camera access error:", err);
+      console.warn("Camera access warning:", err);
       setHasCameraPermission(false);
       setIsScanning(false);
       setScannerError(
         err.name === 'NotAllowedError' || err.message?.includes('Permission')
-          ? 'Camera access denied by user. Refer to browser site permissions.' 
-          : `Failed to acquire video stream: ${err.message || err}`
+          ? 'Camera access denied by browser site settings.' 
+          : `No webcam detected or stream blocked: ${err.message || err}`
       );
     }
   };
 
-  // Start scanning on open
+  // Play audio beep on successful scan
+  const triggerBeep = () => {
+    try {
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = context.createOscillator();
+      const gainNode = context.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(context.destination);
+      osc.frequency.setValueAtTime(950, context.currentTime); // Crisp scan tone
+      gainNode.gain.setValueAtTime(0.06, context.currentTime);
+      osc.start();
+      osc.stop(context.currentTime + 0.08);
+    } catch (e) {
+      // ignore audio errors
+    }
+  };
+
+  // Start scanning on open (or when switching tabs)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && activeTab === 'camera') {
       setScanResult('');
       setFileError('');
       startCamera();
@@ -135,7 +151,7 @@ export default function QRScannerModal({
       stopCameraStream();
     }
     return () => stopCameraStream();
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   // Device change handler
   const handleDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -159,12 +175,13 @@ export default function QRScannerModal({
       if (result) {
         const resultText = result.getText().trim();
         setScanResult(resultText);
+        triggerBeep();
         onScan(resultText);
       } else {
-        setFileError('Could not decode a valid barcode/QR code in this image. Ensure it is crisp, centered, and well-lit.');
+        setFileError('No QR/Barcode found in this image. Ensure it is sharp, clear, and highly focused.');
       }
     } catch (err) {
-      setFileError('Could not decode a valid barcode/QR code in this image. Ensure it is crisp, centered, and well-lit.');
+      setFileError('Barcode recognition failed for this image. Try another image or use manual entry below.');
     }
   };
 
@@ -187,165 +204,384 @@ export default function QRScannerModal({
     }
   };
 
+  // Handle manual submit
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setManualInputError('');
+    const trimmed = manualText.trim();
+    if (!trimmed) {
+      setManualInputError('Please type or select a barcode code to simulate scanning.');
+      return;
+    }
+    
+    triggerBeep();
+    onScan(trimmed);
+  };
+
+  // Demo Simulation Presets
+  const simulationPresets = [
+    {
+      name: "Single Phase Dispute Meter (Full JSON specs)",
+      type: "JSON Specification Card",
+      icon: <FileJson className="w-3.5 h-3.5 text-indigo-400" />,
+      value: JSON.stringify({
+        consumerAccount: "14125893049581",
+        consumerName: "Muhammad Younas",
+        fatherName: "Fazal Ghafoor",
+        meterType: "single_phase",
+        meterNumber: "MTR-SP-2026-9045",
+        serialNumber: "SN-90812-PESCO",
+        make: "KBK Electronics",
+        receivedFrom: "Mardan Rural Division",
+        reasonForTesting: "Consumer Dispute (Slow Running Complaint)",
+        remarks: "Received via manual dispute desk register inward tag."
+      }, null, 2)
+    },
+    {
+      name: "Three Phase Whole Current Meter (Full JSON specs)",
+      type: "JSON Specification Card",
+      icon: <FileJson className="w-3.5 h-3.5 text-indigo-400" />,
+      value: JSON.stringify({
+        consumerAccount: "14211593840291",
+        consumerName: "Ahmad Shah",
+        fatherName: "Sher Shah",
+        meterType: "three_phase_whole",
+        meterNumber: "MTR-3PH-55928",
+        serialNumber: "SN-77281-W",
+        make: "Microtech Industries",
+        receivedFrom: "Mardan Cantt Division",
+        reasonForTesting: "Damaged Terminal Cover & Burnt Display",
+        remarks: "Line testing request submitted by Sub-Divisional Officer."
+      }, null, 2)
+    },
+    {
+      name: "Typical Meter Serial Number Tag",
+      type: "Raw Code Tag",
+      icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+      value: "SN-90812-PESCO"
+    },
+    {
+      name: "Typical Meter Number Identifier",
+      type: "Raw Code Tag",
+      icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+      value: "MTR-SP-2026-9045"
+    },
+    {
+      name: "Standard Consumer Account ID",
+      type: "Raw Code Tag",
+      icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+      value: "14125893049581"
+    },
+    {
+      name: "Existing Report Reference Number",
+      type: "Raw Code Tag",
+      icon: <Search className="w-3.5 h-3.5 text-blue-400" />,
+      value: "REP-2026-0012"
+    }
+  ];
+
   if (!isOpen) return null;
+
+  // Detect if pasted text looks like JSON
+  const isPastedJson = (() => {
+    try {
+      const trimmed = manualText.trim();
+      return trimmed.startsWith('{') && trimmed.endsWith('}');
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs transition-opacity overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 text-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden flex flex-col my-8">
+      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
         
         {/* Header bar */}
-        <div className="bg-slate-950 px-4 py-3 border-b border-slate-850 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-blue-400" />
-            <h3 className="text-sm font-extrabold uppercase tracking-wider">{title}</h3>
+        <div className="bg-slate-950 px-5 py-4 border-b border-slate-850 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+              <QrCode className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-100">{title}</h3>
+              <p className="text-[10px] text-slate-400">High-performance optical &amp; manual keyway emulator</p>
+            </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-850 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close Scanner"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Dynamic Navigation Tabs to Switch Modes */}
+        <div className="grid grid-cols-2 bg-slate-950/50 border-b border-slate-850 p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('camera')}
+            className={`py-2.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'camera'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850/50'
+            }`}
+          >
+            <Camera className="w-4 h-4" />
+            Camera / Image Upload
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('manual')}
+            className={`py-2.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'manual'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850/50'
+            }`}
+          >
+            <Keyboard className="w-4 h-4" />
+            Keyboard / Simulator
+          </button>
+        </div>
+
         {/* Info Ribbon */}
-        <div className="bg-blue-950/40 px-4 py-2 border-b border-blue-900/40 text-[10.5px] text-blue-300 flex items-start gap-1.5 leading-tight">
-          <HelpCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+        <div className="bg-slate-950 px-5 py-2.5 border-b border-slate-850 text-[10.5px] text-slate-400 flex items-start gap-1.5 leading-tight">
+          <HelpCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
           <div>
-            Place a meter barcode/QR card containing meter ID or consumer details inside the frame. 
-            Forms will parse JSON objects or plain codes automatically.
+            {activeTab === 'camera' 
+              ? placeholderText
+              : "Use manual typing or simulate pre-defined laboratory tags to easily register, search, or update without an active camera stream."
+            }
           </div>
         </div>
 
-        <div className="p-4 flex-1 flex flex-col space-y-4">
+        {/* Scrollable Container Box */}
+        <div className="p-5 flex-1 flex flex-col space-y-5 overflow-y-auto max-h-[50vh]">
           
-          {/* Active Camera Feed Stage */}
-          {hasCameraPermission !== false && !scannerError && (
-            <div className="relative aspect-video rounded-md bg-black border border-slate-850 overflow-hidden shadow-inner group">
-              {isScanning && (
-                <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
-                  
-                  {/* Glowing Laser Scan Target Rect */}
-                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 border-2 border-dashed border-blue-400/55 rounded flex items-center justify-center">
-                    {/* Focus ticks */}
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-blue-400 -mt-1.5 -ml-1.5" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-blue-400 -mt-1.5 -mr-1.5" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-400 -mb-1.5 -ml-1.5" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400 -mb-1.5 -mr-1.5" />
+          {activeTab === 'camera' ? (
+            <>
+              {/* TAB 1: ACTIVE CAMERA SCANNING */}
+              {hasCameraPermission !== false && !scannerError ? (
+                <div className="relative aspect-video rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
+                  {isScanning && (
+                    <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
+                      
+                      {/* Glowing Laser Scan Target Rect */}
+                      <div className="relative w-44 h-44 sm:w-52 sm:h-52 border-2 border-dashed border-indigo-400/60 rounded-xl flex items-center justify-center">
+                        {/* Focus ticks */}
+                        <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-indigo-400 -mt-1.5 -ml-1.5 rounded-tl-md" />
+                        <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-indigo-400 -mt-1.5 -mr-1.5 rounded-tr-md" />
+                        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-indigo-400 -mb-1.5 -ml-1.5 rounded-bl-md" />
+                        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-indigo-400 -mb-1.5 -mr-1.5 rounded-br-md" />
 
-                    {/* Laser overlay bar */}
-                    <div className="absolute w-full h-[2px] bg-emerald-400 shadow-[0_0_10px_2px_rgba(52,211,153,0.7)] animate-bounce" />
+                        {/* Laser overlay bar */}
+                        <div className="absolute w-full h-[2px] bg-emerald-400 shadow-[0_0_12px_3px_rgba(52,211,153,0.7)] animate-bounce" />
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      <div className="mt-4 px-3 py-1 rounded-full bg-slate-900/95 text-[9.5px] text-emerald-400 font-bold tracking-widest uppercase flex items-center gap-1.5 border border-emerald-950">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Webcam Analyzing Feed...
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Video Stream */}
+                  <video 
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                </div>
+              ) : (
+                /* CAMERA UNAVAILABLE ALERT BANNER */
+                <div className="p-4 bg-amber-950/15 border border-amber-900/45 text-amber-300 rounded-xl space-y-2 leading-relaxed">
+                  <div className="font-extrabold flex items-center gap-2 text-amber-400 uppercase tracking-wide text-xs">
+                    <AlertCircle className="w-4 h-4" />
+                    Webcam Access Bypassed
                   </div>
-                  
-                  {/* Status Indicator */}
-                  <div className="mt-4 px-2.5 py-0.5 rounded-full bg-slate-900/80 text-[10px] text-blue-300 font-bold tracking-widest uppercase flex items-center gap-1">
-                    <Loader2 className="w-3" />
-                     Live Analysis Active
+                  <p className="text-[11px] text-amber-200">
+                    {scannerError || "Local browser frame configuration blocked direct camera streams. You can utilize the Drag & Drop image uploader container instead or switch to Keyboard / Simulator tab to paste asset records."}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startCamera(selectedDeviceId)}
+                      className="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/35 border border-amber-700/50 rounded-lg font-black text-[10px] uppercase tracking-wider flex items-center gap-1.5 text-white cursor-pointer duration-150 active:scale-95"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Retry Camera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('manual')}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-black text-[10px] uppercase tracking-wider flex items-center gap-1.5 text-white cursor-pointer duration-150 active:scale-95 shadow-sm"
+                    >
+                      <Keyboard className="w-3.5 h-3.5" />
+                      Switch to Manual Mode
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Feed markup */}
-              <video 
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                muted
-                playsInline
-              />
-            </div>
-          )}
+              {/* Device Selector */}
+              {hasCameraPermission === true && devices.length > 1 && (
+                <div className="flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+                  <Camera className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Select Camera:</span>
+                  <select
+                    value={selectedDeviceId}
+                    onChange={handleDeviceChange}
+                    className="flex-1 text-xs font-black bg-transparent text-white focus:outline-none cursor-pointer"
+                  >
+                    {devices.map((device, index) => (
+                      <option key={device.deviceId} value={device.deviceId} className="bg-slate-900 text-white">
+                        {device.label || `Webcam Camera ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-          {/* Camera controls and device dropdown */}
-          {hasCameraPermission === true && devices.length > 1 && (
-            <div className="flex items-center gap-2 bg-slate-950 p-2 rounded border border-slate-850">
-              <Camera className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-[10px] uppercase font-bold text-slate-400">Source:</span>
-              <select
-                value={selectedDeviceId}
-                onChange={handleDeviceChange}
-                className="flex-1 text-xs font-semibold bg-transparent text-white focus:outline-none cursor-pointer"
-              >
-                {devices.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId} className="bg-slate-900 text-white">
-                    {device.label || `Camera ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+              {/* File Uploader fallback */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-black tracking-widest text-slate-500 block pb-1 border-b border-slate-800">
+                  Static Sticker Scan Fallback
+                </div>
+                
+                <div 
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-5 py-6 text-center transition-all ${
+                    dragActive 
+                      ? 'border-indigo-500 bg-indigo-950/20' 
+                      : 'border-slate-800 hover:border-slate-750 bg-slate-950/40'
+                  }`}
+                >
+                  <Upload className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
+                  <p className="text-xs font-black text-slate-300">Drag &amp; drop tag photo here</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Accepts high-res snapshot files of barcode labels</p>
+                  
+                  <label className="mt-3 inline-block px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-black text-[10.5px] uppercase tracking-wide rounded-lg cursor-pointer transition-colors active:scale-95 shadow-sm">
+                    Browse File
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          processImageFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
 
-          {/* Fallback File Uploader Zone */}
-          <div className="space-y-2">
-            <div className="text-[10.5px] uppercase font-black tracking-widest text-slate-400 block pb-1 border-b border-slate-800">
-              Alternative Media Input
-            </div>
-            
-            <div 
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-4 py-6 text-center transition-all ${
-                dragActive 
-                  ? 'border-blue-500 bg-blue-950/20' 
-                  : 'border-slate-800 hover:border-slate-700 bg-slate-950/50'
-              }`}
-            >
-              <Upload className="w-5 h-5 text-slate-550 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-300">Drag or drop QR image here</p>
-              <p className="text-[10px] text-slate-450 mt-1">Accepts PNG, JPG, or PDF snapshots</p>
-              
-              <label className="mt-3 inline-block px-3 py-1 bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-[10.5px] rounded cursor-pointer transition-colors active:scale-95">
-                Browse Files
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      processImageFile(e.target.files[0]);
-                    }
-                  }}
-                  className="hidden" 
+                {fileError && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/20 border border-rose-900/50 text-rose-300 text-[10.5px] flex items-start gap-1.5">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
+                    <span>{fileError}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* TAB 2: MANUAL TEXT ENTRY & SIMULATION PANEL */}
+              <form onSubmit={handleManualSubmit} className="space-y-3.5">
+                <div className="flex justify-between items-center pb-1">
+                  <label className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                    Keyboard Input Channel
+                  </label>
+                  {isPastedJson && (
+                    <span className="text-[8.5px] font-black uppercase px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-900 rounded-md flex items-center gap-1 animate-pulse">
+                      <Sparkles className="w-3 h-3" />
+                      JSON Specs Detected
+                    </span>
+                  )}
+                </div>
+                
+                <textarea
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  placeholder="Paste scanned barcode string, serial numbers (e.g. SN-90812-PESCO), or drag full JSON specification card variables..."
+                  className="w-full h-32 p-3 bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none resize-none"
                 />
-              </label>
-            </div>
 
-            {fileError && (
-              <div className="p-2 rounded bg-rose-950/30 border border-rose-900/50 text-rose-300 text-[10px] flex items-start gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-400" />
-                <span>{fileError}</span>
-              </div>
-            )}
-          </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-wider rounded-xl transition-all duration-150 active:scale-95 shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    Submit Manual Code (Trigger Ingress)
+                  </button>
+                  {manualText && (
+                    <button
+                      type="button"
+                      onClick={() => setManualText('')}
+                      className="px-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
 
-          {/* Camera Scanning Errors & Fallbacks (e.g., Blocked Permissions) */}
-          {(hasCameraPermission === false || scannerError) && (
-            <div className="p-3 bg-amber-950/10 border border-amber-900/30 text-amber-300 rounded text-xs leading-relaxed space-y-1.5">
-              <div className="font-extrabold flex items-center gap-1 text-amber-400 uppercase tracking-wide text-[10px]">
-                <AlertCircle className="w-4 h-4" />
-                Laboratory Camera Ingress Disabled
+                {manualInputError && (
+                  <p className="text-rose-400 text-[10.5px] font-bold flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {manualInputError}
+                  </p>
+                )}
+              </form>
+
+              {/* QUICK CLICK EMULATOR PRESETS */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-black tracking-widest text-slate-500 block pb-1 border-b border-slate-800 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-indigo-400" />
+                  Instant Laboratory Simulation Presets (Click to Scan)
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {simulationPresets.map((preset, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => {
+                        setManualText(preset.value);
+                        // Instantly fire search or fill
+                        triggerBeep();
+                        onScan(preset.value);
+                      }}
+                      className="p-3 text-left bg-slate-950/40 hover:bg-indigo-950/20 border border-slate-850 hover:border-indigo-900/60 rounded-xl transition-all flex flex-col justify-between group cursor-pointer duration-100"
+                    >
+                      <div className="flex justify-between items-start gap-1 w-full">
+                        <span className="text-[11px] font-black text-slate-200 group-hover:text-indigo-200 leading-tight">
+                          {preset.name}
+                        </span>
+                        {preset.icon}
+                      </div>
+                      <span className="text-[8px] font-mono font-bold tracking-wider uppercase text-slate-500 mt-2 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 self-start">
+                        {preset.type}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <p className="text-[11px] text-amber-205">
-                {scannerError || "Local browser frame configuration blocked direct camera streams. You can utilize the Drag & Drop image uploader container instead to scan high-res meter card copies successfully."}
-              </p>
-              <button
-                onClick={() => startCamera(selectedDeviceId)}
-                className="mt-1 px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/35 border border-amber-700/50 rounded font-black text-[9.5px] uppercase tracking-wider flex items-center gap-1 text-white cursor-pointer active:scale-95"
-              >
-                <RefreshCw className="w-3" />
-                Grant Access / Retry Camera Initializer
-              </button>
-            </div>
+            </>
           )}
 
-          {/* Success Decoded Text Log Preview */}
+          {/* Decoded Output Log Preview (Universal) */}
           {scanResult && (
-            <div className="p-3 rounded bg-emerald-950/20 border border-emerald-900/30 text-emerald-300 space-y-1 animate-in fade-in slide-in-from-bottom-2">
+            <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-emerald-300 space-y-1.5 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-1.5 text-[10.5px] font-black uppercase text-emerald-400 tracking-wider">
-                <Check className="w-4 h-4 animate-ping duration-1000 shrink-0" />
-                Success: Decode Intact
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                Decoded Registry Hash Confirmed
               </div>
-              <p className="text-[11px] font-mono select-all bg-slate-950 p-2 rounded whitespace-pre-wrap max-h-24 overflow-y-auto border border-emerald-900/10 text-slate-200">
+              <p className="text-[11px] font-mono select-all bg-slate-950 p-2.5 rounded-lg whitespace-pre-wrap max-h-24 overflow-y-auto border border-emerald-900/20 text-slate-100">
                 {scanResult}
               </p>
             </div>
@@ -354,11 +590,14 @@ export default function QRScannerModal({
         </div>
 
         {/* Modal Footer bar */}
-        <div className="bg-slate-950 px-4 py-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-          <span>Decoded card indices auto-fill targets</span>
+        <div className="bg-slate-950 px-5 py-4 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+          <span className="flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            Automatic form sync is pre-wired.
+          </span>
           <button
             onClick={onClose}
-            className="px-3 py-1 bg-slate-800 hover:bg-slate-750 text-white font-extrabold text-xs rounded transition-colors cursor-pointer"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-wide rounded-xl transition-all cursor-pointer duration-150 active:scale-95 shadow-sm"
           >
             Close Panel
           </button>
