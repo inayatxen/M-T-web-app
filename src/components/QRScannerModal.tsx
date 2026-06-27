@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
+import jsQR from 'jsqr';
 import { 
   X, 
   Camera, 
@@ -54,12 +55,14 @@ export default function QRScannerModal({
   // Camera zoom state
   const [zoom, setZoom] = useState<number>(1);
   const [uploadedImageSrc, setUploadedImageSrc] = useState<string>('');
+  const [isDecodingImage, setIsDecodingImage] = useState<boolean>(false);
 
   // Reset zoom and uploaded image when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setZoom(1);
       setUploadedImageSrc('');
+      setIsDecodingImage(false);
     }
   }, [isOpen]);
 
@@ -216,21 +219,183 @@ export default function QRScannerModal({
       return;
     }
 
+    setIsDecodingImage(true);
+    let decodedText: string | null = null;
+    const imgUrl = URL.createObjectURL(file);
+    setUploadedImageSrc(imgUrl);
+
     try {
-      const imgUrl = URL.createObjectURL(file);
-      setUploadedImageSrc(imgUrl);
       const codeReader = new BrowserMultiFormatReader();
-      const result = await codeReader.decodeFromImageUrl(imgUrl);
-      if (result) {
-        const resultText = result.getText().trim();
-        setScanResult(resultText);
+
+      // Attempt 1: Direct decode of the original image url
+      try {
+        const result = await codeReader.decodeFromImageUrl(imgUrl);
+        if (result) {
+          decodedText = result.getText().trim();
+        }
+      } catch (err) {
+        console.log("Direct ZXing decode failed, trying robust preprocessors...", err);
+      }
+
+      // If Direct decode didn't succeed, use preprocessors
+      if (!decodedText) {
+        // Load image to HTMLImageElement
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = (e) => reject(e);
+          image.src = imgUrl;
+        });
+
+        // Attempt 2: Resize to a "sweet spot" resolution (800px max)
+        // This dramatically reduces high-frequency sensor noise and increases speed
+        const canvas800 = document.createElement('canvas');
+        let w = img.width;
+        let h = img.height;
+        const maxDim = 800;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas800.width = w;
+        canvas800.height = h;
+        const ctx800 = canvas800.getContext('2d');
+        if (ctx800) {
+          ctx800.drawImage(img, 0, 0, w, h);
+          
+          // Try jsQR (extremely fast, specialized for QR)
+          try {
+            const imgData = ctx800.getImageData(0, 0, w, h);
+            const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
+              inversionAttempts: "attemptBoth"
+            });
+            if (qrResult && qrResult.data) {
+              decodedText = qrResult.data.trim();
+            }
+          } catch (e) {
+            console.warn("jsQR on resized failed:", e);
+          }
+
+          // If still not decoded, try ZXing on resized image
+          if (!decodedText) {
+            try {
+              const dataUrl800 = canvas800.toDataURL('image/jpeg', 0.9);
+              const result = await codeReader.decodeFromImageUrl(dataUrl800);
+              if (result) {
+                decodedText = result.getText().trim();
+              }
+            } catch (e) {
+              console.log("ZXing on resized failed:", e);
+            }
+          }
+        }
+
+        // Attempt 3: Enhance Contrast & Grayscale (helps with shadows/under-exposure)
+        if (!decodedText) {
+          const canvasEnhanced = document.createElement('canvas');
+          canvasEnhanced.width = w;
+          canvasEnhanced.height = h;
+          const ctxEnhanced = canvasEnhanced.getContext('2d');
+          if (ctxEnhanced) {
+            ctxEnhanced.filter = 'contrast(1.6) grayscale(1)';
+            ctxEnhanced.drawImage(img, 0, 0, w, h);
+
+            // Try jsQR on contrast enhanced
+            try {
+              const imgData = ctxEnhanced.getImageData(0, 0, w, h);
+              const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
+                inversionAttempts: "attemptBoth"
+              });
+              if (qrResult && qrResult.data) {
+                decodedText = qrResult.data.trim();
+              }
+            } catch (e) {
+              console.warn("jsQR on enhanced failed:", e);
+            }
+
+            // Try ZXing on contrast enhanced
+            if (!decodedText) {
+              try {
+                const dataUrlEnhanced = canvasEnhanced.toDataURL('image/jpeg', 0.9);
+                const result = await codeReader.decodeFromImageUrl(dataUrlEnhanced);
+                if (result) {
+                  decodedText = result.getText().trim();
+                }
+              } catch (e) {
+                console.log("ZXing on enhanced failed:", e);
+              }
+            }
+          }
+        }
+
+        // Attempt 4: Deep Black High Contrast Binarization
+        if (!decodedText) {
+          const canvasHighContrast = document.createElement('canvas');
+          const lowMaxDim = 600;
+          let lw = img.width;
+          let lh = img.height;
+          if (lw > lowMaxDim || lh > lowMaxDim) {
+            if (lw > lh) {
+              lh = Math.round((lh * lowMaxDim) / lw);
+              lw = lowMaxDim;
+            } else {
+              lw = Math.round((lw * lowMaxDim) / lh);
+              lh = lowMaxDim;
+            }
+          }
+          canvasHighContrast.width = lw;
+          canvasHighContrast.height = lh;
+          const ctxHighContrast = canvasHighContrast.getContext('2d');
+          if (ctxHighContrast) {
+            ctxHighContrast.filter = 'contrast(2.2) brightness(0.85) grayscale(1)';
+            ctxHighContrast.drawImage(img, 0, 0, lw, lh);
+
+            // Try jsQR
+            try {
+              const imgData = ctxHighContrast.getImageData(0, 0, lw, lh);
+              const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
+                inversionAttempts: "attemptBoth"
+              });
+              if (qrResult && qrResult.data) {
+                decodedText = qrResult.data.trim();
+              }
+            } catch (e) {
+              console.warn("jsQR on high contrast failed:", e);
+            }
+
+            // Try ZXing
+            if (!decodedText) {
+              try {
+                const dataUrlHighContrast = canvasHighContrast.toDataURL('image/jpeg', 0.9);
+                const result = await codeReader.decodeFromImageUrl(dataUrlHighContrast);
+                if (result) {
+                  decodedText = result.getText().trim();
+                }
+              } catch (e) {
+                console.log("ZXing on high contrast failed:", e);
+              }
+            }
+          }
+        }
+      }
+
+      if (decodedText) {
+        setScanResult(decodedText);
         triggerBeep();
-        onScan(resultText);
+        onScan(decodedText);
       } else {
-        setFileError('No QR/Barcode found in this image. Ensure it is sharp, clear, and highly focused.');
+        setFileError('No high-quality QR Code or Barcode pattern could be identified. Please ensure the image is bright, highly focused, and not blurry.');
       }
     } catch (err) {
-      setFileError('Barcode recognition failed for this image. Try another image or use manual entry below.');
+      console.error(err);
+      setFileError('Image processing error. Please check that the file is not corrupted, or input manually below.');
+    } finally {
+      setIsDecodingImage(false);
     }
   };
 
@@ -523,30 +688,44 @@ export default function QRScannerModal({
                   {uploadedImageSrc && (
                     <div className="border border-slate-800 bg-slate-950/60 rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden">
                       <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 mb-1.5 absolute top-3 left-3 bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-800 z-10 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                        Uploaded Photo Preview
+                        <span className={`w-1.5 h-1.5 rounded-full ${isDecodingImage ? 'bg-amber-500 animate-ping' : 'bg-indigo-500 animate-pulse'}`}></span>
+                        {isDecodingImage ? 'Analyzing Image...' : 'Uploaded Photo Preview'}
                       </span>
                       <button
                         type="button"
+                        disabled={isDecodingImage}
                         onClick={() => setUploadedImageSrc('')}
-                        className="absolute top-3 right-3 p-1 bg-slate-900/90 hover:bg-rose-950 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-900/40 rounded-lg transition-colors cursor-pointer z-10 text-[10px] font-black uppercase px-2 flex items-center gap-1 active:scale-95 duration-100"
+                        className="absolute top-3 right-3 p-1 bg-slate-900/90 hover:bg-rose-950 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-900/40 rounded-lg transition-colors cursor-pointer z-10 text-[10px] font-black uppercase px-2 flex items-center gap-1 active:scale-95 duration-100 disabled:opacity-50"
                       >
                         <X className="w-3.5 h-3.5" />
                         Clear
                       </button>
-                      <div className="w-full h-44 rounded-lg overflow-hidden border border-slate-850 flex items-center justify-center bg-black/60 mt-4">
+                      <div className="w-full h-44 rounded-lg overflow-hidden border border-slate-850 flex items-center justify-center bg-black/60 mt-4 relative">
                         <img 
                           src={uploadedImageSrc} 
                           alt="Uploaded snapshot QR" 
-                          className="max-h-full max-w-full object-contain"
+                          className={`max-h-full max-w-full object-contain transition-all duration-300 ${isDecodingImage ? 'brightness-50 blur-[1px]' : ''}`}
                           referrerPolicy="no-referrer"
                         />
+                        {isDecodingImage && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/40">
+                            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                            <span className="text-[10px] font-mono font-black text-indigo-300 tracking-wide uppercase">Running Multi-Pass Decoders</span>
+                          </div>
+                        )}
                       </div>
                       <div className="w-full mt-3">
-                        <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/20 py-1.5 rounded-lg border border-emerald-900/30">
-                          <Check className="w-3.5 h-3.5" />
-                          Image Rendered in Window
-                        </p>
+                        {isDecodingImage ? (
+                          <p className="text-[10px] font-bold text-amber-400 flex items-center justify-center gap-1.5 bg-amber-950/20 py-1.5 rounded-lg border border-amber-900/30">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Applying High-Contrast Filter Matrix...
+                          </p>
+                        ) : (
+                          <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/20 py-1.5 rounded-lg border border-emerald-900/30">
+                            <Check className="w-3.5 h-3.5" />
+                            Image Rendered in Window
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}

@@ -329,17 +329,24 @@ export default function BarcodeLabelModal({
 
   // Helper to get barcode height based on selected label size - increased heights!
   const getBarcodeHeight = () => {
-    switch (labelSize) {
-      case 'compact':
-        return 45;
-      case 'large':
-        return 80;
-      case 'sticker_sheet':
-        return 60;
-      case 'standard':
-      default:
-        return 65;
+    const baseHeight = (() => {
+      switch (labelSize) {
+        case 'compact':
+          return 45;
+        case 'large':
+          return 80;
+        case 'sticker_sheet':
+          return 60;
+        case 'standard':
+        default:
+          return 65;
+      }
+    })();
+    // In duo mode, reduce the height of the barcode for a cleaner layout and full view of the QR code
+    if (labelType === 'duo') {
+      return Math.round(baseHeight * 0.55);
     }
+    return baseHeight;
   };
 
   const getQrPixelSize = () => {
