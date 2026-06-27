@@ -406,6 +406,10 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
                   </div>
                   <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">{report.checkedBy}</p>
                   <p className="text-[9px] text-slate-400">{report.checkedByDesignation}</p>
+                  {/* Invisible spacer to perfectly align signature horizontal lines with the Overseeing block under items-end alignment */}
+                  <p className="text-[9px] text-transparent select-none mt-1 uppercase tracking-wider pointer-events-none">
+                    Spacer Date
+                  </p>
                 </div>
 
                 {/* Overseeing Lab Manager Signature */}

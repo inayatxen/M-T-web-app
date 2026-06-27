@@ -2134,26 +2134,24 @@ export default function ReportsArchiveView({
                     </div>
 
                     {/* Corporate dispatch authentication space */}
-                    <div className="grid grid-cols-2 gap-8 pt-8 font-sans text-xs">
-                      <div className="space-y-12">
-                        <p className="text-slate-500 select-none">
-                          Report Compiled &amp; Reviewed By:
-                        </p>
+                    <div className="pt-8 font-sans text-xs" style={{ pageBreakInside: 'avoid' }}>
+                      <div className="grid grid-cols-2 gap-8 text-slate-500 select-none">
+                        <p>Report Compiled &amp; Reviewed By:</p>
+                        <p className="text-right">Counter-Signed &amp; Approved For Field Dispatch:</p>
+                      </div>
+                      
+                      <div className="h-12"></div>
+
+                      <div className="grid grid-cols-2 gap-8">
                         <div className="border-t border-slate-400 pt-1">
                           <p className="font-bold">M. ABDULLAH KHAN</p>
                           <p className="text-[10px] text-slate-500 font-medium leading-tight">Director, Quality Assurance &amp; Grid Bench Compliance</p>
                           <p className="text-[9px] text-slate-400 font-mono">ID No: QA-MTL-2601</p>
                         </div>
-                      </div>
-
-                      <div className="space-y-12 text-right">
-                        <p className="text-slate-500 select-none">
-                          Counter-Signed &amp; Approved For Field Dispatch:
-                        </p>
-                        <div className="border-t border-slate-400 pt-1">
-                          <p className="font-bold text-right">CHIEF TESTING ENGINEER</p>
-                          <p className="text-[10px] text-slate-500 font-medium leading-tight text-right">Peshawar Grid Compliance Laboratory Master, PESCO</p>
-                          <p className="text-[9px] text-slate-400 font-mono text-right">Class 0.05 Seal Authority: PESCO-0099</p>
+                        <div className="border-t border-slate-400 pt-1 text-right">
+                          <p className="font-bold">CHIEF TESTING ENGINEER</p>
+                          <p className="text-[10px] text-slate-500 font-medium leading-tight">Peshawar Grid Compliance Laboratory Master, PESCO</p>
+                          <p className="text-[9px] text-slate-400 font-mono">Class 0.05 Seal Authority: PESCO-0099</p>
                         </div>
                       </div>
                     </div>
@@ -2711,23 +2709,21 @@ export default function ReportsArchiveView({
                     </div>
 
                     {/* Official Sign sections for document authenticator seal space */}
-                    <div className="grid grid-cols-2 gap-10 pt-10 font-sans text-[11px]" style={{ pageBreakInside: 'avoid' }}>
-                      <div className="space-y-10">
-                        <p className="text-slate-500 select-none">
-                          Ledger Entries Compiled &amp; Audited By:
-                        </p>
+                    <div className="pt-10 font-sans text-[11px]" style={{ pageBreakInside: 'avoid' }}>
+                      <div className="grid grid-cols-2 gap-10 text-slate-500 select-none">
+                        <p>Ledger Entries Compiled &amp; Audited By:</p>
+                        <p className="text-right font-sans">Authorized Signatures Counter-Sealed For Field Release:</p>
+                      </div>
+                      
+                      <div className="h-10"></div>
+
+                      <div className="grid grid-cols-2 gap-10">
                         <div className="border-t border-slate-300 pt-1">
                           <p className="font-bold text-slate-900">M. ABDULLAH KHAN</p>
                           <p className="text-[9.5px] text-slate-500 font-medium leading-none">Director, Quality Assurance &amp; Grid Bench Compliance</p>
                           <p className="text-[8.5px] text-slate-400 font-mono mt-0.5">ID No: QA-MTL-2601</p>
                         </div>
-                      </div>
-
-                      <div className="space-y-10 text-right">
-                        <p className="text-slate-500 select-none font-sans">
-                          Authorized Signatures Counter-Sealed For Field Release:
-                        </p>
-                        <div className="border-t border-slate-300 pt-1">
+                        <div className="border-t border-slate-300 pt-1 text-right">
                           <p className="font-bold text-slate-900">CHIEF TESTING ENGINEER</p>
                           <p className="text-[9.5px] text-slate-500 font-medium leading-none">Peshawar Grid Compliance Laboratory Master, PESCO</p>
                           <p className="text-[8.5px] text-slate-400 font-mono mt-0.5">Class 0.05 Verification Seal Authority: PESCO-0099</p>
