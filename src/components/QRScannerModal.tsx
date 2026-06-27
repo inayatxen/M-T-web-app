@@ -20,7 +20,12 @@ import {
   Sparkles,
   FileJson,
   Zap,
-  Search
+  Search,
+  Sliders,
+  RotateCw,
+  RotateCcw,
+  Minimize2,
+  Maximize2
 } from 'lucide-react';
 
 interface QRScannerModalProps {
@@ -55,6 +60,11 @@ export default function QRScannerModal({
   // Camera zoom state
   const [zoom, setZoom] = useState<number>(1);
   const [uploadedImageSrc, setUploadedImageSrc] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [imageRotation, setImageRotation] = useState<number>(0);
+  const [imageScale, setImageScale] = useState<number>(1.0);
+  const [imagePanX, setImagePanX] = useState<number>(0);
+  const [imagePanY, setImagePanY] = useState<number>(0);
   const [isDecodingImage, setIsDecodingImage] = useState<boolean>(false);
   const [scanSuccessOverlay, setScanSuccessOverlay] = useState<boolean>(false);
 
@@ -63,6 +73,11 @@ export default function QRScannerModal({
     if (!isOpen) {
       setZoom(1);
       setUploadedImageSrc('');
+      setUploadedFile(null);
+      setImageRotation(0);
+      setImageScale(1.0);
+      setImagePanX(0);
+      setImagePanY(0);
       setIsDecodingImage(false);
       setScanSuccessOverlay(false);
     }
@@ -229,8 +244,71 @@ export default function QRScannerModal({
     startCamera(deviceId);
   };
 
-  // File upload reader fallback
-  const processImageFile = async (file: File) => {
+  // Generates a canvas applying user's rotation, scale, and pan transformations
+  const getTransformedCanvas = (
+    img: HTMLImageElement, 
+    rotation: number, 
+    scale: number, 
+    panX: number, 
+    panY: number
+  ): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    let w = img.width;
+    let h = img.height;
+    
+    // Scale down if extremely high res to speed up decoding and remove high-frequency noise
+    const maxDim = 800;
+    if (w > maxDim || h > maxDim) {
+      if (w > h) {
+        h = Math.round((h * maxDim) / w);
+        w = maxDim;
+      } else {
+        w = Math.round((w * maxDim) / h);
+        h = maxDim;
+      }
+    }
+
+    // Canvas size depends on rotation (if 90 or 270, swap dimensions so we don't clip the image!)
+    const isRotated90 = rotation === 90 || rotation === 270;
+    canvas.width = isRotated90 ? h : w;
+    canvas.height = isRotated90 ? w : h;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+
+    // Solid white background to ensure optimal barcode binarization contrast
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Apply translations starting from canvas center
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    
+    // Rotate canvas
+    ctx.rotate((rotation * Math.PI) / 180);
+    
+    // Scale canvas
+    ctx.scale(scale, scale);
+    
+    // Translate canvas based on user pan inputs (normalized relative to canvas size)
+    // Map -100..100 percentage to actual canvas dimensions
+    const actualPanX = (panX / 100) * w;
+    const actualPanY = (panY / 100) * h;
+    ctx.translate(actualPanX, actualPanY);
+
+    // Draw the source image centered
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+    return canvas;
+  };
+
+  // File upload reader fallback with robust multi-pass alignment-aware decoders
+  const processImageFile = async (
+    file: File, 
+    r: number = 0, 
+    s: number = 1.0, 
+    px: number = 0, 
+    py: number = 0
+  ) => {
     setFileError('');
     if (!file.type.startsWith('image/')) {
       setFileError('The selected file must be an image.');
@@ -241,54 +319,66 @@ export default function QRScannerModal({
     let decodedText: string | null = null;
     const imgUrl = URL.createObjectURL(file);
     setUploadedImageSrc(imgUrl);
+    setUploadedFile(file);
 
     try {
       const codeReader = new BrowserMultiFormatReader();
 
-      // Attempt 1: Direct decode of the original image url
-      try {
-        const result = await codeReader.decodeFromImageUrl(imgUrl);
-        if (result) {
-          decodedText = result.getText().trim();
+      // Load image to HTMLImageElement
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = (e) => reject(e);
+        image.src = imgUrl;
+      });
+
+      // Pass 1: Draw transformed/aligned viewport
+      const canvasTransformed = getTransformedCanvas(img, r, s, px, py);
+      const w = canvasTransformed.width;
+      const h = canvasTransformed.height;
+
+      const ctxTransformed = canvasTransformed.getContext('2d');
+      
+      // Try jsQR (extremely fast, specialized for QR) on transformed image
+      if (ctxTransformed) {
+        try {
+          const imgData = ctxTransformed.getImageData(0, 0, w, h);
+          const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
+            inversionAttempts: "attemptBoth"
+          });
+          if (qrResult && qrResult.data) {
+            decodedText = qrResult.data.trim();
+          }
+        } catch (e) {
+          console.warn("jsQR on transformed failed:", e);
         }
-      } catch (err) {
-        console.log("Direct ZXing decode failed, trying robust preprocessors...", err);
       }
 
-      // If Direct decode didn't succeed, use preprocessors
+      // If still not decoded, try ZXing multi-format on transformed image
       if (!decodedText) {
-        // Load image to HTMLImageElement
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = (e) => reject(e);
-          image.src = imgUrl;
-        });
-
-        // Attempt 2: Resize to a "sweet spot" resolution (800px max)
-        // This dramatically reduces high-frequency sensor noise and increases speed
-        const canvas800 = document.createElement('canvas');
-        let w = img.width;
-        let h = img.height;
-        const maxDim = 800;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
+        try {
+          const dataUrlTransformed = canvasTransformed.toDataURL('image/jpeg', 0.9);
+          const result = await codeReader.decodeFromImageUrl(dataUrlTransformed);
+          if (result) {
+            decodedText = result.getText().trim();
           }
+        } catch (e) {
+          console.log("ZXing on transformed failed:", e);
         }
-        canvas800.width = w;
-        canvas800.height = h;
-        const ctx800 = canvas800.getContext('2d');
-        if (ctx800) {
-          ctx800.drawImage(img, 0, 0, w, h);
-          
-          // Try jsQR (extremely fast, specialized for QR)
+      }
+
+      // Pass 2: Enhanced Contrast & Grayscale on transformed viewport (helps with shadow and exposure)
+      if (!decodedText && ctxTransformed) {
+        const canvasEnhanced = document.createElement('canvas');
+        canvasEnhanced.width = w;
+        canvasEnhanced.height = h;
+        const ctxEnhanced = canvasEnhanced.getContext('2d');
+        if (ctxEnhanced) {
+          ctxEnhanced.filter = 'contrast(1.65) grayscale(1)';
+          ctxEnhanced.drawImage(canvasTransformed, 0, 0);
+
           try {
-            const imgData = ctx800.getImageData(0, 0, w, h);
+            const imgData = ctxEnhanced.getImageData(0, 0, w, h);
             const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
               inversionAttempts: "attemptBoth"
             });
@@ -296,107 +386,54 @@ export default function QRScannerModal({
               decodedText = qrResult.data.trim();
             }
           } catch (e) {
-            console.warn("jsQR on resized failed:", e);
+            console.warn("jsQR on enhanced failed:", e);
           }
 
-          // If still not decoded, try ZXing on resized image
           if (!decodedText) {
             try {
-              const dataUrl800 = canvas800.toDataURL('image/jpeg', 0.9);
-              const result = await codeReader.decodeFromImageUrl(dataUrl800);
+              const dataUrlEnhanced = canvasEnhanced.toDataURL('image/jpeg', 0.9);
+              const result = await codeReader.decodeFromImageUrl(dataUrlEnhanced);
               if (result) {
                 decodedText = result.getText().trim();
               }
             } catch (e) {
-              console.log("ZXing on resized failed:", e);
+              console.log("ZXing on enhanced failed:", e);
             }
           }
         }
+      }
 
-        // Attempt 3: Enhance Contrast & Grayscale (helps with shadows/under-exposure)
-        if (!decodedText) {
-          const canvasEnhanced = document.createElement('canvas');
-          canvasEnhanced.width = w;
-          canvasEnhanced.height = h;
-          const ctxEnhanced = canvasEnhanced.getContext('2d');
-          if (ctxEnhanced) {
-            ctxEnhanced.filter = 'contrast(1.6) grayscale(1)';
-            ctxEnhanced.drawImage(img, 0, 0, w, h);
+      // Pass 3: Deep Black High Contrast Binarization on transformed viewport
+      if (!decodedText && ctxTransformed) {
+        const canvasHighContrast = document.createElement('canvas');
+        canvasHighContrast.width = w;
+        canvasHighContrast.height = h;
+        const ctxHighContrast = canvasHighContrast.getContext('2d');
+        if (ctxHighContrast) {
+          ctxHighContrast.filter = 'contrast(2.4) brightness(0.8) grayscale(1)';
+          ctxHighContrast.drawImage(canvasTransformed, 0, 0);
 
-            // Try jsQR on contrast enhanced
+          try {
+            const imgData = ctxHighContrast.getImageData(0, 0, w, h);
+            const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
+              inversionAttempts: "attemptBoth"
+            });
+            if (qrResult && qrResult.data) {
+              decodedText = qrResult.data.trim();
+            }
+          } catch (e) {
+            console.warn("jsQR on high contrast failed:", e);
+          }
+
+          if (!decodedText) {
             try {
-              const imgData = ctxEnhanced.getImageData(0, 0, w, h);
-              const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
-                inversionAttempts: "attemptBoth"
-              });
-              if (qrResult && qrResult.data) {
-                decodedText = qrResult.data.trim();
+              const dataUrlHighContrast = canvasHighContrast.toDataURL('image/jpeg', 0.9);
+              const result = await codeReader.decodeFromImageUrl(dataUrlHighContrast);
+              if (result) {
+                decodedText = result.getText().trim();
               }
             } catch (e) {
-              console.warn("jsQR on enhanced failed:", e);
-            }
-
-            // Try ZXing on contrast enhanced
-            if (!decodedText) {
-              try {
-                const dataUrlEnhanced = canvasEnhanced.toDataURL('image/jpeg', 0.9);
-                const result = await codeReader.decodeFromImageUrl(dataUrlEnhanced);
-                if (result) {
-                  decodedText = result.getText().trim();
-                }
-              } catch (e) {
-                console.log("ZXing on enhanced failed:", e);
-              }
-            }
-          }
-        }
-
-        // Attempt 4: Deep Black High Contrast Binarization
-        if (!decodedText) {
-          const canvasHighContrast = document.createElement('canvas');
-          const lowMaxDim = 600;
-          let lw = img.width;
-          let lh = img.height;
-          if (lw > lowMaxDim || lh > lowMaxDim) {
-            if (lw > lh) {
-              lh = Math.round((lh * lowMaxDim) / lw);
-              lw = lowMaxDim;
-            } else {
-              lw = Math.round((lw * lowMaxDim) / lh);
-              lh = lowMaxDim;
-            }
-          }
-          canvasHighContrast.width = lw;
-          canvasHighContrast.height = lh;
-          const ctxHighContrast = canvasHighContrast.getContext('2d');
-          if (ctxHighContrast) {
-            ctxHighContrast.filter = 'contrast(2.2) brightness(0.85) grayscale(1)';
-            ctxHighContrast.drawImage(img, 0, 0, lw, lh);
-
-            // Try jsQR
-            try {
-              const imgData = ctxHighContrast.getImageData(0, 0, lw, lh);
-              const qrResult = jsQR(imgData.data, imgData.width, imgData.height, {
-                inversionAttempts: "attemptBoth"
-              });
-              if (qrResult && qrResult.data) {
-                decodedText = qrResult.data.trim();
-              }
-            } catch (e) {
-              console.warn("jsQR on high contrast failed:", e);
-            }
-
-            // Try ZXing
-            if (!decodedText) {
-              try {
-                const dataUrlHighContrast = canvasHighContrast.toDataURL('image/jpeg', 0.9);
-                const result = await codeReader.decodeFromImageUrl(dataUrlHighContrast);
-                if (result) {
-                  decodedText = result.getText().trim();
-                }
-              } catch (e) {
-                console.log("ZXing on high contrast failed:", e);
-              }
+              console.log("ZXing on high contrast failed:", e);
             }
           }
         }
@@ -405,7 +442,7 @@ export default function QRScannerModal({
       if (decodedText) {
         handleScanSuccess(decodedText);
       } else {
-        setFileError('No high-quality QR Code or Barcode pattern could be identified. Please ensure the image is bright, highly focused, and not blurry.');
+        setFileError('No QR/Barcode found. Adjust rotation, zoom, or align the code in the center target frame and retry.');
       }
     } catch (err) {
       console.error(err);
@@ -711,7 +748,7 @@ export default function QRScannerModal({
                   Static Sticker Scan Fallback &amp; Image Preview
                 </div>
                 
-                <div className={uploadedImageSrc ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : "space-y-2"}>
+                <div className={uploadedImageSrc ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-2"}>
                   {uploadedImageSrc && (
                     <div className={`rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300 ${scanSuccessOverlay ? 'border-2 border-emerald-500 bg-emerald-950/10 ring-4 ring-emerald-500/10' : 'border border-slate-800 bg-slate-950/60'}`}>
                       <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 mb-1.5 absolute top-3 left-3 bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-800 z-10 flex items-center gap-1">
@@ -721,27 +758,52 @@ export default function QRScannerModal({
                       <button
                         type="button"
                         disabled={isDecodingImage || scanSuccessOverlay}
-                        onClick={() => setUploadedImageSrc('')}
+                        onClick={() => {
+                          setUploadedImageSrc('');
+                          setUploadedFile(null);
+                        }}
                         className="absolute top-3 right-3 p-1 bg-slate-900/90 hover:bg-rose-950 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-900/40 rounded-lg transition-colors cursor-pointer z-10 text-[10px] font-black uppercase px-2 flex items-center gap-1 active:scale-95 duration-100 disabled:opacity-50"
                       >
                         <X className="w-3.5 h-3.5" />
                         Clear
                       </button>
-                      <div className="w-full h-44 rounded-lg overflow-hidden border border-slate-850 flex items-center justify-center bg-black/60 mt-4 relative">
+
+                      {/* Interactive Alignment Sandbox Stage */}
+                      <div className="w-full h-56 rounded-lg overflow-hidden border border-slate-850 flex items-center justify-center bg-black/60 mt-6 relative">
                         <img 
                           src={uploadedImageSrc} 
                           alt="Uploaded snapshot QR" 
-                          className={`max-h-full max-w-full object-contain transition-all duration-300 ${isDecodingImage ? 'brightness-50 blur-[1px]' : ''} ${scanSuccessOverlay ? 'brightness-40' : ''}`}
+                          style={{
+                            transform: `translate(${imagePanX}px, ${imagePanY}px) rotate(${imageRotation}deg) scale(${imageScale})`,
+                            transformOrigin: 'center center',
+                          }}
+                          className={`max-h-full max-w-full object-contain transition-all duration-200 ${isDecodingImage ? 'brightness-50 blur-[1px]' : ''} ${scanSuccessOverlay ? 'brightness-40' : ''}`}
                           referrerPolicy="no-referrer"
                         />
+                        
+                        {/* High-Tech Scan Reticle / Guide Area Overlay */}
+                        <div className="absolute inset-4 border border-dashed border-indigo-500/40 rounded-lg pointer-events-none flex items-center justify-center">
+                          <div className="w-3/5 h-3/5 border border-indigo-400/20 rounded flex items-center justify-center relative">
+                            {/* Center reticle */}
+                            <div className="absolute w-3 h-0.5 bg-indigo-400/50"></div>
+                            <div className="absolute h-3 w-0.5 bg-indigo-400/50"></div>
+                            {/* Corner brackets */}
+                            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-indigo-500"></div>
+                            <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-indigo-500"></div>
+                            <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-indigo-500"></div>
+                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-indigo-500"></div>
+                          </div>
+                        </div>
+
                         {isDecodingImage && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/40 animate-in fade-in">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950/40 animate-in fade-in z-20">
                             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
                             <span className="text-[10px] font-mono font-black text-indigo-300 tracking-wide uppercase">Running Multi-Pass Decoders</span>
                           </div>
                         )}
+                        
                         {scanSuccessOverlay && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-emerald-950/45 animate-in fade-in duration-200">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-emerald-950/45 animate-in fade-in duration-200 z-20">
                             <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-75 ring-4 ring-emerald-400/20">
                               <Check className="w-6 h-6 stroke-[3]" />
                             </div>
@@ -749,7 +811,9 @@ export default function QRScannerModal({
                           </div>
                         )}
                       </div>
-                      <div className="w-full mt-3">
+
+                      {/* Display Status */}
+                      <div className="w-full mt-2.5 mb-1">
                         {isDecodingImage ? (
                           <p className="text-[10px] font-bold text-amber-400 flex items-center justify-center gap-1.5 bg-amber-950/20 py-1.5 rounded-lg border border-amber-900/30 animate-pulse">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -761,11 +825,152 @@ export default function QRScannerModal({
                             Success: Decoded Successfully!
                           </p>
                         ) : (
-                          <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/20 py-1.5 rounded-lg border border-emerald-900/30">
-                            <Check className="w-3.5 h-3.5" />
-                            Image Rendered in Window
+                          <p className="text-[10px] font-bold text-indigo-400 flex items-center justify-center gap-1.5 bg-indigo-950/20 py-1.5 rounded-lg border border-indigo-900/30">
+                            <Sliders className="w-3.5 h-3.5" />
+                            Adjust alignment of code inside target frame
                           </p>
                         )}
+                      </div>
+
+                      {/* Alignment Control Panel */}
+                      <div className="w-full bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 space-y-3 text-left mt-2 z-10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider flex items-center gap-1.5">
+                            <Sliders className="w-3 h-3" />
+                            Alignment Precision Dashboard
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isDecodingImage || scanSuccessOverlay}
+                            onClick={() => {
+                              setImageRotation(0);
+                              setImageScale(1.0);
+                              setImagePanX(0);
+                              setImagePanY(0);
+                            }}
+                            className="text-[8px] uppercase font-bold text-slate-400 hover:text-white bg-slate-850 hover:bg-slate-800 px-2 py-0.5 rounded border border-slate-800 transition-colors disabled:opacity-40"
+                          >
+                            Reset
+                          </button>
+                        </div>
+
+                        {/* Rotate control */}
+                        <div className="space-y-1">
+                          <label className="text-[8.5px] uppercase font-black text-slate-400 flex justify-between">
+                            <span>Rotation Angle</span>
+                            <span className="font-mono text-indigo-400">{imageRotation}°</span>
+                          </label>
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              disabled={isDecodingImage || scanSuccessOverlay}
+                              onClick={() => setImageRotation(prev => (prev - 90 + 360) % 360)}
+                              className="flex-1 py-1 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold text-[9px] uppercase tracking-wider rounded-md border border-slate-800 flex items-center justify-center gap-1 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              <RotateCcw className="w-2.5 h-2.5 text-slate-400" />
+                              Left 90°
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isDecodingImage || scanSuccessOverlay}
+                              onClick={() => setImageRotation(prev => (prev + 90) % 360)}
+                              className="flex-1 py-1 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold text-[9px] uppercase tracking-wider rounded-md border border-slate-800 flex items-center justify-center gap-1 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              <RotateCw className="w-2.5 h-2.5 text-slate-400" />
+                              Right 90°
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Zoom slider */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between text-[8.5px] uppercase font-black text-slate-400">
+                            <span>Target Zoom / Scale</span>
+                            <span className="font-mono text-indigo-400">{imageScale.toFixed(2)}x</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Minimize2 className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                            <input
+                              type="range"
+                              min="1.0"
+                              max="3.0"
+                              step="0.05"
+                              disabled={isDecodingImage || scanSuccessOverlay}
+                              value={imageScale}
+                              onChange={(e) => setImageScale(parseFloat(e.target.value))}
+                              className="w-full h-1 bg-slate-850 rounded appearance-none cursor-pointer accent-indigo-500"
+                            />
+                            <Maximize2 className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                          </div>
+                        </div>
+
+                        {/* Horizontal Pan */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between text-[8.5px] uppercase font-black text-slate-400">
+                            <span>Horizontal Shift</span>
+                            <span className="font-mono text-indigo-400">{imagePanX > 0 ? `+${imagePanX}` : imagePanX}px</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-mono text-slate-500">L</span>
+                            <input
+                              type="range"
+                              min="-150"
+                              max="150"
+                              step="1"
+                              disabled={isDecodingImage || scanSuccessOverlay}
+                              value={imagePanX}
+                              onChange={(e) => setImagePanX(parseInt(e.target.value))}
+                              className="w-full h-1 bg-slate-850 rounded appearance-none cursor-pointer accent-indigo-500"
+                            />
+                            <span className="text-[8px] font-mono text-slate-500">R</span>
+                          </div>
+                        </div>
+
+                        {/* Vertical Pan */}
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between text-[8.5px] uppercase font-black text-slate-400">
+                            <span>Vertical Shift</span>
+                            <span className="font-mono text-indigo-400">{imagePanY > 0 ? `+${imagePanY}` : imagePanY}px</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-mono text-slate-500">T</span>
+                            <input
+                              type="range"
+                              min="-150"
+                              max="150"
+                              step="1"
+                              disabled={isDecodingImage || scanSuccessOverlay}
+                              value={imagePanY}
+                              onChange={(e) => setImagePanY(parseInt(e.target.value))}
+                              className="w-full h-1 bg-slate-850 rounded appearance-none cursor-pointer accent-indigo-500"
+                            />
+                            <span className="text-[8px] font-mono text-slate-500">B</span>
+                          </div>
+                        </div>
+
+                        {/* Re-decode Button */}
+                        <button
+                          type="button"
+                          disabled={isDecodingImage || scanSuccessOverlay || !uploadedFile}
+                          onClick={() => {
+                            if (uploadedFile) {
+                              processImageFile(uploadedFile, imageRotation, imageScale, imagePanX, imagePanY);
+                            }
+                          }}
+                          className="w-full mt-1.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-lg flex items-center justify-center gap-1.5 duration-100 active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isDecodingImage ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Running Decoders...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Analyze Aligned Viewport
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   )}
