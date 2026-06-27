@@ -53,11 +53,13 @@ export default function QRScannerModal({
   
   // Camera zoom state
   const [zoom, setZoom] = useState<number>(1);
+  const [uploadedImageSrc, setUploadedImageSrc] = useState<string>('');
 
-  // Reset zoom when modal opens/closes
+  // Reset zoom and uploaded image when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setZoom(1);
+      setUploadedImageSrc('');
     }
   }, [isOpen]);
 
@@ -216,6 +218,7 @@ export default function QRScannerModal({
 
     try {
       const imgUrl = URL.createObjectURL(file);
+      setUploadedImageSrc(imgUrl);
       const codeReader = new BrowserMultiFormatReader();
       const result = await codeReader.decodeFromImageUrl(imgUrl);
       if (result) {
@@ -340,7 +343,7 @@ export default function QRScannerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs transition-opacity overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-2xl md:max-w-3xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
+      <div className="bg-slate-900 border border-slate-850 text-white rounded-2xl shadow-2xl max-w-4xl lg:max-w-5xl w-full overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-150">
         
         {/* Header bar */}
         <div className="bg-slate-950 px-5 py-4 border-b border-slate-850 flex items-center justify-between">
@@ -408,17 +411,17 @@ export default function QRScannerModal({
             <>
               {/* TAB 1: ACTIVE CAMERA SCANNING */}
               {hasCameraPermission !== false && !scannerError ? (
-                <div className="relative h-[290px] sm:h-[390px] md:h-[460px] rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
+                <div className="relative h-[400px] sm:h-[500px] md:h-[620px] rounded-xl bg-black border border-slate-850 overflow-hidden shadow-inner group">
                   {isScanning && (
                     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
                       
                       {/* Glowing Laser Scan Target Rect */}
-                      <div className="relative w-52 h-52 sm:w-64 sm:h-64 md:w-76 md:h-76 border-2 border-dashed border-indigo-400/60 rounded-xl flex items-center justify-center">
+                      <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 border-2 border-dashed border-indigo-400/60 rounded-xl flex items-center justify-center">
                         {/* Focus ticks */}
-                        <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-indigo-400 -mt-1.5 -ml-1.5 rounded-tl-md" />
-                        <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-indigo-400 -mt-1.5 -mr-1.5 rounded-tr-md" />
-                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-indigo-400 -mb-1.5 -ml-1.5 rounded-bl-md" />
-                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-indigo-400 -mb-1.5 -mr-1.5 rounded-br-md" />
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-indigo-400 -mt-1.5 -ml-1.5 rounded-tl-md" />
+                        <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-indigo-400 -mt-1.5 -mr-1.5 rounded-tr-md" />
+                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-indigo-400 -mb-1.5 -ml-1.5 rounded-bl-md" />
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-indigo-400 -mb-1.5 -mr-1.5 rounded-br-md" />
 
                         {/* Laser overlay bar */}
                         <div className="absolute w-full h-[2px] bg-emerald-400 shadow-[0_0_12px_3px_rgba(52,211,153,0.7)] animate-bounce" />
@@ -513,37 +516,70 @@ export default function QRScannerModal({
               {/* File Uploader fallback */}
               <div className="space-y-2">
                 <div className="text-[10px] uppercase font-black tracking-widest text-slate-500 block pb-1 border-b border-slate-800">
-                  Static Sticker Scan Fallback
+                  Static Sticker Scan Fallback &amp; Image Preview
                 </div>
                 
-                <div 
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-5 py-6 text-center transition-all ${
-                    dragActive 
-                      ? 'border-indigo-500 bg-indigo-950/20' 
-                      : 'border-slate-800 hover:border-slate-750 bg-slate-950/40'
-                  }`}
-                >
-                  <Upload className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
-                  <p className="text-xs font-black text-slate-300">Drag &amp; drop tag photo here</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Accepts high-res snapshot files of barcode labels</p>
-                  
-                  <label className="mt-3 inline-block px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-black text-[10.5px] uppercase tracking-wide rounded-lg cursor-pointer transition-colors active:scale-95 shadow-sm">
-                    Browse File
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          processImageFile(e.target.files[0]);
-                        }
-                      }}
-                      className="hidden" 
-                    />
-                  </label>
+                <div className={uploadedImageSrc ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : "space-y-2"}>
+                  {uploadedImageSrc && (
+                    <div className="border border-slate-800 bg-slate-950/60 rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden">
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 mb-1.5 absolute top-3 left-3 bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-800 z-10 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                        Uploaded Photo Preview
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImageSrc('')}
+                        className="absolute top-3 right-3 p-1 bg-slate-900/90 hover:bg-rose-950 hover:text-rose-400 text-slate-400 border border-slate-800 hover:border-rose-900/40 rounded-lg transition-colors cursor-pointer z-10 text-[10px] font-black uppercase px-2 flex items-center gap-1 active:scale-95 duration-100"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Clear
+                      </button>
+                      <div className="w-full h-44 rounded-lg overflow-hidden border border-slate-850 flex items-center justify-center bg-black/60 mt-4">
+                        <img 
+                          src={uploadedImageSrc} 
+                          alt="Uploaded snapshot QR" 
+                          className="max-h-full max-w-full object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div className="w-full mt-3">
+                        <p className="text-[10px] font-bold text-emerald-400 flex items-center justify-center gap-1.5 bg-emerald-950/20 py-1.5 rounded-lg border border-emerald-900/30">
+                          <Check className="w-3.5 h-3.5" />
+                          Image Rendered in Window
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div 
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-xl p-5 py-6 text-center transition-all flex flex-col justify-center items-center ${
+                      dragActive 
+                        ? 'border-indigo-500 bg-indigo-950/20' 
+                        : 'border-slate-800 hover:border-slate-750 bg-slate-950/40'
+                    } ${uploadedImageSrc ? 'h-full min-h-[11rem]' : ''}`}
+                  >
+                    <Upload className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
+                    <p className="text-xs font-black text-slate-300">Drag &amp; drop tag photo here</p>
+                    <p className="text-[10px] text-slate-500 mt-1 max-w-[240px] mx-auto">Accepts high-res snapshot files of barcode labels</p>
+                    
+                    <label className="mt-3 inline-block px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-black text-[10.5px] uppercase tracking-wide rounded-lg cursor-pointer transition-colors active:scale-95 shadow-sm">
+                      Browse File
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            processImageFile(e.target.files[0]);
+                          }
+                        }}
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {fileError && (
