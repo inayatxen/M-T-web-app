@@ -50,6 +50,16 @@ export default function QRScannerModal({
   // Manual Input state
   const [manualText, setManualText] = useState<string>('');
   const [manualInputError, setManualInputError] = useState<string>('');
+  
+  // Camera zoom state
+  const [zoom, setZoom] = useState<number>(1);
+
+  // Reset zoom when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setZoom(1);
+    }
+  }, [isOpen]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -111,6 +121,10 @@ export default function QRScannerModal({
             }
           }
         );
+        // Apply initial hardware zoom after a short delay
+        setTimeout(() => {
+          applyHardwareZoom(zoom);
+        }, 300);
       }
     } catch (err: any) {
       console.warn("Camera access warning:", err);
@@ -123,6 +137,38 @@ export default function QRScannerModal({
       );
     }
   };
+
+  // Apply hardware camera zoom constraint if supported by browser / hardware
+  const applyHardwareZoom = async (zoomValue: number) => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      const tracks = stream.getVideoTracks();
+      if (tracks && tracks.length > 0) {
+        const track = tracks[0];
+        try {
+          const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : null;
+          if (capabilities && 'zoom' in capabilities) {
+            const zoomCap = (capabilities as any).zoom;
+            const minZoom = zoomCap.min || 1;
+            const maxZoom = zoomCap.max || 3;
+            const targetZoom = Math.max(minZoom, Math.min(maxZoom, zoomValue));
+            await track.applyConstraints({
+              advanced: [{ zoom: targetZoom } as any]
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to apply hardware zoom constraint:", err);
+        }
+      }
+    }
+  };
+
+  // Monitor zoom changes to apply hardware zoom dynamically
+  useEffect(() => {
+    if (isScanning) {
+      applyHardwareZoom(zoom);
+    }
+  }, [zoom, isScanning]);
 
   // Play audio beep on successful scan
   const triggerBeep = () => {
@@ -389,10 +435,30 @@ export default function QRScannerModal({
                   {/* Video Stream */}
                   <video 
                     ref={videoRef}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300"
+                    style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
                     muted
                     playsInline
                   />
+
+                  {/* Zoom Controls Overlay */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-3.5 py-1 rounded-full border border-slate-800 shadow-xl pointer-events-auto transition-all">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 px-1 select-none">Zoom</span>
+                    {[1, 1.5, 2, 3].map((level) => (
+                      <button
+                        type="button"
+                        key={level}
+                        onClick={() => setZoom(level)}
+                        className={`w-7 h-7 rounded-full text-[11px] font-black transition-all flex items-center justify-center cursor-pointer ${
+                          zoom === level
+                            ? 'bg-indigo-600 text-white scale-110 shadow-md ring-2 ring-indigo-400/20'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        {level}x
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 /* CAMERA UNAVAILABLE ALERT BANNER */
