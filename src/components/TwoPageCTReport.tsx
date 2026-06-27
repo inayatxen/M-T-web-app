@@ -645,11 +645,21 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
             <div className="grid grid-cols-2 gap-4 items-end pt-4">
               <div className="flex flex-col items-start gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 bg-white border border-slate-300 rounded p-1 flex items-center justify-center">
+                  <div className="w-30 h-30 bg-white border border-slate-300 rounded p-1.5 flex items-center justify-center">
                     <QRCodeSVG 
-                      value={JSON.stringify({ reportNo: report.reportNumber, meterNo: report.meterNumber, date: report.testDate })}
-                      size={52}
-                      level="M"
+                      value={JSON.stringify({
+                        "Consumer Account Number": report.accountNumber,
+                        "Meter ID / Corp Asset No": report.meterNumber,
+                        "Warp / Serial Code": report.serialNumber,
+                        "Equipment Type / Category": report.meterType,
+                        "Final Testing Outcome": report.accuracyTest?.passFail || "Pass",
+                        "Identified Physical/Electrical Anomaly Profiles": [
+                          ...(report.discrepancies || []),
+                          ...(report.otherDiscrepancyRemarks ? [report.otherDiscrepancyRemarks] : [])
+                        ]
+                      })}
+                      size={108}
+                      level="L"
                       includeMargin={false}
                     />
                   </div>

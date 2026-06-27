@@ -16,7 +16,8 @@ import {
   QrCode, 
   AlertCircle 
 } from 'lucide-react';
-import { Meter } from '../types';
+import { Meter, TestReport } from '../types';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Genuine scan-compatible Code 39 Barcode Map
 const CODE39_MAP: { [key: string]: string } = {
@@ -166,6 +167,7 @@ interface BarcodeLabelModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedMeters: Meter[];
+  reports?: TestReport[];
 }
 
 type LabelSize = 'standard' | 'compact' | 'large' | 'sticker_sheet';
@@ -174,7 +176,8 @@ type LabelType = 'duo' | 'barcode' | 'qr';
 export default function BarcodeLabelModal({ 
   isOpen, 
   onClose, 
-  selectedMeters 
+  selectedMeters,
+  reports = []
 }: BarcodeLabelModalProps) {
   const [labelSize, setLabelSize] = useState<LabelSize>('standard');
   const [labelType, setLabelType] = useState<LabelType>('duo');
@@ -336,6 +339,20 @@ export default function BarcodeLabelModal({
       case 'standard':
       default:
         return 65;
+    }
+  };
+
+  const getQrPixelSize = () => {
+    switch (labelSize) {
+      case 'compact':
+        return 68;
+      case 'large':
+        return 112;
+      case 'sticker_sheet':
+        return 82;
+      case 'standard':
+      default:
+        return 90;
     }
   };
 
@@ -560,9 +577,33 @@ export default function BarcodeLabelModal({
               >
                 <div className={`grid ${getGridColumnsClass()} gap-4 justify-items-center`}>
                   {selectedMeters.map((meter) => {
-                    // Generate deterministic matrix matching specific serial
-                    const qrMatrix = generateQRMatrix(meter.serialNumber);
-                    const qrSize = qrMatrix.length;
+                    const meterReport = reports.find(
+                      r => r.meterId === meter.id || r.meterNumber === meter.meterNumber || r.serialNumber === meter.serialNumber
+                    );
+
+                    const qrCodeValue = meterReport 
+                      ? JSON.stringify({
+                          "Consumer Account Number": meterReport.accountNumber,
+                          "Meter ID / Corp Asset No": meterReport.meterNumber,
+                          "Warp / Serial Code": meterReport.serialNumber,
+                          "Equipment Type / Category": meterReport.meterType,
+                          "Final Testing Outcome": meterReport.accuracyTest?.passFail || "Pass",
+                          "Identified Physical/Electrical Anomaly Profiles": [
+                            ...(meterReport.discrepancies || []),
+                            ...(meterReport.otherDiscrepancyRemarks ? [meterReport.otherDiscrepancyRemarks] : [])
+                          ]
+                        })
+                      : JSON.stringify({
+                          meterNumber: meter.meterNumber,
+                          serialNumber: meter.serialNumber,
+                          manufacturer: meter.manufacturer,
+                          category: meter.category,
+                          status: meter.status,
+                          stockStatus: meter.stockStatus,
+                          consumerName: meter.consumerName || "",
+                          consumerAccount: meter.consumerAccount || ""
+                        });
+
                     const dateString = new Date().toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
@@ -627,17 +668,12 @@ export default function BarcodeLabelModal({
                             {/* SVG QR Code Rendering block */}
                             {(labelType === 'duo' || labelType === 'qr') && (
                               <div className={`border-2 border-slate-950 bg-white rounded flex items-center justify-center shrink-0 ${getQrSizeClass()}`}>
-                                <svg 
-                                  className="w-full h-full text-black select-none pointer-events-none" 
-                                  viewBox={`0 0 ${qrSize} ${qrSize}`} 
-                                  fill="currentColor"
-                                >
-                                  {qrMatrix.map((row, y) => 
-                                    row.map((cell, x) => cell ? (
-                                      <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" />
-                                    ) : null)
-                                  )}
-                                </svg>
+                                <QRCodeSVG 
+                                  value={qrCodeValue}
+                                  size={getQrPixelSize()}
+                                  level="L"
+                                  includeMargin={false}
+                                />
                               </div>
                             )}
 

@@ -360,11 +360,21 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8 border-t border-slate-200 items-end">
           {/* QR Verification System */}
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-            <div className="w-24 h-24 bg-white border border-slate-300 rounded-lg p-1.5 shadow-sm flex items-center justify-center relative">
+            <div className="w-32 h-32 bg-white border border-slate-300 rounded-lg p-1.5 shadow-sm flex items-center justify-center relative">
               <QRCodeSVG 
-                value={JSON.stringify({ reportNo: report.reportNumber, meterNo: report.meterNumber, date: report.testDate })}
-                size={80}
-                level="M"
+                value={JSON.stringify({
+                  "Consumer Account Number": report.accountNumber,
+                  "Meter ID / Corp Asset No": report.meterNumber,
+                  "Warp / Serial Code": report.serialNumber,
+                  "Equipment Type / Category": report.meterType,
+                  "Final Testing Outcome": report.accuracyTest?.passFail || "Pass",
+                  "Identified Physical/Electrical Anomaly Profiles": [
+                    ...(report.discrepancies || []),
+                    ...(report.otherDiscrepancyRemarks ? [report.otherDiscrepancyRemarks] : [])
+                  ]
+                })}
+                size={116}
+                level="L"
                 includeMargin={false}
               />
             </div>

@@ -501,7 +501,7 @@ export default function TestingView({
                 <span className="text-[8px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Live</span>
               </div>
               <div className="flex flex-col items-center text-center space-y-2">
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                   <QRCodeSVG 
                     value={JSON.stringify({
                       consumerAccount: accountNumber,
@@ -515,8 +515,8 @@ export default function TestingView({
                       reasonForTesting: "Calibration Check",
                       remarks: otherDiscrepancyRemarks
                     })}
-                    size={110}
-                    level="Q"
+                    size={160}
+                    level="L"
                     includeMargin={false}
                   />
                 </div>

@@ -23,13 +23,14 @@ import {
   Printer,
   QrCode
 } from 'lucide-react';
-import { Meter, StockStatus, MeterCategory, EquipmentReceipt } from '../types';
+import { Meter, StockStatus, MeterCategory, EquipmentReceipt, TestReport } from '../types';
 import BarcodeLabelModal from './BarcodeLabelModal';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface InventoryViewProps {
   meters: Meter[];
   receipts?: EquipmentReceipt[];
+  reports?: TestReport[];
   onUpdateStockStatus: (meterId: string, status: StockStatus) => void;
   onUpdateBulkStockStatus?: (meterIds: string[], status: StockStatus) => void;
   currentUser: any;
@@ -38,6 +39,7 @@ interface InventoryViewProps {
 export default function InventoryView({ 
   meters, 
   receipts = [],
+  reports = [],
   onUpdateStockStatus, 
   onUpdateBulkStockStatus, 
   currentUser 
@@ -623,8 +625,8 @@ export default function InventoryView({
                                       make: manufacturerVal,
                                       reasonForTesting: mr?.reasonForTesting || "Calibration Check"
                                     })}
-                                    size={80}
-                                    level="Q"
+                                    size={120}
+                                    level="L"
                                     includeMargin={false}
                                   />
                                 </div>
@@ -677,6 +679,7 @@ export default function InventoryView({
           setMetersToPrint([]);
         }}
         selectedMeters={metersToPrint}
+        reports={reports}
       />
     </div>
   );

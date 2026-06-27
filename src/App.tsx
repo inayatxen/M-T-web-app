@@ -1542,6 +1542,7 @@ export default function App() {
                 <InventoryView 
                   meters={meters} 
                   receipts={receipts}
+                  reports={reports}
                   onUpdateStockStatus={handleUpdateStockStatus} 
                   onUpdateBulkStockStatus={handleUpdateBulkStockStatus}
                   currentUser={currentUser} 
