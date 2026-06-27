@@ -17,8 +17,10 @@ import {
   ChevronRight,
   ClipboardList,
   Flame,
-  FileCheck
+  FileCheck,
+  QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Meter, TestReport, MeterCategory, MeterReadings, AccuracyTest, EquipmentReceipt } from '../types';
 
 interface TestingViewProps {
@@ -487,6 +489,47 @@ export default function TestingView({
               ))
             )}
           </div>
+
+          {/* Dynamic Active Target QR Code Card */}
+          {(meterNumber || serialNumber) && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="text-[10px] uppercase font-black tracking-wider text-slate-700">Active Target QR</span>
+                </div>
+                <span className="text-[8px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Live</span>
+              </div>
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center">
+                  <QRCodeSVG 
+                    value={JSON.stringify({
+                      consumerAccount: accountNumber,
+                      consumerName: consumerName,
+                      fatherName: fatherName,
+                      meterType: defaultCategoryFilter,
+                      meterNumber: meterNumber,
+                      serialNumber: serialNumber,
+                      make: manufacturer,
+                      receivedFrom: natureOfConnection,
+                      reasonForTesting: "Calibration Check",
+                      remarks: otherDiscrepancyRemarks
+                    })}
+                    size={110}
+                    level="Q"
+                    includeMargin={false}
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-[11px] font-black font-mono text-indigo-950 uppercase">{meterNumber || 'MTR-MANUAL'}</p>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase font-mono">SN: {serialNumber || 'PENDING'}</p>
+                </div>
+                <p className="text-[8.5px] text-slate-400 bg-white/50 border border-slate-150 p-2 rounded leading-normal">
+                  Scan this QR code with any workstation reader or intake scanner to instantly duplicate or load this calibration profile.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right side form */}

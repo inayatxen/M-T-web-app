@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Meter, StockStatus, MeterCategory, EquipmentReceipt } from '../types';
 import BarcodeLabelModal from './BarcodeLabelModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface InventoryViewProps {
   meters: Meter[];
@@ -521,7 +522,7 @@ export default function InventoryView({
                     rowElements.push(
                       <tr key={`expanded-${m.id}`} className="bg-indigo-50/20">
                         <td colSpan={isAuthorizedToEdit ? 8 : 7} className="p-4 border-t border-indigo-100">
-                          <div className="bg-white rounded-xl p-4 border border-indigo-100/65 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-white rounded-xl p-4 border border-indigo-100/65 shadow-inner grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Col 1: Carried Forward Receipt Metadata */}
                             <div className="space-y-2">
                               <h5 className="text-[10.5px] font-black uppercase text-indigo-950 tracking-wider flex items-center gap-1.5 border-b pb-1.5 border-slate-100 font-sans">
@@ -597,6 +598,53 @@ export default function InventoryView({
                                 )}
                               </div>
                             </div>
+
+                            {/* Col 3: QR Code Specification Card */}
+                            <div className="space-y-2 flex flex-col justify-between">
+                              <div>
+                                <h5 className="text-[10.5px] font-black uppercase text-indigo-950 tracking-wider flex items-center gap-1.5 border-b pb-1.5 border-slate-100 font-sans">
+                                  <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+                                  Asset QR-Tag Index
+                                </h5>
+                                <p className="text-[10px] text-slate-400 font-medium font-sans mt-1.5">
+                                  A dynamic QR code containing the full specification card is provided for immediate field scanning and ledger identification.
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+                                <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                                  <QRCodeSVG 
+                                    value={JSON.stringify({
+                                      consumerAccount: accountNum || '',
+                                      consumerName: clientName || '',
+                                      meterType: m.category,
+                                      meterNumber: m.meterNumber,
+                                      serialNumber: m.serialNumber,
+                                      make: manufacturerVal,
+                                      reasonForTesting: mr?.reasonForTesting || "Calibration Check"
+                                    })}
+                                    size={80}
+                                    level="Q"
+                                    includeMargin={false}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <div>
+                                    <span className="block text-[8px] text-slate-400 uppercase font-black font-sans">Scannable ID</span>
+                                    <span className="font-mono font-bold text-slate-800 text-[11px] block">{m.meterNumber}</span>
+                                  </div>
+                                  <div>
+                                    <span className="block text-[8px] text-slate-400 uppercase font-black font-sans">Hardware Code</span>
+                                    <span className="font-mono text-slate-500 text-[10px] block">SN: {m.serialNumber}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="text-[8.5px] text-slate-400 bg-indigo-50/20 border border-indigo-100/50 p-2 rounded leading-tight">
+                                Scan using any station intake, search, or inventory ledger device to load this profile without manual typing.
+                              </div>
+                            </div>
+
                           </div>
                         </td>
                       </tr>
