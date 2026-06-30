@@ -32,7 +32,8 @@ import {
   Database,
   Trash2,
   Menu,
-  X
+  X,
+  Truck
 } from 'lucide-react';
 
 // Shared type signatures
@@ -49,7 +50,8 @@ import {
   StockStatus, 
   MeterStatus,
   UserRole,
-  AvailableSIM
+  AvailableSIM,
+  OutwardRecord
 } from './types';
 
 // Predefined seed data
@@ -57,6 +59,7 @@ import {
   SEED_USERS,
   SEED_METERS,
   SEED_RECEIPTS,
+  SEED_OUTWARD_RECORDS,
   SEED_CTS,
   SEED_PTS,
   SEED_COMMITTEE_CASES,
@@ -71,6 +74,7 @@ import ReportPDF from './components/ReportPDF';
 import BatchReportPDF from './components/BatchReportPDF';
 import DashboardView from './components/DashboardView';
 import RegisterView from './components/RegisterView';
+import OutwardRegisterView from './components/OutwardRegisterView';
 import InventoryView from './components/InventoryView';
 import TestingView from './components/TestingView';
 import SIMView from './components/SIMView';
@@ -207,6 +211,7 @@ export default function App() {
   });
   const [meters, setMeters] = useState<Meter[]>([]);
   const [receipts, setReceipts] = useState<EquipmentReceipt[]>([]);
+  const [outwardRecords, setOutwardRecords] = useState<OutwardRecord[]>([]);
   const [cts, setCts] = useState<CTRecord[]>([]);
   const [pts, setPts] = useState<PTRecord[]>([]);
   const [cases, setCases] = useState<CommitteeCase[]>([]);
@@ -317,6 +322,7 @@ export default function App() {
       const tablesToSync = [
         { key: 'meters', stateSetter: setMeters, localSeed: SEED_METERS },
         { key: 'receipts', stateSetter: setReceipts, localSeed: SEED_RECEIPTS },
+        { key: 'outward_records', stateSetter: setOutwardRecords, localSeed: SEED_OUTWARD_RECORDS },
         { key: 'cts', stateSetter: setCts, localSeed: SEED_CTS },
         { key: 'pts', stateSetter: setPts, localSeed: SEED_PTS },
         { key: 'cases', stateSetter: setCases, localSeed: SEED_COMMITTEE_CASES },
@@ -369,6 +375,7 @@ export default function App() {
 
       setMeters(getOrSeed<Meter[]>('meters', SEED_METERS));
       setReceipts(getOrSeed<EquipmentReceipt[]>('receipts', SEED_RECEIPTS));
+      setOutwardRecords(getOrSeed<OutwardRecord[]>('outward_records', SEED_OUTWARD_RECORDS));
       setCts(getOrSeed<CTRecord[]>('cts', SEED_CTS));
       setPts(getOrSeed<PTRecord[]>('pts', SEED_PTS));
       setCases(getOrSeed<CommitteeCase[]>('cases', SEED_COMMITTEE_CASES));
@@ -380,6 +387,7 @@ export default function App() {
       console.error('LocalStorage hydration failed, falling back to default seed.', e);
       setMeters(SEED_METERS);
       setReceipts(SEED_RECEIPTS);
+      setOutwardRecords(SEED_OUTWARD_RECORDS);
       setCts(SEED_CTS);
       setPts(SEED_PTS);
       setCases(SEED_COMMITTEE_CASES);
@@ -445,6 +453,44 @@ export default function App() {
 
   // 2. Controller methods linking modules (Write as direct actions updating central store)
   
+  const handleAddOutwardRecord = (newRecord: OutwardRecord, selectedItemIds: string[]) => {
+    // Update outward records state and local storage
+    const updatedRecords = [newRecord, ...outwardRecords];
+    setOutwardRecords(updatedRecords);
+    saveState('outward_records', updatedRecords);
+
+    // Update stock status of selected meters to 'Installed'
+    if (newRecord.equipmentType && ['single_phase', 'three_phase_whole', 'three_phase_ct', 'three_phase_ct_pt', 'net_metering'].includes(newRecord.equipmentType)) {
+      const updatedMeters = meters.map(m => {
+        if (selectedItemIds.includes(m.id)) {
+          return { 
+            ...m, 
+            stockStatus: 'Installed' as StockStatus,
+            movementHistory: [
+              ...(m.movementHistory || []),
+              {
+                timestamp: new Date().toISOString().split('T')[0],
+                fromStatus: m.stockStatus,
+                toStatus: 'Installed' as StockStatus,
+                actor: currentUser?.name || 'System',
+                details: `Dispatched in outward register entry ${newRecord.outwardNumber} to subdivision ${newRecord.subdivision}`
+              }
+            ]
+          };
+        }
+        return m;
+      });
+      setMeters(updatedMeters);
+      saveState('meters', updatedMeters);
+    }
+
+    recordAuditTrail(
+      `Filed Outward ${newRecord.outwardNumber}`,
+      'Meter Dispatch',
+      `Issued ${selectedItemIds.length} items of type ${newRecord.equipmentType || 'Meter'} to ${newRecord.issuedTo} (${newRecord.subdivision})`
+    );
+  };
+
   // A. Receipt Register Inward link
   const handleAddReceipt = (newReceipt: EquipmentReceipt, associatedMeter: Meter) => {
     const updatedMeters = [associatedMeter, ...meters];
@@ -704,6 +750,7 @@ export default function App() {
   const handleClearLocalData = (resetToSeed: boolean) => {
     const targetMeters = resetToSeed ? SEED_METERS : [];
     const targetReceipts = resetToSeed ? SEED_RECEIPTS : [];
+    const targetOutwardRecords = resetToSeed ? SEED_OUTWARD_RECORDS : [];
     const targetCts = resetToSeed ? SEED_CTS : [];
     const targetPts = resetToSeed ? SEED_PTS : [];
     const targetCases = resetToSeed ? SEED_COMMITTEE_CASES : [];
@@ -716,6 +763,9 @@ export default function App() {
 
     setReceipts(targetReceipts);
     saveState('receipts', targetReceipts);
+
+    setOutwardRecords(targetOutwardRecords);
+    saveState('outward_records', targetOutwardRecords);
 
     setCts(targetCts);
     saveState('cts', targetCts);
@@ -884,6 +934,7 @@ export default function App() {
     const backupObj = {
       meters,
       receipts,
+      outwardRecords,
       cts,
       pts,
       cases,
@@ -928,6 +979,8 @@ export default function App() {
 
       setReceipts(parsed.receipts);
       saveState('receipts', parsed.receipts);
+
+      if (parsed.outwardRecords) { setOutwardRecords(parsed.outwardRecords); saveState('outward_records', parsed.outwardRecords); }
 
       setReports(parsed.reports);
       saveState('reports', parsed.reports);
@@ -1033,7 +1086,8 @@ export default function App() {
     { section: 'DASHBOARDS', items: [
       { id: 'dashboard', label: '1. Laboratory Analytics', icon: TrendingUp },
       { id: 'receipt_register', label: '2. Meter Inward Register', icon: Layers },
-      { id: 'meter_inventory', label: '3. Hardware Inventory Vault', icon: Boxes }
+      { id: 'outward_register', label: '3. Meter Outward Register', icon: Truck },
+      { id: 'meter_inventory', label: '4. Hardware Inventory Vault', icon: Boxes }
     ]},
     { section: 'CALIBRATION BENCHES', items: [
       { id: 'single_phase_testing', label: '4. Single Phase testing', icon: Cpu, filter: 'single_phase' },
@@ -1446,6 +1500,15 @@ export default function App() {
       {/* RIGHT VIEWPORT VIEW CANVAS CONTAINER */}
       <main className="flex-grow flex flex-col min-h-[100dvh] overflow-x-hidden relative max-w-full">
         
+        {/* Mobile Navigation Button (FAB) */}
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-xl shadow-blue-900/20 flex items-center justify-center transition-transform active:scale-95 print:hidden"
+          title="Open Navigation menu"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+
         {/* TOP STATUS HEADER PANEL - Hidden during print */}
         <header className={`h-11 px-4 border-b flex items-center justify-between shrink-0 print:hidden z-10 sticky top-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200'}`}>
           <div className="flex items-center gap-2">
@@ -1535,6 +1598,17 @@ export default function App() {
                   meters={meters}
                   onPushMeterToInventory={handlePushMeterToInventory}
                   onPushBulkMetersToInventory={handlePushBulkMetersToInventory}
+                />
+              )}
+
+              {activePageId === 'outward_register' && (
+                <OutwardRegisterView
+                  outwardRecords={outwardRecords}
+                  onAddOutwardRecord={handleAddOutwardRecord}
+                  currentUser={currentUser}
+                  meters={meters}
+                  cts={cts}
+                  pts={pts}
                 />
               )}
 

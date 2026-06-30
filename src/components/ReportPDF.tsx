@@ -356,8 +356,21 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
           </div>
         </div>
 
-        {/* 7. Verification QR and Signature Blocks */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8 border-t border-slate-200 items-end">
+        {report.nameplatePhotoUrl && (
+          <div className="mb-8 print:break-inside-avoid">
+            <div className="bg-indigo-900/5 px-3 py-1.5 rounded border-l-4 border-indigo-900 mb-4">
+              <h2 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                VII. PHOTOGRAPHIC EVIDENCE (NAMEPLATE)
+              </h2>
+            </div>
+            <div className="flex justify-center border border-slate-200 p-2 rounded-lg bg-slate-50">
+              <img src={report.nameplatePhotoUrl} alt="Meter Nameplate" className="max-w-full h-48 object-contain" />
+            </div>
+          </div>
+        )}
+
+        {/* 8. Verification QR and Signature Blocks */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-8 border-t border-slate-200 items-end print:break-inside-avoid">
           {/* QR Verification System */}
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
             <div className="w-32 h-32 bg-white border border-slate-300 rounded-lg p-1.5 shadow-sm flex items-center justify-center relative">
@@ -395,8 +408,12 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
 
           {/* Tester Signature */}
           <div className="text-center">
-            <div className="h-10 border-b border-indigo-900/40 flex items-end justify-center mb-1.5 font-serif italic text-sm text-indigo-900 font-bold select-none">
-              {report.checkedBy}
+            <div className="h-10 border-b border-indigo-900/40 flex items-end justify-center mb-1.5 font-serif italic text-sm text-indigo-900 font-bold select-none relative">
+              {report.checkedBySignature ? (
+                <img src={report.checkedBySignature} alt="Tester Signature" className="h-full object-contain absolute bottom-0" />
+              ) : (
+                report.checkedBy
+              )}
             </div>
             <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">{report.checkedBy}</p>
             <p className="text-[9px] text-slate-400">{report.checkedByDesignation}</p>
@@ -408,8 +425,12 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
 
           {/* Overseeing Lab Manager Signature */}
           <div className="text-center">
-            <div className="h-10 border-b border-indigo-900/40 flex items-end justify-center mb-1.5 font-serif italic text-sm text-indigo-900 font-bold select-none">
-              {report.counterSignedBy}
+            <div className="h-10 border-b border-indigo-900/40 flex items-end justify-center mb-1.5 font-serif italic text-sm text-indigo-900 font-bold select-none relative">
+              {report.counterSignedBySignature ? (
+                <img src={report.counterSignedBySignature} alt="Lab Manager Signature" className="h-full object-contain absolute bottom-0" />
+              ) : (
+                report.counterSignedBy
+              )}
             </div>
             <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">{report.counterSignedBy}</p>
             <p className="text-[9px] text-slate-400">{report.counterSignedByDesignation}</p>

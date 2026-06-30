@@ -26,9 +26,14 @@ import {
   QrCode,
   Camera,
   Boxes,
-  ArrowUpRight
+  ArrowUpRight,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import QRScannerModal from './QRScannerModal';
+import { PhotoCapture } from './PhotoCapture';
 import { read, utils, write } from 'xlsx';
 import { EquipmentReceipt, MeterCategory, Meter } from '../types';
 import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY } from '../utils';
@@ -421,8 +426,10 @@ export default function RegisterView({
   const [reasonForTesting, setReasonForTesting] = useState('');
   const [newOrUsed, setNewOrUsed] = useState<'New' | 'Used'>('Used');
   const [remarks, setRemarks] = useState('');
+  const [nameplatePhotoUrl, setNameplatePhotoUrl] = useState<string | undefined>();
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [inwardStep, setInwardStep] = useState(1);
 
   // QR Scanner States & Handlers
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
@@ -583,7 +590,8 @@ export default function RegisterView({
       status: 'received',
       stockStatus: 'In Store',
       purchaseDate: today,
-      remarks: `Intake registered via receipt ${generatedNum}.`
+      remarks: `Intake registered via receipt ${generatedNum}.`,
+      nameplatePhotoUrl
     };
 
     onAddReceipt(newReceipt, associatedMeter);
@@ -599,6 +607,7 @@ export default function RegisterView({
     setReceivedFrom('');
     setReasonForTesting('');
     setRemarks('');
+    setNameplatePhotoUrl(undefined);
 
     // Slide down alert
     setTimeout(() => {
@@ -731,566 +740,746 @@ export default function RegisterView({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Consumer Info Section */}
-              <div className="md:col-span-3 pb-1 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
-                <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest block">I. Consumer & Connection Ledger</span>
-                {/* Mode Selector */}
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded text-[10px] font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setInputMode('single')}
-                    className={`px-2 py-0.5 rounded transition-all ${
-                      inputMode === 'single' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs' : 'text-slate-500'
-                    }`}
-                  >
-                    14-Digit Account Number
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInputMode('segmented');
-                      if (!consumerAccount || consumerAccount.length < 14) {
-                        setConsumerAccount('01263110000000');
-                      }
-                    }}
-                    className={`px-2 py-0.5 rounded transition-all ${
-                      inputMode === 'segmented' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs' : 'text-slate-500'
-                    }`}
-                  >
-                    Segmented Area Fields
-                  </button>
+            {/* PROGRESS WIZARD INDICATOR */}
+            <div className="grid grid-cols-3 gap-2 pb-4 border-b border-slate-150 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setInwardStep(1)}
+                className={`p-2 rounded-lg border text-left transition-all relative ${
+                  inwardStep === 1 
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300 ring-2 ring-blue-500/10' 
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold uppercase tracking-wider block text-slate-400 dark:text-slate-500">Step 1</span>
+                  {consumerAccount.length >= 10 && consumerName.trim() !== '' && fatherName.trim() !== '' ? (
+                    <span className="w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-black">✓</span>
+                  ) : (
+                    <span className="w-4 h-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-450 rounded-full flex items-center justify-center text-[9px] font-bold">1</span>
+                  )}
                 </div>
-              </div>
+                <span className="text-[11px] font-black block truncate mt-1 text-slate-700 dark:text-slate-200">Consumer Profile</span>
+              </button>
 
-              {inputMode === 'single' ? (
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Account Number *</label>
-                  <input
-                    type="text"
-                    maxLength={30}
-                    placeholder="e.g. 01263110083300"
-                    value={consumerAccount}
-                    onChange={(e) => setConsumerAccount(e.target.value)}
-                    className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-bold tracking-wider"
-                    required
-                  />
-                  <p className="text-[9px] text-slate-450 mt-0.5 font-medium">Enter direct 14-digit area ledger index number.</p>
+              <button
+                type="button"
+                onClick={() => setInwardStep(2)}
+                className={`p-2 rounded-lg border text-left transition-all relative ${
+                  inwardStep === 2 
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300 ring-2 ring-blue-500/10' 
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold uppercase tracking-wider block text-slate-400 dark:text-slate-500">Step 2</span>
+                  {meterNumber.trim() !== '' && serialNumber.trim() !== '' && make.trim() !== '' ? (
+                    <span className="w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center text-[9px] font-black">✓</span>
+                  ) : (
+                    <span className="w-4 h-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-450 rounded-full flex items-center justify-center text-[9px] font-bold">2</span>
+                  )}
                 </div>
-              ) : (
-                <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-50 dark:bg-slate-850/50 p-3 rounded border border-slate-200 dark:border-slate-800 animate-in fade-in duration-150">
-                  {/* Segmented Inputs */}
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Batch No *</label>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      placeholder="01"
-                      value={consumerAccount.substring(0, 2)}
-                      onChange={(e) => {
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        const val = e.target.value.replace(/\D/g, '');
-                        accParts.batch = val;
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
-                      required
-                    />
-                  </div>
+                <span className="text-[11px] font-black block truncate mt-1 text-slate-700 dark:text-slate-200">Hardware specs</span>
+              </button>
 
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Company *</label>
-                    <select
-                      value={consumerAccount.substring(2, 4)}
-                      onChange={(e) => {
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        accParts.company = e.target.value;
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
-                    >
-                      <option value="26">PESCO</option>
-                      <option value="11">LESCO</option>
-                      <option value="22">FESCO</option>
-                      <option value="14">IESCO</option>
-                      <option value="15">MEPCO</option>
-                      <option value="25">HESCO</option>
-                      <option value="18">PESCO</option>
-                      <option value="31">SEPCO</option>
-                      <option value="24">QESCO</option>
-                      <option value="35">TESCO</option>
-                      <option value="09">PESCO</option>
-                      <option value="02">Local</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Circle *</label>
-                    <select
-                      value={consumerAccount.substring(4, 5)}
-                      onChange={(e) => {
-                        const newCircleCode = e.target.value;
-                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(newCircleCode));
-                        let defaultDiv = '1';
-                        let defaultSub = '1';
-                        if (activeCircle && activeCircle.divisions.length > 0) {
-                          const firstDiv = activeCircle.divisions[0];
-                          defaultDiv = firstDiv.code.slice(-1) || '1';
-                          if (firstDiv.subdivisions.length > 0) {
-                            defaultSub = firstDiv.subdivisions[0].code.slice(-1) || '1';
-                          }
-                        }
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: newCircleCode,
-                          division: defaultDiv,
-                          subdivision: defaultSub,
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
-                    >
-                      {PESCO_HIERARCHY.map(c => {
-                        const val = c.code.substring(2) || '3';
-                        return (
-                          <option key={c.code} value={val}>
-                            {c.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Division *</label>
-                    <select
-                      value={consumerAccount.substring(5, 6)}
-                      onChange={(e) => {
-                        const newDivCodeSuffix = e.target.value;
-                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(consumerAccount.substring(4, 5)));
-                        let defaultSub = '1';
-                        if (activeCircle) {
-                          const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(newDivCodeSuffix));
-                          if (activeDiv && activeDiv.subdivisions.length > 0) {
-                            defaultSub = activeDiv.subdivisions[0].code.slice(-1) || '1';
-                          }
-                        }
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: newDivCodeSuffix,
-                          subdivision: defaultSub,
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
-                    >
-                      {(() => {
-                        const currentCircleSuffix = consumerAccount.substring(4, 5);
-                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
-                        const divisionsList = activeCircle ? activeCircle.divisions : PESCO_HIERARCHY.flatMap(c => c.divisions);
-                        const seen = new Set();
-                        const filteredDivs = divisionsList.filter(d => {
-                          const val = d.code.slice(-1) || '1';
-                          if (seen.has(val)) return false;
-                          seen.add(val);
-                          return true;
-                        });
-                        if (filteredDivs.length === 0) {
-                          return <option value="1">Division 1</option>;
-                        }
-                        return filteredDivs.map(d => {
-                          const val = d.code.slice(-1) || '1';
-                          return (
-                            <option key={d.code} value={val}>
-                              {d.name}
-                            </option>
-                          );
-                        });
-                      })()}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Sub-Div *</label>
-                    <select
-                      value={consumerAccount.substring(6, 7)}
-                      onChange={(e) => {
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: e.target.value,
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
-                    >
-                      {(() => {
-                        const currentCircleSuffix = consumerAccount.substring(4, 5);
-                        const currentDivisionSuffix = consumerAccount.substring(5, 6);
-                        const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
-                        let subsList: any[] = [];
-                        if (activeCircle) {
-                          const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(currentDivisionSuffix));
-                          if (activeDiv) {
-                            subsList = activeDiv.subdivisions;
-                          } else {
-                            subsList = activeCircle.divisions.flatMap(d => d.subdivisions);
-                          }
-                        } else {
-                          subsList = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
-                        }
-                        const seen = new Set();
-                        const filteredSubs = subsList.filter(s => {
-                          const val = s.code.slice(-1) || '1';
-                          if (seen.has(val)) return false;
-                          seen.add(val);
-                          return true;
-                        });
-                        if (filteredSubs.length === 0) {
-                          return <option value="1">Sub-Div 1</option>;
-                        }
-                        return filteredSubs.map(s => {
-                          const val = s.code.slice(-1) || '1';
-                          return (
-                            <option key={s.code} value={val}>
-                              {s.name}
-                            </option>
-                          );
-                        });
-                      })()}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Consumer No *</label>
-                    <input
-                      type="text"
-                      maxLength={7}
-                      placeholder="0083300"
-                      value={consumerAccount.substring(7, 14)}
-                      onChange={(e) => {
-                        const accParts = {
-                          batch: consumerAccount.substring(0, 2) || '',
-                          company: consumerAccount.substring(2, 4) || '',
-                          circle: consumerAccount.substring(4, 5) || '',
-                          division: consumerAccount.substring(5, 6) || '',
-                          subdivision: consumerAccount.substring(6, 7) || '',
-                          consumer: consumerAccount.substring(7, 14) || '',
-                        };
-                        accParts.consumer = e.target.value.replace(/\D/g, '');
-                        const joined = [
-                          accParts.batch.padEnd(2, '0').substring(0, 2),
-                          accParts.company.padEnd(2, '0').substring(0, 2),
-                          accParts.circle.padEnd(1, '0').substring(0, 1),
-                          accParts.division.padEnd(1, '0').substring(0, 1),
-                          accParts.subdivision.padEnd(1, '0').substring(0, 1),
-                          accParts.consumer.padEnd(7, '0').substring(0, 7)
-                        ].join('');
-                        setConsumerAccount(joined);
-                      }}
-                      className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
-                      required
-                    />
-                  </div>
+              <button
+                type="button"
+                onClick={() => setInwardStep(3)}
+                className={`p-2 rounded-lg border text-left transition-all relative ${
+                  inwardStep === 3 
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300 ring-2 ring-blue-500/10' 
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold uppercase tracking-wider block text-slate-400 dark:text-slate-500">Step 3</span>
+                  <span className="w-4 h-4 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-450 rounded-full flex items-center justify-center text-[9px] font-bold">3</span>
                 </div>
-              )}
-
-              {/* Real-time Decomposed Category breakdown display */}
-              {consumerAccount.length > 0 && (
-                <div className="md:col-span-3 bg-blue-50/40 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 p-2.5 rounded text-[10.5px] space-y-1.5 animate-in slide-in-from-top-1 duration-150 select-none">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-400">
-                    <MapPin className="w-3.5 h-3.5 shrink-0" />
-                    <span>Real-time Category Breakdown of Account No: <span className="font-mono text-slate-800 dark:text-white font-extrabold">{consumerAccount.padEnd(14, '·')}</span></span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-slate-600 dark:text-slate-300">
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Batch Number</span>
-                      <span className="font-mono font-black text-slate-800 dark:text-white">{parsedAccount.batchNumber || '—'}</span>
-                    </div>
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Company</span>
-                      <span className="font-sans font-extrabold text-blue-600 dark:text-blue-400 truncate block" title={parsedAccount.companyName}>
-                        {parsedAccount.companyCode ? `${parsedAccount.companyCode} (${parsedAccount.companyName.split(' ')[0]})` : '—'}
-                      </span>
-                    </div>
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Circle Code</span>
-                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.circleCode ? getCircleName(parsedAccount.circleCode) : ''}>
-                        {parsedAccount.circleCode ? `${parsedAccount.circleCode} (${getCircleName(parsedAccount.circleCode)})` : '—'}
-                      </span>
-                    </div>
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Division Code</span>
-                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
-                        {parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
-                      </span>
-                    </div>
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Sub-Division</span>
-                      <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
-                        {parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
-                      </span>
-                    </div>
-                    <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Consumer Code</span>
-                      <span className="font-mono font-black text-slate-800 dark:text-white">{parsedAccount.consumerCode || '—'}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Primary Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Blue Ridge Textiles Ltd"
-                    value={consumerName}
-                    onChange={(e) => setConsumerName(e.target.value)}
-                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Father / Guardian Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Haji Waris Khan / Official Utility Custody"
-                    value={fatherName}
-                    onChange={(e) => setFatherName(e.target.value)}
-                    className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Hardware Specifications */}
-              <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest block">II. Hardware Specifications & Make</span>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Meter Target Type *</label>
-                <select
-                  value={meterType}
-                  onChange={(e) => setMeterType(e.target.value as MeterCategory)}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white cursor-pointer"
-                >
-                  <option value="single_phase">Single Phase Meter</option>
-                  <option value="three_phase_whole">Three Phase Whole Current</option>
-                  <option value="three_phase_ct">Three Phase CT Operated</option>
-                  <option value="three_phase_ct_pt">Three Phase CT/PT Operated</option>
-                  <option value="smart">Smart Cellular Meter</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
-                  Meter ID / Number *
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQRScanMode('meterNumber');
-                      setIsQRScannerOpen(true);
-                    }}
-                    className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
-                  >
-                    <Camera className="w-3 h-3" />
-                    Scan Label
-                  </button>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. MTR-982103"
-                  value={meterNumber}
-                  onChange={(e) => setMeterNumber(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-extrabold text-blue-600 dark:text-blue-400"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
-                  Warp / Serial Code:
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQRScanMode('serialNumber');
-                      setIsQRScannerOpen(true);
-                    }}
-                    className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
-                  >
-                    <Camera className="w-3 h-3" />
-                    Scan Label
-                  </button>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. SN-772183-A"
-                  value={serialNumber}
-                  onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Manufacturer Make *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Landis+Gyr"
-                  value={make}
-                  onChange={(e) => setMake(e.target.value)}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Testing Reason *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Billing Dispute"
-                  value={reasonForTesting}
-                  onChange={(e) => setReasonForTesting(e.target.value)}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Origin Division Received From</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sub-Division-IV"
-                  value={receivedFrom}
-                  onChange={(e) => setReceivedFrom(e.target.value)}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                />
-              </div>
-
-              {/* Classification */}
-              <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest block">III. Classification & Authority Sealing</span>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Condition Class</label>
-                <div className="flex gap-4 mt-1.5">
-                  <label className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newOrUsed"
-                      checked={newOrUsed === 'New'}
-                      onChange={() => setNewOrUsed('New')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    New Meter
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
-                    <input
-                      type="radio"
-                      name="newOrUsed"
-                      checked={newOrUsed === 'Used'}
-                      onChange={() => setNewOrUsed('Used')}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    Previously Deployed
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Authorized Receiver Staff</label>
-                <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-500 dark:text-slate-400 font-semibold select-none">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  {currentUser.name}
-                </div>
-              </div>
-
-              <div className="md:col-span-3">
-                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Inward Remarks / Observed Deficiencies</label>
-                <textarea
-                  placeholder="e.g. Cover screws slightly rusty, glass has minor scratches."
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  rows={2}
-                  className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                />
-              </div>
-
+                <span className="text-[11px] font-black block truncate mt-1 text-slate-700 dark:text-slate-200">Classification</span>
+              </button>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+            {/* STEP 1: CONSUMER LEDGER */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
               <button
-                type="submit"
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-xs tracking-wider uppercase rounded transition-all shadow-sm"
+                type="button"
+                onClick={() => setInwardStep(inwardStep === 1 ? 0 : 1)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-100 dark:border-slate-800"
               >
-                File Formal Receipt & Queue
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    inwardStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>I</span>
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-slate-800 dark:text-white leading-tight">Consumer Profile & Connection Ledger</h3>
+                    <p className="text-[9px] text-slate-400 leading-none mt-0.5">Account lookup and primary billing info</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {consumerAccount.length >= 10 && consumerName.trim() !== '' && fatherName.trim() !== '' && (
+                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                  )}
+                  {inwardStep === 1 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                </div>
               </button>
+
+              <div className={`${inwardStep === 1 ? 'p-4 sm:p-5' : 'hidden'} space-y-4 animate-in fade-in duration-200`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-3 pb-1 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
+                    <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest block">I. Consumer & Connection Ledger</span>
+                    {/* Mode Selector */}
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setInputMode('single')}
+                        className={`px-2 py-0.5 rounded transition-all ${
+                          inputMode === 'single' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs' : 'text-slate-500'
+                        }`}
+                      >
+                        14-Digit Account Number
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInputMode('segmented');
+                          if (!consumerAccount || consumerAccount.length < 14) {
+                            setConsumerAccount('01263110000000');
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded transition-all ${
+                          inputMode === 'segmented' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs' : 'text-slate-500'
+                        }`}
+                      >
+                        Segmented Area Fields
+                      </button>
+                    </div>
+                  </div>
+
+                  {inputMode === 'single' ? (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Account Number *</label>
+                      <input
+                        type="text"
+                        maxLength={30}
+                        placeholder="e.g. 01263110083300"
+                        value={consumerAccount}
+                        onChange={(e) => setConsumerAccount(e.target.value)}
+                        className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-bold tracking-wider"
+                      />
+                      <p className="text-[9px] text-slate-450 mt-0.5 font-medium">Enter direct 14-digit area ledger index number.</p>
+                    </div>
+                  ) : (
+                    <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-50 dark:bg-slate-850/50 p-3 rounded border border-slate-200 dark:border-slate-800 animate-in fade-in duration-150">
+                      {/* Segmented Inputs */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Batch No *</label>
+                        <input
+                          type="text"
+                          maxLength={2}
+                          placeholder="01"
+                          value={consumerAccount.substring(0, 2)}
+                          onChange={(e) => {
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: consumerAccount.substring(4, 5) || '',
+                              division: consumerAccount.substring(5, 6) || '',
+                              subdivision: consumerAccount.substring(6, 7) || '',
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            const val = e.target.value.replace(/\D/g, '');
+                            accParts.batch = val;
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Company *</label>
+                        <select
+                          value={consumerAccount.substring(2, 4)}
+                          onChange={(e) => {
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: consumerAccount.substring(4, 5) || '',
+                              division: consumerAccount.substring(5, 6) || '',
+                              subdivision: consumerAccount.substring(6, 7) || '',
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            accParts.company = e.target.value;
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                        >
+                          <option value="26">PESCO</option>
+                          <option value="11">LESCO</option>
+                          <option value="22">FESCO</option>
+                          <option value="14">IESCO</option>
+                          <option value="15">MEPCO</option>
+                          <option value="25">HESCO</option>
+                          <option value="18">PESCO</option>
+                          <option value="31">SEPCO</option>
+                          <option value="24">QESCO</option>
+                          <option value="35">TESCO</option>
+                          <option value="09">PESCO</option>
+                          <option value="02">Local</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Circle *</label>
+                        <select
+                          value={consumerAccount.substring(4, 5)}
+                          onChange={(e) => {
+                            const newCircleCode = e.target.value;
+                            const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(newCircleCode));
+                            let defaultDiv = '1';
+                            let defaultSub = '1';
+                            if (activeCircle && activeCircle.divisions.length > 0) {
+                              const firstDiv = activeCircle.divisions[0];
+                              defaultDiv = firstDiv.code.slice(-1) || '1';
+                              if (firstDiv.subdivisions.length > 0) {
+                                defaultSub = firstDiv.subdivisions[0].code.slice(-1) || '1';
+                              }
+                            }
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: newCircleCode,
+                              division: defaultDiv,
+                              subdivision: defaultSub,
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                        >
+                          {PESCO_HIERARCHY.map(c => {
+                            const val = c.code.substring(2) || '3';
+                            return (
+                              <option key={c.code} value={val}>
+                                {c.name}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Division *</label>
+                        <select
+                          value={consumerAccount.substring(5, 6)}
+                          onChange={(e) => {
+                            const newDivCodeSuffix = e.target.value;
+                            const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(consumerAccount.substring(4, 5)));
+                            let defaultSub = '1';
+                            if (activeCircle) {
+                              const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(newDivCodeSuffix));
+                              if (activeDiv && activeDiv.subdivisions.length > 0) {
+                                defaultSub = activeDiv.subdivisions[0].code.slice(-1) || '1';
+                              }
+                            }
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: consumerAccount.substring(4, 5) || '',
+                              division: newDivCodeSuffix,
+                              subdivision: defaultSub,
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                        >
+                          {(() => {
+                            const currentCircleSuffix = consumerAccount.substring(4, 5);
+                            const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
+                            const divisionsList = activeCircle ? activeCircle.divisions : PESCO_HIERARCHY.flatMap(c => c.divisions);
+                            const seen = new Set();
+                            const filteredDivs = divisionsList.filter(d => {
+                              const val = d.code.slice(-1) || '1';
+                              if (seen.has(val)) return false;
+                              seen.add(val);
+                              return true;
+                            });
+                            if (filteredDivs.length === 0) {
+                              return <option value="1">Division 1</option>;
+                            }
+                            return filteredDivs.map(d => {
+                              const val = d.code.slice(-1) || '1';
+                              return (
+                                <option key={d.code} value={val}>
+                                  {d.name}
+                                </option>
+                              );
+                            });
+                          })()}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Sub-Div *</label>
+                        <select
+                          value={consumerAccount.substring(6, 7)}
+                          onChange={(e) => {
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: consumerAccount.substring(4, 5) || '',
+                              division: consumerAccount.substring(5, 6) || '',
+                              subdivision: e.target.value,
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white font-semibold cursor-pointer"
+                        >
+                          {(() => {
+                            const currentCircleSuffix = consumerAccount.substring(4, 5);
+                            const currentDivisionSuffix = consumerAccount.substring(5, 6);
+                            const activeCircle = PESCO_HIERARCHY.find(c => c.code.endsWith(currentCircleSuffix));
+                            let subsList: any[] = [];
+                            if (activeCircle) {
+                              const activeDiv = activeCircle.divisions.find(d => d.code.endsWith(currentDivisionSuffix));
+                              if (activeDiv) {
+                                subsList = activeDiv.subdivisions;
+                              } else {
+                                subsList = activeCircle.divisions.flatMap(d => d.subdivisions);
+                              }
+                            } else {
+                              subsList = PESCO_HIERARCHY.flatMap(c => c.divisions.flatMap(d => d.subdivisions));
+                            }
+                            const seen = new Set();
+                            const filteredSubs = subsList.filter(s => {
+                              const val = s.code.slice(-1) || '1';
+                              if (seen.has(val)) return false;
+                              seen.add(val);
+                              return true;
+                            });
+                            if (filteredSubs.length === 0) {
+                              return <option value="1">Sub-Div 1</option>;
+                            }
+                            return filteredSubs.map(s => {
+                              const val = s.code.slice(-1) || '1';
+                              return (
+                                <option key={s.code} value={val}>
+                                  {s.name}
+                                </option>
+                              );
+                            });
+                          })()}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 uppercase">Consumer No *</label>
+                        <input
+                          type="text"
+                          maxLength={7}
+                          placeholder="0083300"
+                          value={consumerAccount.substring(7, 14)}
+                          onChange={(e) => {
+                            const accParts = {
+                              batch: consumerAccount.substring(0, 2) || '',
+                              company: consumerAccount.substring(2, 4) || '',
+                              circle: consumerAccount.substring(4, 5) || '',
+                              division: consumerAccount.substring(5, 6) || '',
+                              subdivision: consumerAccount.substring(6, 7) || '',
+                              consumer: consumerAccount.substring(7, 14) || '',
+                            };
+                            accParts.consumer = e.target.value.replace(/\D/g, '');
+                            const joined = [
+                              accParts.batch.padEnd(2, '0').substring(0, 2),
+                              accParts.company.padEnd(2, '0').substring(0, 2),
+                              accParts.circle.padEnd(1, '0').substring(0, 1),
+                              accParts.division.padEnd(1, '0').substring(0, 1),
+                              accParts.subdivision.padEnd(1, '0').substring(0, 1),
+                              accParts.consumer.padEnd(7, '0').substring(0, 7)
+                            ].join('');
+                            setConsumerAccount(joined);
+                          }}
+                          className="w-full text-xs font-mono p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white text-center font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Real-time Decomposed Category breakdown display */}
+                  {consumerAccount.length > 0 && (
+                    <div className="md:col-span-3 bg-blue-50/40 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 p-2.5 rounded text-[10.5px] space-y-1.5 animate-in slide-in-from-top-1 duration-150 select-none">
+                      <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-400">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        <span>Real-time Category Breakdown of Account No: <span className="font-mono text-slate-800 dark:text-white font-extrabold">{consumerAccount.padEnd(14, '·')}</span></span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-slate-600 dark:text-slate-300">
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Batch Number</span>
+                          <span className="font-mono font-black text-slate-800 dark:text-white">{parsedAccount.batchNumber || '—'}</span>
+                        </div>
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Company</span>
+                          <span className="font-sans font-extrabold text-blue-600 dark:text-blue-400 truncate block" title={parsedAccount.companyName}>
+                            {parsedAccount.companyCode ? `${parsedAccount.companyCode} (${parsedAccount.companyName.split(' ')[0]})` : '—'}
+                          </span>
+                        </div>
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Circle Code</span>
+                          <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.circleCode ? getCircleName(parsedAccount.circleCode) : ''}>
+                            {parsedAccount.circleCode ? `${parsedAccount.circleCode} (${getCircleName(parsedAccount.circleCode)})` : '—'}
+                          </span>
+                        </div>
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Division Code</span>
+                          <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
+                            {parsedAccount.divisionCode ? getDivisionName(parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
+                          </span>
+                        </div>
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Sub-Division</span>
+                          <span className="font-sans font-extrabold text-slate-800 dark:text-white block truncate" title={parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : ''}>
+                            {parsedAccount.subdivisionCode ? getSubdivisionName(parsedAccount.subdivisionCode, parsedAccount.divisionCode, parsedAccount.circleCode) : '—'}
+                          </span>
+                        </div>
+                        <div className="p-1 px-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded">
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 block font-semibold uppercase">Consumer Code</span>
+                          <span className="font-mono font-black text-slate-800 dark:text-white">{parsedAccount.consumerCode || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Consumer Primary Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Blue Ridge Textiles Ltd"
+                        value={consumerName}
+                        onChange={(e) => setConsumerName(e.target.value)}
+                        className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Father / Guardian Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Haji Waris Khan / Official Utility Custody"
+                        value={fatherName}
+                        onChange={(e) => setFatherName(e.target.value)}
+                        className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (consumerAccount.replace(/\D/g, '').length < 10 || consumerName.trim() === '' || fatherName.trim() === '') {
+                        setErrorMsg('Please fill in Consumer Account Number (10+ digits), Name, and Father Name before continuing.');
+                        return;
+                      }
+                      setErrorMsg('');
+                      setInwardStep(2);
+                    }}
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                  >
+                    Continue to Hardware Details
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* STEP 2: HARDWARE SPECIFICATIONS */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setInwardStep(inwardStep === 2 ? 0 : 2)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-100 dark:border-slate-800"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    inwardStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>II</span>
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-slate-800 dark:text-white leading-tight">Hardware Specifications & Make</h3>
+                    <p className="text-[9px] text-slate-400 leading-none mt-0.5">Meter type, identification labels, and manufacturer info</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {meterNumber.trim() !== '' && serialNumber.trim() !== '' && make.trim() !== '' && (
+                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                  )}
+                  {inwardStep === 2 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                </div>
+              </button>
+
+              <div className={`${inwardStep === 2 ? 'p-4 sm:p-5' : 'hidden'} space-y-4 animate-in fade-in duration-200`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Meter Target Type *</label>
+                    <select
+                      value={meterType}
+                      onChange={(e) => setMeterType(e.target.value as MeterCategory)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white cursor-pointer"
+                    >
+                      <option value="single_phase">Single Phase Meter</option>
+                      <option value="three_phase_whole">Three Phase Whole Current</option>
+                      <option value="three_phase_ct">Three Phase CT Operated</option>
+                      <option value="three_phase_ct_pt">Three Phase CT/PT Operated</option>
+                      <option value="smart">Smart Cellular Meter</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
+                      Meter ID / Number *
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQRScanMode('meterNumber');
+                          setIsQRScannerOpen(true);
+                        }}
+                        className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
+                      >
+                        <Camera className="w-3 h-3" />
+                        Scan Label
+                      </button>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MTR-982103"
+                      value={meterNumber}
+                      onChange={(e) => setMeterNumber(e.target.value.toUpperCase())}
+                      className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-extrabold text-blue-600 dark:text-blue-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 flex items-center justify-between">
+                      Warp / Serial Code: *
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQRScanMode('serialNumber');
+                          setIsQRScannerOpen(true);
+                        }}
+                        className="flex items-center gap-1 text-[9px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-extrabold uppercase"
+                      >
+                        <Camera className="w-3 h-3" />
+                        Scan Label
+                      </button>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. SN-772183-A"
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
+                      className="w-full text-xs font-mono p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Manufacturer Make *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Landis+Gyr"
+                      value={make}
+                      onChange={(e) => setMake(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Testing Reason *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Billing Dispute"
+                      value={reasonForTesting}
+                      onChange={(e) => setReasonForTesting(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Origin Division Received From</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sub-Division-IV"
+                      value={receivedFrom}
+                      onChange={(e) => setReceivedFrom(e.target.value)}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setInwardStep(1)}
+                    className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (meterNumber.trim() === '' || serialNumber.trim() === '' || make.trim() === '') {
+                        setErrorMsg('Please fill in Meter ID, Serial Code, and Make before continuing.');
+                        return;
+                      }
+                      setErrorMsg('');
+                      setInwardStep(3);
+                    }}
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                  >
+                    Continue to Classification
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* STEP 3: CLASSIFICATION & REMARKS */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setInwardStep(inwardStep === 3 ? 0 : 3)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-100 dark:border-slate-800"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    inwardStep === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>III</span>
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-slate-800 dark:text-white leading-tight">Classification & Authority Sealing</h3>
+                    <p className="text-[9px] text-slate-400 leading-none mt-0.5">Visual conditions, photos, and final observations</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {inwardStep === 3 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                </div>
+              </button>
+
+              <div className={`${inwardStep === 3 ? 'p-4 sm:p-5' : 'hidden'} space-y-4 animate-in fade-in duration-200`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Condition Class</label>
+                    <div className="flex gap-4 mt-1.5">
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                        <input
+                          type="radio"
+                          name="newOrUsed"
+                          checked={newOrUsed === 'New'}
+                          onChange={() => setNewOrUsed('New')}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        New Meter
+                      </label>
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                        <input
+                          type="radio"
+                          name="newOrUsed"
+                          checked={newOrUsed === 'Used'}
+                          onChange={() => setNewOrUsed('Used')}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        Previously Deployed
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Authorized Receiver Staff</label>
+                    <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-500 dark:text-slate-400 font-semibold select-none">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      {currentUser.name}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <PhotoCapture 
+                      label="Nameplate Image Capture (Optional)"
+                      photoUrl={nameplatePhotoUrl}
+                      onChange={setNameplatePhotoUrl}
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Inward Remarks / Observed Deficiencies</label>
+                    <textarea
+                      placeholder="e.g. Cover screws slightly rusty, glass has minor scratches."
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      rows={2}
+                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setInwardStep(2)}
+                    className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-md select-none cursor-pointer"
+                  >
+                    File Formal Receipt & Queue
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
           ) : (() => {

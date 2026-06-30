@@ -578,8 +578,18 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
             </div>
           </div>
 
+          {/* Photographic Evidence */}
+          {report.nameplatePhotoUrl && (
+            <div className="space-y-2 pt-2 print:break-inside-avoid">
+              <span className="block underline uppercase font-black text-slate-900">17-B. Photographic Evidence (Nameplate)</span>
+              <div className="border border-slate-300 p-2 rounded-lg bg-slate-50 flex justify-center">
+                <img src={report.nameplatePhotoUrl} alt="Meter Nameplate" className="max-w-full h-48 object-contain" />
+              </div>
+            </div>
+          )}
+
           {/* Signatures part 18 */}
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 print:break-inside-avoid">
             <span className="block underline uppercase font-black text-slate-900">18. Name & Designation of all duly properly secured.</span>
             <div className="border border-slate-300 rounded-lg p-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] uppercase">
               <div className="space-y-2">

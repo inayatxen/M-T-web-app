@@ -7,6 +7,7 @@ import {
   User, 
   Meter, 
   EquipmentReceipt, 
+  OutwardRecord,
   CTRecord, 
   PTRecord, 
   CommitteeCase, 
@@ -414,3 +415,5 @@ export const SEED_CALIBRATION_STANDARDS: CalibrationStandard[] = [
     multiplier: 0.9998
   }
 ];
+
+export const SEED_OUTWARD_RECORDS: OutwardRecord[] = [];

@@ -56,6 +56,7 @@ export interface Meter {
     actor: string;
     details?: string;
   }[];
+  nameplatePhotoUrl?: string;
 }
 
 // Equipment Receipt Information
@@ -75,6 +76,31 @@ export interface EquipmentReceipt {
   receivedBy: string;
   remarks?: string;
   fatherName?: string;
+}
+
+export interface OutwardRecord {
+  id: string;
+  outwardNumber: string;
+  dateIssued: string;
+  meterId: string;
+  meterNumber: string;
+  serialNumber: string;
+  make: string;
+  issuedTo: string;
+  designation: string;
+  division: string;
+  subdivision: string;
+  purpose: string;
+  issuedBy: string;
+  remarks?: string;
+  recipientSignatureUrl?: string;
+  equipmentType?: 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'net_metering' | 'ct' | 'pt';
+  items?: {
+    id: string;
+    number: string;
+    serialNumber: string;
+    make: string;
+  }[];
 }
 
 // Current & Potential Transformers
@@ -232,12 +258,15 @@ export interface TestReport {
   discrepancies: string[]; // ['Slow Meter', 'burnt', etc]
   otherDiscrepancyRemarks?: string;
   checkedBy: string;
+  checkedBySignature?: string;
   checkedByDesignation: string;
   counterSignedBy: string;
+  counterSignedBySignature?: string;
   counterSignedByDesignation: string;
   approvalDate: string;
   qrCodeMockUrl: string;
   ctPtExtra?: CtPtExtraFields;
+  nameplatePhotoUrl?: string;
 }
 
 // Audit Trail interface

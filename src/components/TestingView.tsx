@@ -15,12 +15,18 @@ import {
   ShieldAlert, 
   CheckSquare, 
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeft,
+  ArrowRight,
   ClipboardList,
   Flame,
   FileCheck,
   QrCode
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { SignaturePad } from './SignaturePad';
+import { PhotoCapture } from './PhotoCapture';
 import { Meter, TestReport, MeterCategory, MeterReadings, AccuracyTest, EquipmentReceipt } from '../types';
 
 interface TestingViewProps {
@@ -45,6 +51,7 @@ export default function TestingView({
   );
 
   const [selectedMeterId, setSelectedMeterId] = useState<string>('');
+  const [activeStep, setActiveStep] = useState(1);
   
   // Form Fields
   // I. Consumer Info
@@ -85,12 +92,16 @@ export default function TestingView({
 
   // VI. Certification Details
   const [checkedBy, setCheckedBy] = useState(currentUser.name);
+  const [checkedBySignature, setCheckedBySignature] = useState<string | undefined>();
   const [checkedByDesignation, setCheckedByDesignation] = useState(currentUser.designation);
   const [counterSignedBy, setCounterSignedBy] = useState('Sarah Rahman');
+  const [counterSignedBySignature, setCounterSignedBySignature] = useState<string | undefined>();
   const [counterSignedByDesignation, setCounterSignedByDesignation] = useState('Laboratory Executive & Manager');
   const [approvalDate, setApprovalDate] = useState(getPKTDateString());
-
+  const [nameplatePhotoUrl, setNameplatePhotoUrl] = useState<string | undefined>();
+  
   const [formSuccess, setFormSuccess] = useState('');
+  const [formError, setFormError] = useState('');
 
   // Extra CT/PT Fields state variables
   const [sanctionLoad, setSanctionLoad] = useState('75 kW');
@@ -183,6 +194,7 @@ export default function TestingView({
         setMeterNumber(match.meterNumber);
         setSerialNumber(match.serialNumber);
         setManufacturer(match.manufacturer);
+        setNameplatePhotoUrl(match.nameplatePhotoUrl);
         
         // Search for dynamic matches in the Inward Register (receipts)
         const matchedReceipt = receipts.find(r => 
@@ -237,6 +249,8 @@ export default function TestingView({
   useEffect(() => {
     if (meterNumber && !selectedMeterId) {
       const matchReceipt = receipts.find(r => r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase());
+      const matchMeter = meters.find(m => m.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase());
+      
       if (matchReceipt) {
         setAccountNumber(matchReceipt.consumerAccount || '');
         setConsumerName(matchReceipt.consumerName || '');
@@ -244,12 +258,16 @@ export default function TestingView({
         setManufacturer(matchReceipt.make || '');
         setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
       }
+      if (matchMeter && matchMeter.nameplatePhotoUrl) {
+        setNameplatePhotoUrl(matchMeter.nameplatePhotoUrl);
+      }
     }
-  }, [meterNumber, selectedMeterId, receipts]);
+  }, [meterNumber, selectedMeterId, receipts, meters]);
 
   useEffect(() => {
     if (serialNumber && !selectedMeterId) {
       const matchReceipt = receipts.find(r => r.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
+      const matchMeter = meters.find(m => m.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
       if (matchReceipt) {
         setAccountNumber(matchReceipt.consumerAccount || '');
         setConsumerName(matchReceipt.consumerName || '');
@@ -257,8 +275,11 @@ export default function TestingView({
         setManufacturer(matchReceipt.make || '');
         setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
       }
+      if (matchMeter && matchMeter.nameplatePhotoUrl) {
+        setNameplatePhotoUrl(matchMeter.nameplatePhotoUrl);
+      }
     }
-  }, [serialNumber, selectedMeterId, receipts]);
+  }, [serialNumber, selectedMeterId, receipts, meters]);
 
   const handleDiscrepancyToggle = (profile: string) => {
     if (profile === 'No Discrepancy') {
@@ -281,8 +302,15 @@ export default function TestingView({
 
   const handlesSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (!meterNumber || !accountNumber || !consumerName) {
-      alert('Please select or specify a valid Meter Number & Consumer Account.');
+      setFormError('Please fill in required fields: Meter Number & Consumer Account & Name.');
+      // Auto expand to step 1/2 to help find missing fields
+      if (!accountNumber || !consumerName) {
+        setActiveStep(1);
+      } else {
+        setActiveStep(2);
+      }
       return;
     }
 
@@ -338,11 +366,14 @@ export default function TestingView({
       discrepancies,
       otherDiscrepancyRemarks: otherDiscrepancyRemarks || undefined,
       checkedBy,
+      checkedBySignature,
       checkedByDesignation,
       counterSignedBy,
+      counterSignedBySignature,
       counterSignedByDesignation,
       approvalDate,
       qrCodeMockUrl: `${window.location.origin}/verify/${reportNumber}`,
+      nameplatePhotoUrl,
       ctPtExtra: (defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt') ? {
         sanctionLoad,
         connectedLoad,
@@ -406,9 +437,12 @@ export default function TestingView({
 
     onAddReportAndVerifyMeter(updatedMeterObj, reportObj);
     setFormSuccess(`Test Approved & Signed! Compliance report reference: ${reportNumber} successfully compiled.`);
+    setActiveStep(1);
+    setFormError('');
     
     // Clear selections
     setSelectedMeterId('');
+    setNameplatePhotoUrl(undefined);
     setTimeout(() => {
       setFormSuccess('');
     }, 4500);
@@ -445,6 +479,13 @@ export default function TestingView({
         <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs font-bold rounded-lg flex items-center gap-2 animate-bounce">
           <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
           {formSuccess}
+        </div>
+      )}
+
+      {formError && (
+        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-800 text-xs font-bold rounded-lg flex items-center gap-2 animate-shake">
+          <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+          {formError}
         </div>
       )}
 
@@ -543,10 +584,93 @@ export default function TestingView({
             </span>
           </div>
 
-          <form onSubmit={handlesSubmit} className="p-6 sm:p-8 space-y-8">
+          <form onSubmit={handlesSubmit} className="p-6 sm:p-8 space-y-6">
             
-            {/* Sec I: Consumer Information */}
-            <div className="space-y-4">
+            {/* Step Progress Bar */}
+            <div className="mb-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Calibration Progress</span>
+                <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">Step {activeStep} of 6</span>
+              </div>
+              
+              {/* Progress track line */}
+              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mb-4">
+                <div 
+                  className="bg-indigo-600 h-full transition-all duration-300" 
+                  style={{ width: `${(activeStep / 6) * 100}%` }}
+                />
+              </div>
+
+              {/* Steps pills/indicators */}
+              <div className="flex flex-wrap gap-2 items-center justify-between sm:justify-start sm:gap-3">
+                {[
+                  { id: 1, label: 'Profile' },
+                  { id: 2, label: 'Specs' },
+                  { id: 3, label: 'Readings' },
+                  { id: 4, label: 'Accuracy' },
+                  { id: 5, label: 'Abuse/Evidence' },
+                  { id: 6, label: 'Certification' }
+                ].map((step) => {
+                  const isCompleted = (step.id === 1 && accountNumber.trim() !== '' && consumerName.trim() !== '') ||
+                                      (step.id === 2 && meterNumber.trim() !== '' && serialNumber.trim() !== '') ||
+                                      (step.id === 3 && kwhPeak.trim() !== '') ||
+                                      (step.id === 4 && accuracyPercentage.trim() !== '') ||
+                                      (step.id === 5 && (discrepancies.length > 0 || otherDiscrepancyRemarks.trim() !== '' || nameplatePhotoUrl !== undefined));
+                  
+                  const isActive = activeStep === step.id;
+
+                  return (
+                    <button
+                      key={step.id}
+                      type="button"
+                      onClick={() => setActiveStep(step.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all border select-none cursor-pointer ${
+                        isActive
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                        : isCompleted
+                        ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black ${
+                        isActive
+                        ? 'bg-white text-indigo-600'
+                        : isCompleted
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}>{step.id}</span>
+                      <span className="hidden xs:inline">{step.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* STEP 1: CONSUMER INFORMATION */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setActiveStep(activeStep === 1 ? 0 : 1)}
+                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    activeStep === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>I</span>
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">I. Consumer Account Profile</h3>
+                    <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Consumer name, account number, connection details and tariff</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {accountNumber.trim() !== '' && consumerName.trim() !== '' && (
+                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                  )}
+                  {activeStep === 1 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                </div>
+              </button>
+
+              <div className={`${activeStep === 1 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">I. Consumer Account Profile Information</h4>
@@ -675,10 +799,53 @@ export default function TestingView({
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Sec II: Meter Details */}
-            <div className="space-y-4">
+              {/* Navigation Actions for Step 1 */}
+              <div className="flex justify-end pt-3 border-t border-slate-150 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (accountNumber.trim() === '' || consumerName.trim() === '') {
+                      setFormError('Please fill in Account Number and Consumer Name before continuing.');
+                      return;
+                    }
+                    setFormError('');
+                    setActiveStep(2);
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                >
+                  Continue to Tested Specs
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 2: TESTED METER SPECIFICATIONS */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveStep(activeStep === 2 ? 0 : 2)}
+              className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  activeStep === 2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>II</span>
+                <div>
+                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">II. Tested Meter Specifications</h3>
+                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Meter ID, serial code, make, and test timing records</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {meterNumber.trim() !== '' && (
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                )}
+                {activeStep === 2 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+              </div>
+            </button>
+
+            <div className={`${activeStep === 2 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">II. Tested Meter Specifications</h4>
@@ -727,10 +894,61 @@ export default function TestingView({
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Sec III: Readings */}
-            <div className="space-y-4">
+              {/* Navigation Actions for Step 2 */}
+              <div className="flex justify-between pt-3 border-t border-slate-150 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(1)}
+                  className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (meterNumber.trim() === '' || serialNumber.trim() === '') {
+                      setFormError('Please fill in Meter Target Number and Warp/Serial Code before continuing.');
+                      return;
+                    }
+                    setFormError('');
+                    setActiveStep(3);
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                >
+                  Continue to Readings
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 3: AS-FOUND REGISTER DIAL INDEXES */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveStep(activeStep === 3 ? 0 : 3)}
+              className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  activeStep === 3 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>III</span>
+                <div>
+                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">III. As-Found Register Dial Indexes</h3>
+                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Active/Reactive energy consumption and demand logs</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {kwhPeak.trim() !== '' && (
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                )}
+                {activeStep === 3 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+              </div>
+            </button>
+
+            <div className={`${activeStep === 3 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">III. As-Found Register Dial Indexes</h4>
@@ -815,10 +1033,61 @@ export default function TestingView({
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Sec IV: Accuracy test details */}
-            <div className="space-y-4">
+              {/* Navigation Actions for Step 3 */}
+              <div className="flex justify-between pt-3 border-t border-slate-150 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(2)}
+                  className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (kwhPeak.trim() === '') {
+                      setFormError('Please specify the main active register (kWh Peak/Final) to proceed.');
+                      return;
+                    }
+                    setFormError('');
+                    setActiveStep(4);
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                >
+                  Continue to Accuracy Test
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 4: TARGET ACCURACY BENCHMARK AUDIT */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveStep(activeStep === 4 ? 0 : 4)}
+              className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  activeStep === 4 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>IV</span>
+                <div>
+                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">IV. Target Accuracy Benchmark Audit</h3>
+                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Load, voltage, current and recorded error calibration metrics</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {accuracyPercentage.trim() !== '' && (
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
+                )}
+                {activeStep === 4 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+              </div>
+            </button>
+
+            <div className={`${activeStep === 4 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">IV. Target Accuracy Benchmark Audit</h4>
@@ -905,10 +1174,61 @@ export default function TestingView({
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Sec V: Discrepancy checklists (9 states) */}
-            <div className="space-y-4">
+              {/* Navigation Actions for Step 4 */}
+              <div className="flex justify-between pt-3 border-t border-slate-150 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(3)}
+                  className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (accuracyPercentage.trim() === '' || errorPercentage.trim() === '') {
+                      setFormError('Please fill in Accuracy Registered % and Recorded Error % before continuing.');
+                      return;
+                    }
+                    setFormError('');
+                    setActiveStep(5);
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+                >
+                  Continue to Abuse Map
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 5: PHYSICAL & ELECTRICAL ABUSE DISCREPANCIES & PHOTOGRAPHIC EVIDENCE */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveStep(activeStep === 5 ? 0 : 5)}
+              className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  activeStep === 5 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>V</span>
+                <div>
+                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">V. Physical & Electrical Abuse & Photos</h3>
+                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Deficiency mapping, auxiliary CT params and camera evidence</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {(discrepancies.length > 0 || otherDiscrepancyRemarks.trim() !== '' || nameplatePhotoUrl !== undefined) && (
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Configured</span>
+                )}
+                {activeStep === 5 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+              </div>
+            </button>
+
+            <div className={`${activeStep === 5 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">V. Physical & Electrical Abuse Discrepancies Map</h4>
@@ -954,7 +1274,6 @@ export default function TestingView({
                   className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none"
                 />
               </div>
-            </div>
 
             {(defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt') && (
               <div className="space-y-6 bg-slate-50 p-6 rounded-xl border border-indigo-100 shadow-sm">
@@ -1227,12 +1546,75 @@ export default function TestingView({
               </div>
             )}
 
-            {/* Sec VI: Sign-off Seal authorities */}
+            {/* Sec V-B: Nameplate Image Capture */}
             <div className="space-y-4">
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-                <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">VI. Certification & Sign-off Seal authorities</h4>
+                <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">V-B. Photographic Evidence</h4>
               </div>
+              <div className="max-w-md">
+                <PhotoCapture 
+                  label="Nameplate / Equipment Photo (Optional)"
+                  photoUrl={nameplatePhotoUrl}
+                  onChange={setNameplatePhotoUrl}
+                />
+              </div>
+            </div>
+
+            {/* Navigation Actions for Step 5 */}
+            <div className="flex justify-between pt-3 border-t border-slate-150 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveStep(4)}
+                className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError('');
+                  setActiveStep(6);
+                }}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 shadow-sm select-none cursor-pointer"
+              >
+                Continue to Certification
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 6: CERTIFICATION & SIGN-OFF SEAL AUTHORITIES */}
+        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveStep(activeStep === 6 ? 0 : 6)}
+            className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-left select-none border-b border-slate-200 dark:border-slate-800"
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                activeStep === 6 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}>VI</span>
+              <div>
+                <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">VI. Certification & Sign-off</h3>
+                <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Authorized tester signature and supervisor countersign</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {(checkedBySignature !== undefined || counterSignedBySignature !== undefined) && (
+                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Signed</span>
+              )}
+              {activeStep === 6 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+            </div>
+          </button>
+
+          <div className={`${activeStep === 6 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
+            <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
+              <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
+              <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">VI. Certification & Sign-off Seal authorities</h4>
+            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3.5">
@@ -1253,6 +1635,14 @@ export default function TestingView({
                       value={checkedByDesignation}
                       onChange={(e) => setCheckedByDesignation(e.target.value)}
                       className="w-full p-2.5 bg-white border border-slate-200 rounded"
+                    />
+                  </div>
+                  <div className="pt-2">
+                    <SignaturePad
+                      label="Checker Signature Capture"
+                      onEnd={(data) => setCheckedBySignature(data)}
+                      onClear={() => setCheckedBySignature(undefined)}
+                      initialDataUrl={checkedBySignature}
                     />
                   </div>
                 </div>
@@ -1277,19 +1667,36 @@ export default function TestingView({
                       className="w-full p-2.5 bg-white border border-slate-200 rounded"
                     />
                   </div>
+                  <div className="pt-2">
+                    <SignaturePad
+                      label="Manager Signature Capture"
+                      onEnd={(data) => setCounterSignedBySignature(data)}
+                      onClear={() => setCounterSignedBySignature(undefined)}
+                      initialDataUrl={counterSignedBySignature}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-5 border-t border-slate-100">
+            <div className="flex justify-between items-center pt-5 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveStep(5)}
+                className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-extrabold text-xs tracking-wider uppercase rounded-lg flex items-center gap-1.5 select-none cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back
+              </button>
               <button
                 type="submit"
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2"
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 select-none cursor-pointer"
               >
                 <FileCheck className="w-4 h-4 text-emerald-400" />
                 Authorize & Sign Certificate
               </button>
             </div>
+          </div>
 
           </form>
         </div>
