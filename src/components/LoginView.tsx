@@ -459,8 +459,8 @@ export default function LoginView({
                       }}
                       className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950/55 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-slate-800 dark:text-slate-200 cursor-pointer"
                     >
-                      {roleUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
+                      {roleUsers.map((u, uIdx) => (
+                        <option key={`${u.id}-${uIdx}`} value={u.id}>
                           {u.name} — {u.designation || u.role}
                         </option>
                       ))}

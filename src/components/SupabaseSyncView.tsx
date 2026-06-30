@@ -33,7 +33,8 @@ import {
   TestReport, 
   AuditLog, 
   CalibrationStandard,
-  AvailableSIM
+  AvailableSIM,
+  OutwardRecord
 } from '../types';
 
 interface SupabaseSyncViewProps {
@@ -59,6 +60,8 @@ interface SupabaseSyncViewProps {
   setTodos?: React.Dispatch<React.SetStateAction<any[]>>;
   availableSims: AvailableSIM[];
   setAvailableSims: (updated: AvailableSIM[] | ((prev: AvailableSIM[]) => AvailableSIM[])) => void;
+  outwardRecords: OutwardRecord[];
+  setOutwardRecords: React.Dispatch<React.SetStateAction<OutwardRecord[]>>;
 }
 
 export default function SupabaseSyncView({
@@ -74,7 +77,9 @@ export default function SupabaseSyncView({
   todos = [],
   setTodos,
   availableSims = [],
-  setAvailableSims
+  setAvailableSims,
+  outwardRecords,
+  setOutwardRecords
 }: SupabaseSyncViewProps) {
   const [dbStatus, setDbStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
   const [dbMessage, setDbMessage] = useState<string>('');
@@ -96,6 +101,7 @@ export default function SupabaseSyncView({
     standards: 'Click test',
     todos: 'Click test',
     available_sims: 'Click test',
+    outward_records: 'Click test',
   });
 
   const checkConnection = async () => {
@@ -116,7 +122,7 @@ export default function SupabaseSyncView({
   };
 
   const fetchSupabaseCounts = async () => {
-    const tables = ['users', 'meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos', 'available_sims'];
+    const tables = ['users', 'meters', 'receipts', 'cts', 'pts', 'cases', 'reports', 'auditLogs', 'standards', 'todos', 'available_sims', 'outward_records'];
     const updated: { [key: string]: number | string } = {};
 
     for (const t of tables) {
@@ -305,6 +311,27 @@ CREATE TABLE IF NOT EXISTS available_sims (
   provider TEXT
 );
 
+-- 11. Create outward_records Table
+CREATE TABLE IF NOT EXISTS outward_records (
+  id TEXT PRIMARY KEY,
+  "outwardNumber" TEXT,
+  "dateIssued" TEXT,
+  "meterId" TEXT,
+  "meterNumber" TEXT,
+  "serialNumber" TEXT,
+  make TEXT,
+  "issuedTo" TEXT,
+  designation TEXT,
+  division TEXT,
+  subdivision TEXT,
+  purpose TEXT,
+  "issuedBy" TEXT,
+  remarks TEXT,
+  "recipientSignatureUrl" TEXT,
+  "equipmentType" TEXT,
+  items JSONB
+);
+
 -- ==========================================
 -- DISABLE ROW LEVEL SECURITY (RLS) FOR PIPELINE BYPASS
 -- ==========================================
@@ -319,6 +346,7 @@ ALTER TABLE IF EXISTS "auditLogs" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS standards DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS todos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS available_sims DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS outward_records DISABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- REAL-TIME FALLBACK POLICIES IF YOU RE-ENABLE RLS OR TO BYPASS RESTRICTIONS
@@ -356,6 +384,9 @@ CREATE POLICY "allow_anon_users" ON users FOR ALL TO anon USING (true) WITH CHEC
 DROP POLICY IF EXISTS "allow_anon_available_sims" ON available_sims;
 CREATE POLICY "allow_anon_available_sims" ON available_sims FOR ALL TO anon USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "allow_anon_outward_records" ON outward_records;
+CREATE POLICY "allow_anon_outward_records" ON outward_records FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- =========================================================================
 -- RECOVERY / PATCH MIGRATION (RUN THIS SECURELY TO PATCH ALREADY-BUILT TABLES)
 -- =========================================================================
@@ -389,6 +420,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
       { name: 'standards', data: standards },
       { name: 'todos', data: todos },
       { name: 'available_sims', data: availableSims },
+      { name: 'outward_records', data: outwardRecords },
     ];
 
     for (const item of items) {
@@ -439,6 +471,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
       { name: 'standards', stateSetter: setStandards },
       { name: 'todos', stateSetter: setTodos || (() => {}) },
       { name: 'available_sims', stateSetter: setAvailableSims },
+      { name: 'outward_records', stateSetter: setOutwardRecords },
     ];
 
     for (const job of pullingJobs) {
@@ -608,7 +641,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
             <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
               <h3 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">Database Registers Concordance</h3>
-              <p className="text-[10px] font-mono text-slate-450">Active Sync Keys: 10 registers</p>
+              <p className="text-[10px] font-mono text-slate-450">Active Sync Keys: 12 registers</p>
             </div>
             
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-[11.5px]">
@@ -625,6 +658,7 @@ ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "fatherName" TEXT;
                 { label: 'Active User Directory', name: 'users', localCount: users.length },
                 { label: 'Meter Registry', name: 'meters', localCount: meters.length },
                 { label: 'Inward Receipts', name: 'receipts', localCount: receipts.length },
+                { label: 'Outward Dispatch Records', name: 'outward_records', localCount: outwardRecords.length },
                 { label: 'Current Transformers (CT)', name: 'cts', localCount: cts.length },
                 { label: 'Potential Transformers (PT)', name: 'pts', localCount: pts.length },
                 { label: 'Joint Dispute Cases', name: 'cases', localCount: cases.length },

@@ -24,9 +24,11 @@ import {
   RefreshCw,
   Database,
   Wifi,
-  WifiOff
+  WifiOff,
+  Truck,
+  Package
 } from 'lucide-react';
-import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport, AvailableSIM } from '../types';
+import { Meter, CTRecord, PTRecord, CommitteeCase, EquipmentReceipt, TestReport, AvailableSIM, OutwardRecord } from '../types';
 import {
   ResponsiveContainer,
   LineChart,
@@ -53,6 +55,7 @@ interface DashboardViewProps {
   lastSyncedTime?: string;
   onRefreshAllData?: () => Promise<boolean>;
   availableSims?: AvailableSIM[];
+  outwardRecords?: OutwardRecord[];
 }
 
 export default function DashboardView({ 
@@ -66,7 +69,8 @@ export default function DashboardView({
   syncStatus = 'offline',
   lastSyncedTime = 'N/A',
   onRefreshAllData,
-  availableSims = []
+  availableSims = [],
+  outwardRecords = []
 }: DashboardViewProps) {
 
   // Regional configuration filters
@@ -159,6 +163,40 @@ export default function DashboardView({
   const ctsPending = cts.filter(c => c.testResult === 'pending').length;
   const ptsPending = pts.filter(p => p.testResult === 'pending').length;
   const committeeCasesActive = filteredCases.filter(c => c.approvalStatus !== 'Report Issued').length;
+
+  // Cross-reference lookups for outward records
+  const getAccountNumberForOutwardRecord = (rec: OutwardRecord): string => {
+    if (rec.meterNumber) {
+      const acc = getAccountNumberForMeter(rec.meterNumber);
+      if (acc) return acc;
+    }
+    if (rec.items && rec.items.length > 0) {
+      for (const item of rec.items) {
+        if (item.number) {
+          const acc = getAccountNumberForMeter(item.number);
+          if (acc) return acc;
+        }
+      }
+    }
+    return '';
+  };
+
+  const filteredOutwardRecords = outwardRecords.filter(rec => {
+    if (!isRegionFiltered) return true;
+    const acc = getAccountNumberForOutwardRecord(rec);
+    if (acc) return matchesRegion(acc);
+    if (regSubdivision !== 'all') {
+      const recSub = rec.subdivision?.toLowerCase() || '';
+      return recSub.includes(regSubdivision.toLowerCase());
+    }
+    return true;
+  });
+
+  const totalOutwardDeliveries = filteredOutwardRecords.length;
+  const totalOutwardItems = filteredOutwardRecords.reduce((acc, curr) => {
+    const itemCount = curr.items && curr.items.length > 0 ? curr.items.length : 1;
+    return acc + itemCount;
+  }, 0);
 
   // 2. Mock Analytics calculation for Custom SVG Graphs
   const activeMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
@@ -354,7 +392,7 @@ export default function DashboardView({
               </span>
               <span className="flex items-center gap-1">
                 <Layers className="w-3 h-3 text-slate-500" />
-                Tables Synchronized: <strong className="text-slate-200">9 Active Registers</strong>
+                Tables Synchronized: <strong className="text-slate-200">12 Active Registers</strong>
               </span>
             </div>
           </div>
@@ -593,8 +631,8 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* Grid of Summary Cards (10 Cards requested) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      {/* Grid of Summary Cards (12 Cards requested/implemented) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
         {/* 1. Total Meters Received */}
         <div className="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between min-h-[75px]">
           <div className="flex items-center justify-between text-slate-400">
@@ -732,6 +770,34 @@ export default function DashboardView({
           <div className="mt-1">
             <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{committeeCasesActive}</span>
             <span className="text-[9px] text-rose-650 dark:text-rose-500 block font-extrabold">Active Disputes</span>
+          </div>
+        </div>
+
+        {/* 11. Outward Dispatches */}
+        <div className="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between min-h-[75px]">
+          <div className="flex items-center justify-between text-indigo-650 dark:text-indigo-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-450">Outward Deliveries</span>
+            <div className="p-1 bg-indigo-50 dark:bg-indigo-950/30 rounded">
+              <Truck className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-1">
+            <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{totalOutwardDeliveries}</span>
+            <span className="text-[9px] text-indigo-650 dark:text-indigo-500 block font-medium">Dispatched batches</span>
+          </div>
+        </div>
+
+        {/* 12. Outward Items */}
+        <div className="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between min-h-[75px]">
+          <div className="flex items-center justify-between text-purple-600 dark:text-purple-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-450">Items Dispatched</span>
+            <div className="p-1 bg-purple-50 dark:bg-purple-950/30 rounded">
+              <Package className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-1">
+            <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{totalOutwardItems}</span>
+            <span className="text-[9px] text-purple-650 dark:text-purple-500 block font-medium">Total equipment units</span>
           </div>
         </div>
       </div>
@@ -1133,7 +1199,7 @@ export default function DashboardView({
 
             {/* LATEST REPORTS GENERATED */}
             {reports.length > 0 && (
-              <div className="py-2 flex items-start gap-2.5 last:pb-0">
+              <div className="py-2 flex items-start gap-2.5">
                 <div className="p-1.5 bg-purple-50 dark:bg-purple-950/20 text-purple-605 dark:text-purple-400 rounded shrink-0 mt-0.5">
                   <FileText className="w-3.5 h-3.5" />
                 </div>
@@ -1144,6 +1210,24 @@ export default function DashboardView({
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Report Reference <strong className="text-slate-900 dark:text-white font-mono">{reports[0].reportNumber}</strong> finalized for account <span className="font-semibold text-slate-700 dark:text-slate-350">{reports[0].accountNumber}</span>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* LATEST OUTWARD DISPATCH */}
+            {filteredOutwardRecords.length > 0 && (
+              <div className="py-2 flex items-start gap-2.5 last:pb-0">
+                <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded shrink-0 mt-0.5">
+                  <Truck className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-250">Latest Equipment Outward Dispatch</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{filteredOutwardRecords[0].dateIssued}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Gate pass <strong className="text-slate-900 dark:text-white font-mono">{filteredOutwardRecords[0].outwardNumber}</strong> issued to <span className="font-semibold text-slate-700 dark:text-slate-350">{filteredOutwardRecords[0].issuedTo}</span> ({filteredOutwardRecords[0].designation || 'Representative'}) for delivery to subdivision <strong className="text-slate-805 dark:text-slate-205">{filteredOutwardRecords[0].subdivision || 'N/A'}</strong> (Quantity: {filteredOutwardRecords[0].items?.length || 1} units).
                   </p>
                 </div>
               </div>

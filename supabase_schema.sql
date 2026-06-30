@@ -165,6 +165,28 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 11. Create outward_records Table
+CREATE TABLE IF NOT EXISTS public.outward_records (
+  id TEXT PRIMARY KEY,
+  "outwardNumber" TEXT,
+  "dateIssued" TEXT,
+  "meterId" TEXT,
+  "meterNumber" TEXT,
+  "serialNumber" TEXT,
+  make TEXT,
+  "issuedTo" TEXT,
+  designation TEXT,
+  division TEXT,
+  subdivision TEXT,
+  purpose TEXT,
+  "issuedBy" TEXT,
+  remarks TEXT,
+  "recipientSignatureUrl" TEXT,
+  "equipmentType" TEXT,
+  items JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==========================================
 -- DISABLE ROW LEVEL SECURITY (RLS) FOR PIPELINE BYPASS
 -- ==========================================
@@ -178,6 +200,7 @@ ALTER TABLE public."auditLogs" DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.standards DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.todos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.outward_records DISABLE ROW LEVEL SECURITY;
 
 -- ==========================================
 -- REAL-TIME FALLBACK POLICIES IF YOU RE-ENABLE RLS OR TO BYPASS RESTRICTIONS
@@ -211,4 +234,7 @@ CREATE POLICY "allow_anon_todos" ON public.todos FOR ALL TO anon USING (true) WI
 
 DROP POLICY IF EXISTS "allow_anon_users" ON public.users;
 CREATE POLICY "allow_anon_users" ON public.users FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_anon_outward_records" ON public.outward_records;
+CREATE POLICY "allow_anon_outward_records" ON public.outward_records FOR ALL TO anon USING (true) WITH CHECK (true);
 

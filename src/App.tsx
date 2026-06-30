@@ -225,7 +225,13 @@ export default function App() {
   const [users, setUsers] = useState<UserType[]>(() => {
     try {
       const stored = localStorage.getItem('mtlms_users');
-      return stored ? JSON.parse(stored) : SEED_USERS;
+      const loaded = stored ? JSON.parse(stored) : SEED_USERS;
+      const seen = new Set<string>();
+      return loaded.filter((u: UserType) => {
+        if (seen.has(u.id)) return false;
+        seen.add(u.id);
+        return true;
+      });
     } catch {
       return SEED_USERS;
     }
@@ -253,8 +259,14 @@ export default function App() {
               password: u.password || seedUser?.password || 'password123'
             };
           });
-          setUsers(mapped);
-          localStorage.setItem('mtlms_users', JSON.stringify(mapped));
+          const seen = new Set<string>();
+          const uniqueMapped = mapped.filter(u => {
+            if (seen.has(u.id)) return false;
+            seen.add(u.id);
+            return true;
+          });
+          setUsers(uniqueMapped);
+          localStorage.setItem('mtlms_users', JSON.stringify(uniqueMapped));
           setSyncStatus('synced');
         } else {
           // If remote users is empty, let's push SEED_USERS to it!
@@ -1074,6 +1086,67 @@ export default function App() {
     }
   };
 
+  // Remove duplicate users keeping only unique emails (or names, if email is empty)
+  const handleRemoveDuplicateUsers = async () => {
+    const seenEmails = new Set<string>();
+    const seenIds = new Set<string>();
+    const deduplicatedUsers: UserType[] = [];
+    const duplicateIdsToDelete: string[] = [];
+
+    for (const u of users) {
+      const emailNorm = u.email.trim().toLowerCase();
+      const duplicateById = seenIds.has(u.id);
+      const duplicateByEmail = emailNorm && seenEmails.has(emailNorm);
+
+      if (duplicateById || duplicateByEmail) {
+        duplicateIdsToDelete.push(u.id);
+      } else {
+        seenIds.add(u.id);
+        if (emailNorm) {
+          seenEmails.add(emailNorm);
+        }
+        deduplicatedUsers.push(u);
+      }
+    }
+
+    if (duplicateIdsToDelete.length === 0) {
+      alert("No duplicate users detected in your directory registry!");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to remove ${duplicateIdsToDelete.length} duplicate user record(s)? This will keep the first instance of each unique member email and delete duplicates.`)) {
+      return;
+    }
+
+    // Save to local state and localStorage
+    setUsers(deduplicatedUsers);
+    localStorage.setItem('mtlms_users', JSON.stringify(deduplicatedUsers));
+
+    // Try to sync deletion to Supabase
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .in('id', duplicateIdsToDelete);
+      
+      if (error) {
+        console.warn("Could not delete from Supabase, local state updated:", error);
+        alert(`Successfully cleaned local directory. Removed ${duplicateIdsToDelete.length} duplicate user records. (Remote Supabase deletion skipped/failed: ${error.message})`);
+      } else {
+        alert(`Successfully removed ${duplicateIdsToDelete.length} duplicate user records from both local cache and central Supabase ledger!`);
+      }
+    } catch (e: any) {
+      console.warn("Database deletion error:", e);
+      alert(`Successfully cleaned local directory. Removed ${duplicateIdsToDelete.length} duplicate user records.`);
+    }
+
+    recordAuditTrail(
+      "Deduplicated Team Officer Directory",
+      `${users.length} registered officers`,
+      `${deduplicatedUsers.length} clean accounts (${duplicateIdsToDelete.length} duplicates removed)`
+    );
+  };
+
   // Trigger page displacement from any link shortcut
   const handleNavigateToPage = (pageId: string) => {
     setActivePageId(pageId);
@@ -1586,6 +1659,7 @@ export default function App() {
                   lastSyncedTime={lastSyncedTime}
                   onRefreshAllData={handlePullAllFromDatabase}
                   availableSims={availableSims}
+                  outwardRecords={outwardRecords}
                 />
               )}
 
@@ -1743,6 +1817,7 @@ export default function App() {
                   onRecordAudit={recordAuditTrail}
                   onUpdateUserPassword={handleUpdateUserPassword}
                   onUpdateUserProfile={handleUpdateUserProfile}
+                  onRemoveDuplicateUsers={handleRemoveDuplicateUsers}
                 />
               )}
 
@@ -1760,6 +1835,7 @@ export default function App() {
                   onRecordAudit={recordAuditTrail}
                   onUpdateUserPassword={handleUpdateUserPassword}
                   onUpdateUserProfile={handleUpdateUserProfile}
+                  onRemoveDuplicateUsers={handleRemoveDuplicateUsers}
                 />
               )}
 
@@ -1787,6 +1863,8 @@ export default function App() {
                   setTodos={setTodos}
                   availableSims={availableSims}
                   setAvailableSims={handleUpdateAvailableSims}
+                  outwardRecords={outwardRecords}
+                  setOutwardRecords={setOutwardRecords}
                 />
               )}
 

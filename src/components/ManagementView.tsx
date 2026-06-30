@@ -42,6 +42,7 @@ interface ManagementViewProps {
   onRecordAudit?: (action: string, oldVal: string, newVal: string) => void;
   onUpdateUserPassword?: (userId: string, newPass: string) => void;
   onUpdateUserProfile?: (userId: string, updatedFields: Partial<User>) => void;
+  onRemoveDuplicateUsers?: () => void;
 }
 
 export default function ManagementView({
@@ -56,7 +57,8 @@ export default function ManagementView({
   onRestoreState,
   onRecordAudit,
   onUpdateUserPassword,
-  onUpdateUserProfile
+  onUpdateUserProfile,
+  onRemoveDuplicateUsers
 }: ManagementViewProps) {
   
   const [activePane, setActivePane] = useState<'profile' | 'audit' | 'settings' | 'backup' | 'org'>('profile');
@@ -556,9 +558,21 @@ export default function ManagementView({
           {/* Member Security Passwords Registry - ADMINISTRATOR EXCLUSIVE */}
           {currentUser?.role === 'administrator' && (
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5 shadow-sm animate-in fade-in duration-200">
-              <div className="flex gap-2 items-center text-sm font-extrabold text-indigo-950 uppercase border-b border-slate-100 pb-3">
-                <KeyRound className="w-5 h-5 text-indigo-650 animate-pulse" />
-                Member Security Passwords & Directory Registry
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex gap-2 items-center text-sm font-extrabold text-indigo-950 uppercase">
+                  <KeyRound className="w-5 h-5 text-indigo-650 animate-pulse" />
+                  Member Security Passwords & Directory Registry
+                </div>
+                {onRemoveDuplicateUsers && (
+                  <button
+                    type="button"
+                    onClick={onRemoveDuplicateUsers}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow-sm transition cursor-pointer animate-pulse"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove Duplicate Users
+                  </button>
+                )}
               </div>
               
               <p className="text-xs text-slate-500 leading-relaxed">
@@ -596,9 +610,9 @@ export default function ManagementView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {users.map((u) => {
+                    {users.map((u, uIdx) => {
                       return (
-                        <tr key={u.id} className="hover:bg-slate-50/40">
+                        <tr key={`${u.id}-${uIdx}`} className="hover:bg-slate-50/40">
                           <td className="p-3">
                             <p className="font-bold text-slate-800">{u.name}</p>
                             <span className="text-[10px] text-slate-400 block font-mono mt-0.5">{u.designation}</span>
