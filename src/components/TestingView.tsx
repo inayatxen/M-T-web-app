@@ -69,20 +69,20 @@ export default function TestingView({
   const [removalDate, setRemovalDate] = useState(getPKTDateString());
 
   // III. Meter Reading Details
-  const [kwhPeak, setKwhPeak] = useState('1024.1');
-  const [kwhOffPeak, setKwhOffPeak] = useState('841.0');
-  const [kvarhPeak, setKvarhPeak] = useState('119.5');
-  const [kvarhOffPeak, setKvarhOffPeak] = useState('98.0');
-  const [mdiPeak, setMdiPeak] = useState('12.5');
-  const [mdiOffPeak, setMdiOffPeak] = useState('8.4');
+  const [kwhPeak, setKwhPeak] = useState('');
+  const [kwhOffPeak, setKwhOffPeak] = useState('');
+  const [kvarhPeak, setKvarhPeak] = useState('');
+  const [kvarhOffPeak, setKvarhOffPeak] = useState('');
+  const [mdiPeak, setMdiPeak] = useState('');
+  const [mdiOffPeak, setMdiOffPeak] = useState('');
 
   // IV. Accuracy Test Parameters
-  const [accuracyPercentage, setAccuracyPercentage] = useState('99.75');
-  const [testLoad, setTestLoad] = useState('10 A');
-  const [testVoltage, setTestVoltage] = useState('230 V');
-  const [testCurrent, setTestCurrent] = useState('10.0 A');
+  const [accuracyPercentage, setAccuracyPercentage] = useState('');
+  const [testLoad, setTestLoad] = useState('');
+  const [testVoltage, setTestVoltage] = useState('');
+  const [testCurrent, setTestCurrent] = useState('');
   const [powerFactor, setPowerFactor] = useState('1.0');
-  const [errorPercentage, setErrorPercentage] = useState('+0.25');
+  const [errorPercentage, setErrorPercentage] = useState('');
   const [standardLimit, setStandardLimit] = useState('±1.0%');
   const [passFail, setPassFail] = useState<'Pass' | 'Fail'>('Pass');
 
@@ -104,87 +104,87 @@ export default function TestingView({
   const [formError, setFormError] = useState('');
 
   // Extra CT/PT Fields state variables
-  const [sanctionLoad, setSanctionLoad] = useState('75 kW');
-  const [connectedLoad, setConnectedLoad] = useState('72 kW');
-  const [transformerCapacity, setTransformerCapacity] = useState('100 kVA');
-  const [multiplyingFactor, setMultiplyingFactor] = useState('40');
-  const [installedCtsRatio, setInstalledCtsRatio] = useState('200/5');
-  const [marksOfSealingPlier, setMarksOfSealingPlier] = useState('PESCO-M&T-MARDAN #14');
-  const [resultsCheckingSlow, setResultsCheckingSlow] = useState('0.00%');
-  const [resultsCheckingFast, setResultsCheckingFast] = useState('0.15%');
-  const [resultsCheckingCorrect, setResultsCheckingCorrect] = useState('99.85%');
+  const [sanctionLoad, setSanctionLoad] = useState('');
+  const [connectedLoad, setConnectedLoad] = useState('');
+  const [transformerCapacity, setTransformerCapacity] = useState('');
+  const [multiplyingFactor, setMultiplyingFactor] = useState('');
+  const [installedCtsRatio, setInstalledCtsRatio] = useState('');
+  const [marksOfSealingPlier, setMarksOfSealingPlier] = useState('');
+  const [resultsCheckingSlow, setResultsCheckingSlow] = useState('');
+  const [resultsCheckingFast, setResultsCheckingFast] = useState('');
+  const [resultsCheckingCorrect, setResultsCheckingCorrect] = useState('');
 
   // Security Slips
-  const [touBody, setTouBody] = useState('M-SLIP-8891');
-  const [touTcover, setTouTcover] = useState('M-SLIP-8892');
-  const [touSimNo, setTouSimNo] = useState('+92-300-9876543');
-  const [touMsb, setTouMsb] = useState('MSB-1122');
-  const [touMsbGlass, setTouMsbGlass] = useState('G-SLIP-7731');
-  const [touSimId, setTouSimId] = useState('SIM-8992100823');
+  const [touBody, setTouBody] = useState('');
+  const [touTcover, setTouTcover] = useState('');
+  const [touSimNo, setTouSimNo] = useState('');
+  const [touMsb, setTouMsb] = useState('');
+  const [touMsbGlass, setTouMsbGlass] = useState('');
+  const [touSimId, setTouSimId] = useState('');
 
   // Security Slips Removed
-  const [removedTouBody, setRemovedTouBody] = useState('R-SLIP-5541');
-  const [removedTouTcover, setRemovedTouTcover] = useState('R-SLIP-5542');
-  const [removedTouMsb, setRemovedTouMsb] = useState('R-MSB-4411');
-  const [removedTouMsbGlass, setRemovedTouMsbGlass] = useState('R-G-SLIP-2291');
+  const [removedTouBody, setRemovedTouBody] = useState('');
+  const [removedTouTcover, setRemovedTouTcover] = useState('');
+  const [removedTouMsb, setRemovedTouMsb] = useState('');
+  const [removedTouMsbGlass, setRemovedTouMsbGlass] = useState('');
 
   // Removed AMR details
-  const [removedAmrNo, setRemovedAmrNo] = useState('AMR-77821');
-  const [removedAmrMake, setRemovedAmrMake] = useState('MicroTech');
-  const [removedAmrAmps, setRemovedAmrAmps] = useState('50/5 A');
-  const [removedAmrKwh, setRemovedAmrKwh] = useState('45821.1');
-  const [removedAmrKvarh, setRemovedAmrKvarh] = useState('14922.4');
-  const [removedAmrMdi, setRemovedAmrMdi] = useState('42.8');
-  const [removedAmrSum, setRemovedAmrSum] = useState('60743.5');
-  const [removedAmrResetNo, setRemovedAmrResetNo] = useState('14');
+  const [removedAmrNo, setRemovedAmrNo] = useState('');
+  const [removedAmrMake, setRemovedAmrMake] = useState('');
+  const [removedAmrAmps, setRemovedAmrAmps] = useState('');
+  const [removedAmrKwh, setRemovedAmrKwh] = useState('');
+  const [removedAmrKvarh, setRemovedAmrKvarh] = useState('');
+  const [removedAmrMdi, setRemovedAmrMdi] = useState('');
+  const [removedAmrSum, setRemovedAmrSum] = useState('');
+  const [removedAmrResetNo, setRemovedAmrResetNo] = useState('');
 
   // Removed Backup details
-  const [removedBackupNo, setRemovedBackupNo] = useState('BKUP-99321');
-  const [removedBackupMake, setRemovedBackupMake] = useState('Landis+Gyr');
-  const [removedBackupAmps, setRemovedBackupAmps] = useState('100/5 A');
-  const [removedBackupKwh, setRemovedBackupKwh] = useState('32109.5');
-  const [removedBackupKvarh, setRemovedBackupKvarh] = useState('10882.1');
-  const [removedBackupMdi, setRemovedBackupMdi] = useState('35.6');
-  const [removedBackupSum, setRemovedBackupSum] = useState('42991.6');
-  const [removedBackupResetNo, setRemovedBackupResetNo] = useState('09');
+  const [removedBackupNo, setRemovedBackupNo] = useState('');
+  const [removedBackupMake, setRemovedBackupMake] = useState('');
+  const [removedBackupAmps, setRemovedBackupAmps] = useState('');
+  const [removedBackupKwh, setRemovedBackupKwh] = useState('');
+  const [removedBackupKvarh, setRemovedBackupKvarh] = useState('');
+  const [removedBackupMdi, setRemovedBackupMdi] = useState('');
+  const [removedBackupSum, setRemovedBackupSum] = useState('');
+  const [removedBackupResetNo, setRemovedBackupResetNo] = useState('');
 
-  const [removedCtsRatio, setRemovedCtsRatio] = useState('200/5 A');
+  const [removedCtsRatio, setRemovedCtsRatio] = useState('');
 
   // TOU Table (Import/Export grid)
-  const [kwhImportTotal, setKwhImportTotal] = useState('12034.5');
-  const [kwhExportTotal, setKwhExportTotal] = useState('4510.2');
-  const [kwhImportT1, setKwhImportT1] = useState('6030.1');
-  const [kwhExportT1, setKwhExportT1] = useState('2290.5');
-  const [kwhImportT2, setKwhImportT2] = useState('6004.4');
-  const [kwhExportT2, setKwhExportT2] = useState('2219.7');
+  const [kwhImportTotal, setKwhImportTotal] = useState('');
+  const [kwhExportTotal, setKwhExportTotal] = useState('');
+  const [kwhImportT1, setKwhImportT1] = useState('');
+  const [kwhExportT1, setKwhExportT1] = useState('');
+  const [kwhImportT2, setKwhImportT2] = useState('');
+  const [kwhExportT2, setKwhExportT2] = useState('');
 
-  const [kvarhImportTotal, setKvarhImportTotal] = useState('4511.0');
-  const [kvarhExportTotal, setKvarhExportTotal] = useState('1109.8');
-  const [kvarhImportT1, setKvarhImportT1] = useState('2250.2');
-  const [kvarhExportT1, setKvarhExportT1] = useState('560.4');
-  const [kvarhImportT2, setKvarhImportT2] = useState('2260.8');
-  const [kvarhExportT2, setKvarhExportT2] = useState('549.4');
+  const [kvarhImportTotal, setKvarhImportTotal] = useState('');
+  const [kvarhExportTotal, setKvarhExportTotal] = useState('');
+  const [kvarhImportT1, setKvarhImportT1] = useState('');
+  const [kvarhExportT1, setKvarhExportT1] = useState('');
+  const [kvarhImportT2, setKvarhImportT2] = useState('');
+  const [kvarhExportT2, setKvarhExportT2] = useState('');
 
-  const [mdiImportTotal, setmdiImportTotal] = useState('45.6');
-  const [mdiExportTotal, setmdiExportTotal] = useState('18.2');
-  const [mdiImportT1, setmdiImportT1] = useState('42.1');
-  const [mdiExportT1, setmdiExportT1] = useState('15.4');
-  const [mdiImportT2, setmdiImportT2] = useState('45.0');
-  const [mdiExportT2, setmdiExportT2] = useState('18.0');
+  const [mdiImportTotal, setmdiImportTotal] = useState('');
+  const [mdiExportTotal, setmdiExportTotal] = useState('');
+  const [mdiImportT1, setmdiImportT1] = useState('');
+  const [mdiExportT1, setmdiExportT1] = useState('');
+  const [mdiImportT2, setmdiImportT2] = useState('');
+  const [mdiExportT2, setmdiExportT2] = useState('');
 
-  const [sumImportTotal, setSumImportTotal] = useState('16545.5');
-  const [sumExportTotal, setSumExportTotal] = useState('5620.0');
-  const [sumImportT1, setSumImportT1] = useState('8280.3');
-  const [sumExportT1, setSumExportT1] = useState('2850.9');
-  const [sumImportT2, setSumImportT2] = useState('8265.2');
-  const [sumExportT2, setSumExportT2] = useState('2769.1');
+  const [sumImportTotal, setSumImportTotal] = useState('');
+  const [sumExportTotal, setSumExportTotal] = useState('');
+  const [sumImportT1, setSumImportT1] = useState('');
+  const [sumExportT1, setSumExportT1] = useState('');
+  const [sumImportT2, setSumImportT2] = useState('');
+  const [sumExportT2, setSumExportT2] = useState('');
 
-  const [resetImportTotal, setResetImportTotal] = useState('12');
-  const [resetExportTotal, setResetExportTotal] = useState('12');
-  const [resetImportT1, setResetImportT1] = useState('12');
-  const [resetExportT1, setResetExportT1] = useState('12');
-  const [resetImportT2, setResetImportT2] = useState('12');
-  const [resetExportT2, setResetExportT2] = useState('12');
+  const [resetImportTotal, setResetImportTotal] = useState('');
+  const [resetExportTotal, setResetExportTotal] = useState('');
+  const [resetImportT1, setResetImportT1] = useState('');
+  const [resetExportT1, setResetExportT1] = useState('');
+  const [resetImportT2, setResetImportT2] = useState('');
+  const [resetExportT2, setResetExportT2] = useState('');
 
   // Auto layout prefill when meter selected from backlog queue
   useEffect(() => {

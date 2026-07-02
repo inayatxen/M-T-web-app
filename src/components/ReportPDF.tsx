@@ -442,7 +442,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
 
         {/* Footer legal disclaimer */}
         <div className="mt-10 pt-6 border-t border-slate-100 text-[9px] text-slate-400 text-center leading-relaxed">
-          This document is generated digitally and verified by automated laboratory calibration benches. Metropolis Power Distribution holds full legal custodian rights over secondary sealing rings. Report accuracy is certified against Class 0.05 state primary meters.
+          This document is generated digitally and verified by automated laboratory calibration benches. PESCO M&T holds full legal custodian rights over secondary sealing rings. Report accuracy is certified against state primary meters.
         </div>
       </div>
     )}

@@ -320,10 +320,10 @@ export default function DashboardView({
           <div className="space-y-0.5">
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 text-[10px] font-semibold border border-blue-400/15">
               <Zap className="w-2.5 h-2.5 text-amber-400 fill-amber-300" />
-              PESCO Grid Compliance Assurance Live
+              PESCO Metering & Testing Lab
             </div>
             <h1 className="text-base sm:text-lg font-black tracking-tight uppercase">
-              PESCO Laboratory Analytics Panel
+              PESCO M&T Analytics Panel
             </h1>
             <p className="text-[11px] text-slate-300 max-w-xl">
               Real-time tracking of electricity meters, Current/Potential Transformers compliance checking, dispute investigation, and cryptographic verification status.
@@ -495,7 +495,7 @@ export default function DashboardView({
           {/* Batch Code */}
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-450 dark:text-slate-500 uppercase tracking-widest block">
-              Batch Code (1-2)
+              Batch Code
             </label>
             <select
               value={regBatch}
