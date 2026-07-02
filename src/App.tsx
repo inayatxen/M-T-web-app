@@ -1879,7 +1879,7 @@ export default function App() {
 
         {/* Footer info block */}
         <footer className="h-10 border-t border-slate-200 bg-white flex items-center justify-between px-6 sm:px-8 text-[10px] text-slate-400 shrink-0 print:hidden font-medium select-none">
-          <span>Metropolis Power Grid testing laboratory v2.1.0 • Core encrypted</span>
+          <span>PESCO Metering & Testing Lab</span>
           <span>Security status: Safe • System clock aligned</span>
         </footer>
 
