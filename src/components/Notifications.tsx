@@ -32,7 +32,7 @@ export default function Notifications({ meters, cts, pts, onNavigateToPage }: No
       message: `${m.meterNumber} (${m.manufacturer}) is waiting for lab entry.`,
       severity: 'warning',
       page: m.category === 'single_phase' ? 'single_phase_testing' : 
-            m.category === 'three_phase_whole' ? 'three_phase_whole_testing' :
+            (m.category === 'three_phase_whole' || m.category === 'bi_directional_three_phase_whole') ? 'three_phase_whole_testing' :
             m.category === 'three_phase_ct' ? 'three_phase_ct_testing' : 'three_phase_ct_pt_testing',
       icon: Cpu,
     })),

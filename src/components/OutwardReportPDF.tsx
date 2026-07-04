@@ -39,6 +39,8 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
       case 'three_phase_whole': return 'Three Phase Whole Current Meter';
       case 'three_phase_ct': return 'Three Phase CT Operated Meter';
       case 'three_phase_ct_pt': return 'Three Phase CT/PT Operated Meter';
+      case 'bi_directional_three_phase_whole': return 'Bi-Directional Three Phase Whole Current Meter';
+      case 'bi_directional_ct_pt': return 'Bi-Directional CT/PT Operated Meter';
       case 'net_metering': return 'Net Metering';
       case 'ct': return 'Current Transformer (CT)';
       case 'pt': return 'Potential Transformer (PT)';
@@ -383,7 +385,7 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Three Phase Meters</p>
             <p className="text-xl font-extrabold text-slate-800 mt-1 font-mono">
-              {((typeCounts['three_phase_whole'] || 0) + (typeCounts['three_phase_ct'] || 0) + (typeCounts['three_phase_ct_pt'] || 0))}
+              {((typeCounts['three_phase_whole'] || 0) + (typeCounts['three_phase_ct'] || 0) + (typeCounts['three_phase_ct_pt'] || 0) + (typeCounts['bi_directional_three_phase_whole'] || 0) + (typeCounts['bi_directional_ct_pt'] || 0))}
             </p>
           </div>
         </div>

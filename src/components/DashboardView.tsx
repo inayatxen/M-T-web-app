@@ -80,6 +80,11 @@ export default function DashboardView({
   const [regDivision, setRegDivision] = useState('all');
   const [regSubdivision, setRegSubdivision] = useState('all');
 
+  // Calibration Benches selection states
+  const [selectedBenchId, setSelectedBenchId] = useState('single_phase');
+  const [benchSearchQuery, setBenchSearchQuery] = useState('');
+  const [benchStatusFilter, setBenchStatusFilter] = useState('all');
+
   // Cross-reference lookup to trace a meter back to its account number
   const getAccountNumberForMeter = (meterNo: string): string => {
     const rc = receipts.find(r => r.meterNumber === meterNo);
@@ -299,6 +304,16 @@ export default function DashboardView({
     
     return records;
   }, [filteredReports, ratio]);
+
+  const benches = [
+    { id: 'single_phase', label: 'Single Phase Bench', type: 'Single Phase', code: 'Bench A' },
+    { id: 'three_phase_whole', label: 'Three Phase Whole Bench', type: '3-Phase Whole Current', code: 'Bench B' },
+    { id: 'three_phase_ct', label: 'Three Phase CT Op. Bench', type: '3-Phase CT Operated', code: 'Bench C' },
+    { id: 'three_phase_ct_pt', label: 'Three Phase CT/PT Op. Bench', type: '3-Phase CT & PT Operated', code: 'Bench D' },
+    { id: 'bi_directional_three_phase_whole', label: 'Bi-Directional Whole Current Bench', type: 'Bi-Directional Whole Current', code: 'Bench E' },
+    { id: 'bi_directional_ct_pt', label: 'Bi-Directional CT/PT Op. Bench', type: 'Bi-Directional CT & PT Operated', code: 'Bench F' },
+    { id: 'smart', label: 'Smart Cellular Integration Bench', type: 'Smart Cellular', code: 'Bench G' },
+  ];
 
   return (
     <div className="space-y-4">
@@ -1112,6 +1127,427 @@ export default function DashboardView({
         </div>
       </div>
 
+      {/* METER-WISE CALIBRATION BENCHES PERFORMANCE ANALYTICS */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-150 dark:border-slate-800 pb-3">
+          <div>
+            <h3 className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wide">
+              <Sliders className="w-4 h-4 text-indigo-500" />
+              🔬 Meter-Wise Calibration Benches Performance Analytics
+            </h3>
+            <p className="text-[10px] text-slate-550 dark:text-slate-400">
+              Real-time diagnostic metrics, queue status, and certification accuracy offsets per calibration bench
+            </p>
+          </div>
+          <div className="text-[10px] text-slate-450 dark:text-slate-500 font-bold bg-slate-50 dark:bg-slate-850 px-2 py-1 rounded">
+            Active Bench Stations: <strong className="text-slate-700 dark:text-slate-300">7 Connected</strong>
+          </div>
+        </div>
+
+        {/* Layout: Bench Selection sidebar and details */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Left Column: Bench Selection list */}
+          <div className="lg:col-span-1 space-y-1.5 border-r border-slate-100 dark:border-slate-800 pr-0 lg:pr-3">
+            <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider block mb-2">
+              Select Station Bench
+            </span>
+            {benches.map(bench => {
+              const total = filteredMeters.filter(m => m.category === bench.id).length;
+              const isSelected = selectedBenchId === bench.id;
+              return (
+                <button
+                  key={bench.id}
+                  onClick={() => {
+                    setSelectedBenchId(bench.id);
+                    setBenchSearchQuery('');
+                    setBenchStatusFilter('all');
+                  }}
+                  className={`w-full text-left p-2.5 rounded-lg border text-xs transition-all duration-150 flex items-center justify-between cursor-pointer ${
+                    isSelected 
+                      ? 'bg-indigo-600 border-indigo-600 text-white font-bold shadow'
+                      : 'bg-slate-50 dark:bg-slate-855 border-slate-205 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-black px-1 rounded uppercase ${
+                        isSelected 
+                          ? 'bg-indigo-550 text-indigo-100'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {bench.code}
+                      </span>
+                      <span className="font-extrabold truncate max-w-[120px]">{bench.label.replace(' Bench', '')}</span>
+                    </div>
+                    <span className={`text-[10px] block ${isSelected ? 'text-indigo-200' : 'text-slate-450'}`}>
+                      {bench.type}
+                    </span>
+                  </div>
+                  <span className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                    isSelected 
+                      ? 'bg-indigo-700 text-indigo-100' 
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {total}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Columns: Active Bench Diagnostics & Queue List */}
+          {(() => {
+            const selectedBench = benches.find(b => b.id === selectedBenchId) || benches[0];
+            const benchMeters = filteredMeters.filter(m => m.category === selectedBenchId);
+            const benchReports = filteredReports.filter(r => r.meterType === selectedBenchId);
+
+            // Calculate Bench KPIs
+            const totalIn = benchMeters.length;
+            const pending = benchMeters.filter(m => m.status === 'pending_testing' || m.status === 'received').length;
+            const testing = benchMeters.filter(m => m.status === 'under_testing').length;
+            const passed = benchMeters.filter(m => m.status === 'passed' || m.status === 'report_issued').length;
+            const failed = benchMeters.filter(m => m.status === 'failed').length;
+
+            const totalTested = passed + failed;
+            const yieldRate = totalTested > 0 ? Math.round((passed / totalTested) * 100) : 100;
+
+            // Average Error calculation from actual reports of selected type
+            const errorSum = benchReports.reduce((acc, curr) => {
+              const errStr = curr.accuracyTest?.errorPercentage || curr.accuracyTest?.accuracyPercentage || '';
+              const num = parseFloat(errStr.replace(/[+%]/g, ''));
+              return isNaN(num) ? acc : acc + num;
+            }, 0);
+            const validReportsCount = benchReports.filter(r => {
+              const errStr = r.accuracyTest?.errorPercentage || r.accuracyTest?.accuracyPercentage || '';
+              return !isNaN(parseFloat(errStr.replace(/[+%]/g, '')));
+            }).length;
+            const avgError = validReportsCount > 0 ? (errorSum / validReportsCount).toFixed(3) : null;
+            const formattedAvgError = avgError !== null ? (parseFloat(avgError) >= 0 ? `+${avgError}%` : `${avgError}%`) : '±0.00%';
+
+            // Filtered meters for the queue table
+            const filteredQueue = benchMeters.filter(m => {
+              const matchesSearch = m.meterNumber.toLowerCase().includes(benchSearchQuery.toLowerCase()) || 
+                                    (m.manufacturer || '').toLowerCase().includes(benchSearchQuery.toLowerCase());
+              const matchesStatus = benchStatusFilter === 'all' || m.status === benchStatusFilter;
+              return matchesSearch && matchesStatus;
+            });
+
+            // Icon mapping
+            let BenchIcon = Sliders;
+            if (selectedBenchId === 'single_phase') BenchIcon = Cpu;
+            else if (selectedBenchId === 'three_phase_whole') BenchIcon = Layers;
+            else if (selectedBenchId === 'three_phase_ct') BenchIcon = Sliders;
+            else if (selectedBenchId === 'three_phase_ct_pt') BenchIcon = Building;
+            else if (selectedBenchId === 'bi_directional_three_phase_whole') BenchIcon = Zap;
+            else if (selectedBenchId === 'bi_directional_ct_pt') BenchIcon = ShieldCheck;
+            else if (selectedBenchId === 'smart') BenchIcon = Radio;
+
+            return (
+              <div className="lg:col-span-3 space-y-4">
+                {/* Selected Bench Banner */}
+                <div className="bg-slate-50 dark:bg-slate-850 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl text-indigo-650 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30">
+                      <BenchIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded tracking-wider">
+                          {selectedBench.code} - Operational
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-xs text-slate-500 font-semibold">{selectedBench.type}</span>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200 mt-0.5">
+                        {selectedBench.label}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1">
+                    <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded border border-emerald-500/10">
+                      Active Standards: IEC-62053
+                    </span>
+                    <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/10">
+                      Class limit: ±1.0%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bench diagnostic KPIs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* Utilization */}
+                  <div className="bg-slate-50/50 dark:bg-slate-855 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800 flex flex-col justify-between">
+                    <span className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider block mb-1">Total Intake</span>
+                    <div className="flex justify-between items-end">
+                      <span className="text-lg font-black text-slate-850 dark:text-slate-100">{totalIn}</span>
+                      <span className="text-[9px] text-slate-450 font-semibold">Active Units</span>
+                    </div>
+                  </div>
+
+                  {/* Stage Status breakdown */}
+                  <div className="bg-slate-50/50 dark:bg-slate-855 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800 flex flex-col justify-between">
+                    <span className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider block mb-1">Under Calibration</span>
+                    <div className="flex justify-between items-end">
+                      <span className="text-lg font-black text-blue-600 dark:text-blue-400">{testing}</span>
+                      <span className="text-[9px] text-amber-600 dark:text-amber-500 font-semibold">{pending} Pending slot</span>
+                    </div>
+                  </div>
+
+                  {/* Pass Yield rate */}
+                  <div className="bg-slate-50/50 dark:bg-slate-855 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800 flex flex-col justify-between">
+                    <span className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider block mb-1">Calibration Yield</span>
+                    <div className="flex justify-between items-end">
+                      <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">{yieldRate}%</span>
+                      <span className="text-[9px] text-rose-500 font-semibold">{failed} Defective</span>
+                    </div>
+                  </div>
+
+                  {/* Accuracy offset */}
+                  <div className="bg-slate-50/50 dark:bg-slate-855 p-2.5 rounded-xl border border-slate-150 dark:border-slate-800 flex flex-col justify-between">
+                    <span className="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider block mb-1">Avg Accuracy Error</span>
+                    <div className="flex justify-between items-end">
+                      <span className="text-lg font-black text-indigo-650 dark:text-indigo-400 font-mono">{formattedAvgError}</span>
+                      <span className="text-[9px] text-slate-450 font-semibold">{benchReports.length} Reports</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Queue Search & Table */}
+                <div className="space-y-2 border border-slate-150 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-900">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div className="space-y-0.5">
+                      <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Active Calibration Slot Allocation Queue
+                      </h5>
+                      <p className="text-[10px] text-slate-450 dark:text-slate-500">
+                        List of registered {selectedBench.type} meters tracked at this diagnostic bench station
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                      <input
+                        type="text"
+                        value={benchSearchQuery}
+                        onChange={(e) => setBenchSearchQuery(e.target.value)}
+                        placeholder="Search serial / brand..."
+                        className="text-[11px] p-1 px-2 border border-slate-200 dark:border-slate-800 rounded bg-slate-50 dark:bg-slate-855 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full sm:w-28"
+                      />
+                      <select
+                        value={benchStatusFilter}
+                        onChange={(e) => setBenchStatusFilter(e.target.value)}
+                        className="text-[11px] p-1 border border-slate-205 dark:border-slate-800 rounded bg-slate-50 dark:bg-slate-855 dark:text-white cursor-pointer font-semibold"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="received">Received</option>
+                        <option value="pending_testing">Pending</option>
+                        <option value="under_testing">Testing</option>
+                        <option value="passed">Passed</option>
+                        <option value="failed">Failed</option>
+                        <option value="report_issued">Report Issued</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {filteredQueue.length === 0 ? (
+                    <div className="text-center py-6 bg-slate-50/40 dark:bg-slate-855/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                      <Layers className="w-6 h-6 text-slate-300 dark:text-slate-700 mx-auto mb-1.5" />
+                      <p className="text-xs font-bold text-slate-650 dark:text-slate-400">
+                        No matching equipment found in queue
+                      </p>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 max-w-xs mx-auto mt-0.5">
+                        Try adjusting your search criteria or register new equipment to assign them to {selectedBench.label}.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px] text-left">
+                        <thead>
+                          <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-450 dark:text-slate-500 font-extrabold uppercase text-[9px] tracking-wider">
+                            <th className="py-2 pl-1">Meter Serial</th>
+                            <th className="py-2">Manufacturer</th>
+                            <th className="py-2">Amps / Voltage</th>
+                            <th className="py-2">Current Status</th>
+                            <th className="py-2 text-right pr-1">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">
+                          {filteredQueue.slice(0, 5).map(m => (
+                            <tr key={m.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-855/10">
+                              <td className="py-2 pl-1 font-mono font-bold text-slate-900 dark:text-white">
+                                {m.meterNumber}
+                              </td>
+                              <td className="py-2 text-slate-650 dark:text-slate-350 font-medium">
+                                {m.manufacturer || '—'}
+                              </td>
+                              <td className="py-2 text-slate-500 dark:text-slate-400 font-mono">
+                                Class {m.accuracyClass || '1.0'}
+                              </td>
+                              <td className="py-2">
+                                {(() => {
+                                  let color = 'bg-slate-100 text-slate-800 border-slate-250';
+                                  let label: string = m.status;
+                                  if (m.status === 'passed') { color = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/30'; label = 'Passed'; }
+                                  else if (m.status === 'failed') { color = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/30'; label = 'Failed'; }
+                                  else if (m.status === 'under_testing') { color = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30'; label = 'Under Testing'; }
+                                  else if (m.status === 'pending_testing' || m.status === 'received') { color = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30'; label = 'Pending Testing'; }
+                                  else if (m.status === 'report_issued') { color = 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30'; label = 'Report Issued'; }
+                                  
+                                  return (
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-black uppercase ${color}`}>
+                                      <span className="w-1 h-1 rounded-full bg-current" />
+                                      {label}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                              <td className="py-2 text-right pr-1">
+                                <button
+                                  onClick={() => {
+                                    onNavigateToPage('meter_testing');
+                                  }}
+                                  className="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded transition cursor-pointer text-[10px]"
+                                >
+                                  {m.status === 'passed' || m.status === 'report_issued' ? 'View Test' : 'Run Test'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredQueue.length > 5 && (
+                        <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            Showing top 5 of {filteredQueue.length} queue entries. Adjust filters to refine list.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Bench Certifications / Bi-Directional Readings if applicable */}
+                <div className="border border-slate-150 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-900 space-y-2">
+                  <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>Recent Certified Bench Test Records</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      Live Audit Data
+                    </span>
+                  </h5>
+
+                  {benchReports.length === 0 ? (
+                    <div className="text-center py-4 text-slate-400 text-[10px] font-semibold">
+                      No calibration reports finalized yet for this category in the selected region.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {benchReports.slice(0, 2).map((rep) => {
+                        const isBiDir = rep.meterType === 'bi_directional_three_phase_whole' || rep.meterType === 'bi_directional_ct_pt';
+                        return (
+                          <div key={rep.id} className="bg-slate-50/50 dark:bg-slate-855/30 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60 text-[11px] space-y-2">
+                            <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
+                              <div>
+                                <span className="font-extrabold text-slate-800 dark:text-slate-250 font-mono">
+                                  Report No: {rep.reportNumber}
+                                </span>
+                                <span className="text-slate-400 mx-1.5">|</span>
+                                <span className="text-slate-500 font-bold">
+                                  Meter {rep.meterNumber} ({rep.meterMake})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-400 font-mono">{rep.testDate}</span>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                                  rep.accuracyTest.passFail === 'Pass'
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400'
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
+                                }`}>
+                                  {rep.accuracyTest.passFail} ({rep.accuracyTest.errorPercentage || rep.accuracyTest.accuracyPercentage})
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Readings representation */}
+                            {isBiDir ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                                {/* Import */}
+                                <div className="bg-amber-500/5 dark:bg-amber-500/10 p-2 rounded-lg border border-amber-500/10 space-y-1">
+                                  <div className="font-black text-amber-800 dark:text-amber-400 uppercase text-[8px] tracking-wider pb-0.5 border-b border-amber-500/10">
+                                    📥 Import Readings (Peak / Off-Peak)
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-1 font-mono font-bold">
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH Pk</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhPeak || rep.readings.kwhPeak || '—'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH OP</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhOffPeak || rep.readings.kwhOffPeak || '—'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">MDI Pk</span>
+                                      <span className="text-indigo-600 dark:text-indigo-400">{rep.importReadings?.mdiPeak || rep.readings.mdiPeak || '—'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Export */}
+                                <div className="bg-rose-500/5 dark:bg-rose-500/10 p-2 rounded-lg border border-rose-500/10 space-y-1">
+                                  <div className="font-black text-rose-800 dark:text-rose-400 uppercase text-[8px] tracking-wider pb-0.5 border-b border-rose-500/10">
+                                    📤 Export Readings (Peak / Off-Peak)
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-1 font-mono font-bold">
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH Pk</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.exportReadings?.kwhPeak || '0.00'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH OP</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.exportReadings?.kwhOffPeak || '0.00'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-400 block text-[7px] uppercase font-bold">MDI Pk</span>
+                                      <span className="text-indigo-600 dark:text-indigo-400">{rep.exportReadings?.mdiPeak || '0.00'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-x-6 gap-y-1.5 font-mono font-bold text-[10.5px]">
+                                <div>
+                                  <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Active Energy</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kwhPeak} kWh</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Off-Peak Active</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kwhOffPeak || '—'} kWh</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Reactive</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kvarhPeak || '—'} kVARh</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Off-Peak Reactive</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kvarhOffPeak || '—'} kVARh</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Demand (MDI)</span>
+                                  <span className="text-indigo-600 dark:text-indigo-400">{rep.readings.mdiPeak || '—'} kW</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* Secondary Graphs and Categories Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Category Share */}
@@ -1127,6 +1563,8 @@ export default function DashboardView({
               { id: 'three_phase_whole', label: 'Three Phase Whole', color: 'bg-sky-500' },
               { id: 'three_phase_ct', label: 'Three Phase CT Op.', color: 'bg-blue-500' },
               { id: 'three_phase_ct_pt', label: 'Three Phase CT/PT Op.', color: 'bg-blue-800' },
+              { id: 'bi_directional_three_phase_whole', label: 'Bi-Directional Three Phase Whole', color: 'bg-amber-500' },
+              { id: 'bi_directional_ct_pt', label: 'Bi-Directional CT/PT Op.', color: 'bg-rose-500' },
               { id: 'smart', label: 'Smart Cellular', color: 'bg-purple-500' },
             ].map(cat => {
               const count = categoryDistribution[cat.id] || 0;

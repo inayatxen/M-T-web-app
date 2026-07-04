@@ -40,6 +40,12 @@ import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName,
 
 const mapMeterCategory = (rawType: string): MeterCategory => {
   const norm = rawType.toLowerCase().trim();
+  if (norm.includes('bi-directional whole') || norm.includes('bi directional whole') || norm.includes('bidirectional whole') || norm.includes('bi-dir whole') || norm.includes('bi_directional_three_phase_whole')) {
+    return 'bi_directional_three_phase_whole';
+  }
+  if (norm.includes('bi-directional ct') || norm.includes('bi directional ct') || norm.includes('bidirectional ct') || norm.includes('bi-dir ct') || norm.includes('bi_directional_ct_pt') || norm.includes('bi-directional pt') || norm.includes('bi directional pt')) {
+    return 'bi_directional_ct_pt';
+  }
   if (norm.includes('single') || norm.includes('1-phase') || norm.includes('1 phase') || norm === '1p') {
     return 'single_phase';
   }
@@ -248,7 +254,7 @@ export default function RegisterView({
           'Consumer Account Number (14 Digits) *',
           'Consumer Primary Name *',
           'Father / Guardian Name *',
-          'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / smart) *',
+          'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / three_phase_ct_pt / bi_directional_three_phase_whole / bi_directional_ct_pt / smart) *',
           'Meter ID / Number *',
           'Readings',
           'Warp / Serial Code:',
@@ -380,6 +386,7 @@ export default function RegisterView({
             manufacturer: row.make,
             accuracyClass: row.meterType === 'single_phase' ? 'Class 1.0' : 
                            row.meterType === 'three_phase_whole' ? 'Class 1.0' :
+                           row.meterType === 'bi_directional_three_phase_whole' ? 'Class 1.0' :
                            row.meterType === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
             category: row.meterType,
             status: 'received',
@@ -1272,6 +1279,8 @@ export default function RegisterView({
                       <option value="three_phase_whole">Three Phase Whole Current</option>
                       <option value="three_phase_ct">Three Phase CT Operated</option>
                       <option value="three_phase_ct_pt">Three Phase CT/PT Operated</option>
+                      <option value="bi_directional_three_phase_whole">Bi-Directional Three Phase Whole Current</option>
+                      <option value="bi_directional_ct_pt">Bi-Directional CT/PT Operated</option>
                       <option value="smart">Smart Cellular Meter</option>
                     </select>
                   </div>

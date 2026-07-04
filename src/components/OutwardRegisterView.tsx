@@ -15,7 +15,7 @@ interface OutwardRegisterViewProps {
   pts: PTRecord[];
 }
 
-type EquipmentCategory = 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'net_metering' | 'ct' | 'pt';
+type EquipmentCategory = 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'bi_directional_three_phase_whole' | 'bi_directional_ct_pt' | 'net_metering' | 'ct' | 'pt';
 
 export default function OutwardRegisterView({ 
   outwardRecords, 
@@ -123,6 +123,28 @@ export default function OutwardRegisterView({
       case 'three_phase_ct_pt':
         return meters
           .filter(m => m.category === 'three_phase_ct_pt' && m.stockStatus !== 'Installed' && m.stockStatus !== 'Scrapped')
+          .map(m => ({
+            id: m.id,
+            number: m.meterNumber,
+            serialNumber: m.serialNumber,
+            make: m.manufacturer,
+            status: m.stockStatus,
+            badge: m.status.toUpperCase()
+          }));
+      case 'bi_directional_three_phase_whole':
+        return meters
+          .filter(m => m.category === 'bi_directional_three_phase_whole' && m.stockStatus !== 'Installed' && m.stockStatus !== 'Scrapped')
+          .map(m => ({
+            id: m.id,
+            number: m.meterNumber,
+            serialNumber: m.serialNumber,
+            make: m.manufacturer,
+            status: m.stockStatus,
+            badge: m.status.toUpperCase()
+          }));
+      case 'bi_directional_ct_pt':
+        return meters
+          .filter(m => m.category === 'bi_directional_ct_pt' && m.stockStatus !== 'Installed' && m.stockStatus !== 'Scrapped')
           .map(m => ({
             id: m.id,
             number: m.meterNumber,
@@ -263,6 +285,8 @@ export default function OutwardRegisterView({
       case 'three_phase_whole': return 'Three Phase Whole Current Meter';
       case 'three_phase_ct': return 'Three Phase CT Meter';
       case 'three_phase_ct_pt': return 'Three Phase CT/PT Meter';
+      case 'bi_directional_three_phase_whole': return 'Bi-Directional Three Phase Whole Meter';
+      case 'bi_directional_ct_pt': return 'Bi-Directional Three Phase CT/PT Meter';
       case 'net_metering': return 'Net Metering';
       case 'ct': return 'Current Transformer (CT)';
       case 'pt': return 'Potential Transformer (PT)';
@@ -347,6 +371,8 @@ export default function OutwardRegisterView({
                   <option value="three_phase_whole">Three Phase Whole Current Meter</option>
                   <option value="three_phase_ct">Three Phase CT Meter</option>
                   <option value="three_phase_ct_pt">Three Phase CT/PT Meter</option>
+                  <option value="bi_directional_three_phase_whole">Bi-Directional Three Phase Whole Current Meter</option>
+                  <option value="bi_directional_ct_pt">Bi-Directional CT/PT Meter</option>
                   <option value="net_metering">Net Metering</option>
                   <option value="ct">Current Transformers (CTs)</option>
                   <option value="pt">Potential Transformers (PTs)</option>

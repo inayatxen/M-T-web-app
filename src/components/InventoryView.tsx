@@ -70,6 +70,8 @@ export default function InventoryView({
     { value: 'three_phase_whole', label: 'Three Phase Whole Current' },
     { value: 'three_phase_ct', label: 'Three Phase CT Operated' },
     { value: 'three_phase_ct_pt', label: 'Three Phase CT/PT Operated' },
+    { value: 'bi_directional_three_phase_whole', label: 'Bi-Directional 3-Phase Whole' },
+    { value: 'bi_directional_ct_pt', label: 'Bi-Directional CT/PT Operated' },
     { value: 'smart', label: 'Smart Meters' }
   ];
 

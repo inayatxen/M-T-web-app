@@ -47,7 +47,12 @@ export default function TestingView({
 
   // Select Meter from Backlog to test
   const pendingMetersOfThisType = meters.filter(
-    m => m.category === defaultCategoryFilter && m.status !== 'passed' && m.status !== 'failed' && m.status !== 'report_issued'
+    m => {
+      const isMatch = m.category === defaultCategoryFilter ||
+        (defaultCategoryFilter === 'three_phase_whole' && m.category === 'bi_directional_three_phase_whole') ||
+        (defaultCategoryFilter === 'three_phase_ct_pt' && m.category === 'bi_directional_ct_pt');
+      return isMatch && m.status !== 'passed' && m.status !== 'failed' && m.status !== 'report_issued';
+    }
   );
 
   const [selectedMeterId, setSelectedMeterId] = useState<string>('');
@@ -75,6 +80,21 @@ export default function TestingView({
   const [kvarhOffPeak, setKvarhOffPeak] = useState('');
   const [mdiPeak, setMdiPeak] = useState('');
   const [mdiOffPeak, setMdiOffPeak] = useState('');
+
+  // Bi-Directional specific states
+  const [importKwhPeak, setImportKwhPeak] = useState('');
+  const [importKwhOffPeak, setImportKwhOffPeak] = useState('');
+  const [importKvarhPeak, setImportKvarhPeak] = useState('');
+  const [importKvarhOffPeak, setImportKvarhOffPeak] = useState('');
+  const [importMdiPeak, setImportMdiPeak] = useState('');
+  const [importMdiOffPeak, setImportMdiOffPeak] = useState('');
+
+  const [exportKwhPeak, setExportKwhPeak] = useState('');
+  const [exportKwhOffPeak, setExportKwhOffPeak] = useState('');
+  const [exportKvarhPeak, setExportKvarhPeak] = useState('');
+  const [exportKvarhOffPeak, setExportKvarhOffPeak] = useState('');
+  const [exportMdiPeak, setExportMdiPeak] = useState('');
+  const [exportMdiOffPeak, setExportMdiOffPeak] = useState('');
 
   // IV. Accuracy Test Parameters
   const [accuracyPercentage, setAccuracyPercentage] = useState('');
@@ -317,6 +337,8 @@ export default function TestingView({
     const testId = `tr-gen-${Date.now()}`;
     const reportNumber = `REP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const isBiDirectional = defaultCategoryFilter === 'bi_directional_three_phase_whole' || defaultCategoryFilter === 'bi_directional_ct_pt';
+
     const readings: MeterReadings = defaultCategoryFilter === 'single_phase' ? {
       kwhPeak,
       kwhOffPeak: '—',
@@ -324,6 +346,13 @@ export default function TestingView({
       kvarhOffPeak: '—',
       mdiPeak: '—',
       mdiOffPeak: '—'
+    } : isBiDirectional ? {
+      kwhPeak: importKwhPeak,
+      kwhOffPeak: importKwhOffPeak,
+      kvarhPeak: importKvarhPeak,
+      kvarhOffPeak: importKvarhOffPeak,
+      mdiPeak: importMdiPeak,
+      mdiOffPeak: importMdiOffPeak
     } : {
       kwhPeak,
       kwhOffPeak,
@@ -332,6 +361,24 @@ export default function TestingView({
       mdiPeak,
       mdiOffPeak
     };
+
+    const importReadings: MeterReadings | undefined = isBiDirectional ? {
+      kwhPeak: importKwhPeak,
+      kwhOffPeak: importKwhOffPeak,
+      kvarhPeak: importKvarhPeak,
+      kvarhOffPeak: importKvarhOffPeak,
+      mdiPeak: importMdiPeak,
+      mdiOffPeak: importMdiOffPeak
+    } : undefined;
+
+    const exportReadings: MeterReadings | undefined = isBiDirectional ? {
+      kwhPeak: exportKwhPeak,
+      kwhOffPeak: exportKwhOffPeak,
+      kvarhPeak: exportKvarhPeak,
+      kvarhOffPeak: exportKvarhOffPeak,
+      mdiPeak: exportMdiPeak,
+      mdiOffPeak: exportMdiOffPeak
+    } : undefined;
 
     const accuracyTest: AccuracyTest = {
       accuracyPercentage: `${accuracyPercentage}%`,
@@ -343,6 +390,9 @@ export default function TestingView({
       standardLimit,
       passFail
     };
+
+    const selectedMeter = meters.find(m => m.id === selectedMeterId);
+    const actualMeterType = selectedMeter?.category || defaultCategoryFilter;
 
     // Construct reports
     const reportObj: TestReport = {
@@ -356,12 +406,14 @@ export default function TestingView({
       fatherName,
       natureOfConnection,
       meterNumber,
-      meterType: defaultCategoryFilter,
+      meterType: actualMeterType,
       meterMake: manufacturer || 'Secure Meters Ltd',
       serialNumber,
       installationDate: approvalDate,
       removalDate: approvalDate,
       readings,
+      importReadings,
+      exportReadings,
       accuracyTest,
       discrepancies,
       otherDiscrepancyRemarks: otherDiscrepancyRemarks || undefined,
@@ -374,7 +426,7 @@ export default function TestingView({
       approvalDate,
       qrCodeMockUrl: `${window.location.origin}/verify/${reportNumber}`,
       nameplatePhotoUrl,
-      ctPtExtra: (defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt') ? {
+      ctPtExtra: (defaultCategoryFilter === 'three_phase_ct' || defaultCategoryFilter === 'three_phase_ct_pt' || actualMeterType === 'bi_directional_ct_pt') ? {
         sanctionLoad,
         connectedLoad,
         transformerCapacity,
@@ -425,10 +477,11 @@ export default function TestingView({
       meterNumber,
       serialNumber,
       manufacturer: manufacturer || 'Secure Meters Ltd',
-      accuracyClass: defaultCategoryFilter === 'single_phase' ? 'Class 1.0' : 
-                     defaultCategoryFilter === 'three_phase_whole' ? 'Class 1.0' :
-                     defaultCategoryFilter === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
-      category: defaultCategoryFilter,
+      accuracyClass: actualMeterType === 'single_phase' ? 'Class 1.0' : 
+                     actualMeterType === 'three_phase_whole' ? 'Class 1.0' :
+                     actualMeterType === 'bi_directional_three_phase_whole' ? 'Class 1.0' :
+                     actualMeterType === 'smart' ? 'Class 0.2S' : 'Class 0.5S',
+      category: actualMeterType,
       status: passFail === 'Pass' ? 'passed' : 'failed',
       stockStatus: passFail === 'Pass' ? 'Approved' : 'Rejected',
       purchaseDate: approvalDate,
@@ -443,6 +496,18 @@ export default function TestingView({
     // Clear selections
     setSelectedMeterId('');
     setNameplatePhotoUrl(undefined);
+    setImportKwhPeak('');
+    setImportKwhOffPeak('');
+    setImportKvarhPeak('');
+    setImportKvarhOffPeak('');
+    setImportMdiPeak('');
+    setImportMdiOffPeak('');
+    setExportKwhPeak('');
+    setExportKwhOffPeak('');
+    setExportKvarhPeak('');
+    setExportKvarhOffPeak('');
+    setExportMdiPeak('');
+    setExportMdiOffPeak('');
     setTimeout(() => {
       setFormSuccess('');
     }, 4500);
@@ -452,8 +517,10 @@ export default function TestingView({
     switch (cat) {
       case 'single_phase': return 'Single Phase Bench (Standard)';
       case 'three_phase_whole': return 'Three Phase Whole Current Bench';
+      case 'bi_directional_three_phase_whole': return 'Bi-Directional Three Phase Whole Current Bench';
       case 'three_phase_ct': return 'Three Phase CT Operated Calibration Bench';
       case 'three_phase_ct_pt': return 'Three Phase CT/PT Instrument Transformer Bench';
+      case 'bi_directional_ct_pt': return 'Bi-Directional Three Phase CT/PT Instrument Transformer Bench';
       default: return 'Standard Calibration Cell';
     }
   };
@@ -941,7 +1008,7 @@ export default function TestingView({
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                {kwhPeak.trim() !== '' && (
+                {((defaultCategoryFilter === 'bi_directional_three_phase_whole' || defaultCategoryFilter === 'bi_directional_ct_pt') ? importKwhPeak.trim() !== '' : kwhPeak.trim() !== '') && (
                   <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-450 uppercase">Complete</span>
                 )}
                 {activeStep === 3 ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
@@ -968,6 +1035,148 @@ export default function TestingView({
                   <p className="text-[10.5px] text-indigo-700/80 font-semibold mt-1">
                     ℹ️ For single phase meters, only one "Final Reading" is required. All other complex billing registers are omitted.
                   </p>
+                </div>
+              ) : (defaultCategoryFilter === 'bi_directional_three_phase_whole' || defaultCategoryFilter === 'bi_directional_ct_pt') ? (
+                <div className="space-y-6">
+                  {/* Import Readings */}
+                  <div className="p-4 bg-amber-50/40 dark:bg-amber-950/10 rounded-xl border border-amber-100 dark:border-amber-900/30 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <h5 className="text-[11px] font-black uppercase text-amber-950 dark:text-amber-400 tracking-wider">1 - Import Readings</h5>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Peak *</label>
+                        <input
+                          type="text"
+                          value={importKwhPeak}
+                          onChange={(e) => setImportKwhPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Off Peak *</label>
+                        <input
+                          type="text"
+                          value={importKwhOffPeak}
+                          onChange={(e) => setImportKwhOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Peak *</label>
+                        <input
+                          type="text"
+                          value={importKvarhPeak}
+                          onChange={(e) => setImportKvarhPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Off Peak *</label>
+                        <input
+                          type="text"
+                          value={importKvarhOffPeak}
+                          onChange={(e) => setImportKvarhOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Peak * (kW)</label>
+                        <input
+                          type="text"
+                          value={importMdiPeak}
+                          onChange={(e) => setImportMdiPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg font-black text-amber-950 dark:text-amber-300"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Off Peak * (kW)</label>
+                        <input
+                          type="text"
+                          value={importMdiOffPeak}
+                          onChange={(e) => setImportMdiOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg font-black text-amber-950 dark:text-amber-300"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Export Readings */}
+                  <div className="p-4 bg-rose-50/40 dark:bg-rose-950/10 rounded-xl border border-rose-100 dark:border-rose-900/30 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                      <h5 className="text-[11px] font-black uppercase text-rose-950 dark:text-rose-400 tracking-wider">2 - Export Readings</h5>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Peak *</label>
+                        <input
+                          type="text"
+                          value={exportKwhPeak}
+                          onChange={(e) => setExportKwhPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KWH Off Peak *</label>
+                        <input
+                          type="text"
+                          value={exportKwhOffPeak}
+                          onChange={(e) => setExportKwhOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Peak *</label>
+                        <input
+                          type="text"
+                          value={exportKvarhPeak}
+                          onChange={(e) => setExportKvarhPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">KVARH Off Peak *</label>
+                        <input
+                          type="text"
+                          value={exportKvarhOffPeak}
+                          onChange={(e) => setExportKvarhOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Peak * (kW)</label>
+                        <input
+                          type="text"
+                          value={exportMdiPeak}
+                          onChange={(e) => setExportMdiPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 rounded-lg font-black text-rose-950 dark:text-rose-300"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">MDI Off Peak * (kW)</label>
+                        <input
+                          type="text"
+                          value={exportMdiOffPeak}
+                          onChange={(e) => setExportMdiOffPeak(e.target.value)}
+                          className="w-full text-xs p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 rounded-lg font-black text-rose-950 dark:text-rose-300"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
@@ -1047,7 +1256,13 @@ export default function TestingView({
                 <button
                   type="button"
                   onClick={() => {
-                    if (kwhPeak.trim() === '') {
+                    const isBiDirectional = defaultCategoryFilter === 'bi_directional_three_phase_whole' || defaultCategoryFilter === 'bi_directional_ct_pt';
+                    if (isBiDirectional) {
+                      if (importKwhPeak.trim() === '' || exportKwhPeak.trim() === '') {
+                        setFormError('Please specify both Import and Export main active registers (kWh Peak) to proceed.');
+                        return;
+                      }
+                    } else if (kwhPeak.trim() === '') {
                       setFormError('Please specify the main active register (kWh Peak/Final) to proceed.');
                       return;
                     }

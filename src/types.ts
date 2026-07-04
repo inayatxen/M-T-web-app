@@ -17,7 +17,7 @@ export interface User {
 }
 
 // Meter Categories and Statuses
-export type MeterCategory = 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'smart';
+export type MeterCategory = 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'smart' | 'bi_directional_three_phase_whole' | 'bi_directional_ct_pt';
 
 export type MeterStatus = 'received' | 'pending_testing' | 'under_testing' | 'passed' | 'failed' | 'report_issued';
 
@@ -94,7 +94,7 @@ export interface OutwardRecord {
   issuedBy: string;
   remarks?: string;
   recipientSignatureUrl?: string;
-  equipmentType?: 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'net_metering' | 'ct' | 'pt';
+  equipmentType?: 'single_phase' | 'three_phase_whole' | 'three_phase_ct' | 'three_phase_ct_pt' | 'bi_directional_three_phase_whole' | 'bi_directional_ct_pt' | 'net_metering' | 'ct' | 'pt';
   items?: {
     id: string;
     number: string;
@@ -254,6 +254,8 @@ export interface TestReport {
   installationDate: string;
   removalDate: string;
   readings: MeterReadings;
+  importReadings?: MeterReadings;
+  exportReadings?: MeterReadings;
   accuracyTest: AccuracyTest;
   discrepancies: string[]; // ['Slow Meter', 'burnt', etc]
   otherDiscrepancyRemarks?: string;

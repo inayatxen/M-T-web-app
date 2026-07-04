@@ -472,7 +472,7 @@ export default function App() {
     saveState('outward_records', updatedRecords);
 
     // Update stock status of selected meters to 'Installed'
-    if (newRecord.equipmentType && ['single_phase', 'three_phase_whole', 'three_phase_ct', 'three_phase_ct_pt', 'net_metering'].includes(newRecord.equipmentType)) {
+    if (newRecord.equipmentType && ['single_phase', 'three_phase_whole', 'three_phase_ct', 'three_phase_ct_pt', 'bi_directional_three_phase_whole', 'bi_directional_ct_pt', 'net_metering'].includes(newRecord.equipmentType)) {
       const updatedMeters = meters.map(m => {
         if (selectedItemIds.includes(m.id)) {
           return { 
@@ -1166,7 +1166,9 @@ export default function App() {
       { id: 'single_phase_testing', label: '4. Single Phase testing', icon: Cpu, filter: 'single_phase' },
       { id: 'three_phase_whole_testing', label: '5. Three Phase Whole line', icon: Cpu, filter: 'three_phase_whole' },
       { id: 'three_phase_ct_testing', label: '6. Three Phase CT Op.', icon: Cpu, filter: 'three_phase_ct' },
-      { id: 'three_phase_ct_pt_testing', label: '7. Three Phase CT/PT Op.', icon: Cpu, filter: 'three_phase_ct_pt' }
+      { id: 'three_phase_ct_pt_testing', label: '7. Three Phase CT/PT Op.', icon: Cpu, filter: 'three_phase_ct_pt' },
+      { id: 'bi_directional_three_phase_whole_testing', label: '7b. Bi-Dir Whole Current', icon: Cpu, filter: 'bi_directional_three_phase_whole' },
+      { id: 'bi_directional_ct_pt_testing', label: '7c. Bi-Dir CT/PT Operated', icon: Cpu, filter: 'bi_directional_ct_pt' }
     ]},
     { section: 'INSTRUMENTS COILS & SIMS', items: [
       { id: 'smart_sim', label: '8. Smart SIM provisioning', icon: Radio },
@@ -1190,8 +1192,10 @@ export default function App() {
   const handleDirectCompileRedirect = (meter: Meter) => {
     let targetPage = 'single_phase_testing';
     if (meter.category === 'three_phase_whole') targetPage = 'three_phase_whole_testing';
+    else if (meter.category === 'bi_directional_three_phase_whole') targetPage = 'bi_directional_three_phase_whole_testing';
     else if (meter.category === 'three_phase_ct') targetPage = 'three_phase_ct_testing';
     else if (meter.category === 'three_phase_ct_pt') targetPage = 'three_phase_ct_pt_testing';
+    else if (meter.category === 'bi_directional_ct_pt') targetPage = 'bi_directional_ct_pt_testing';
     else if (meter.category === 'smart') targetPage = 'single_phase_testing'; // Default smart calibrator
 
     setActivePageId(targetPage);
@@ -1738,6 +1742,28 @@ export default function App() {
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_ct_pt" 
+                />
+              )}
+
+              {/* Bi-Directional Three Phase Whole Current testing */}
+              {activePageId === 'bi_directional_three_phase_whole_testing' && (
+                <TestingView 
+                  meters={meters} 
+                  receipts={receipts}
+                  onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  currentUser={currentUser} 
+                  defaultCategoryFilter="bi_directional_three_phase_whole" 
+                />
+              )}
+
+              {/* Bi-Directional CT/PT Operated testing */}
+              {activePageId === 'bi_directional_ct_pt_testing' && (
+                <TestingView 
+                  meters={meters} 
+                  receipts={receipts}
+                  onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  currentUser={currentUser} 
+                  defaultCategoryFilter="bi_directional_ct_pt" 
                 />
               )}
 

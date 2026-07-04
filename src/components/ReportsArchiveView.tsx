@@ -781,6 +781,8 @@ export default function ReportsArchiveView({
                 <option value="three_phase_whole">Three Phase Whole</option>
                 <option value="three_phase_ct">Three Phase CT Op.</option>
                 <option value="three_phase_ct_pt">Three Phase CT/PT Op.</option>
+                <option value="bi_directional_three_phase_whole">Bi-Directional Three Phase Whole</option>
+                <option value="bi_directional_ct_pt">Bi-Directional CT/PT Operated</option>
                 <option value="smart">Smart Cellular</option>
               </select>
             </div>
@@ -2178,6 +2180,8 @@ export default function ReportsArchiveView({
             case 'three_phase_whole': return '3-Phase Whole Current';
             case 'three_phase_ct': return '3-Phase CT Operated';
             case 'three_phase_ct_pt': return '3-Phase CT & PT';
+            case 'bi_directional_three_phase_whole': return 'Bi-Directional 3-Phase Whole Current';
+            case 'bi_directional_ct_pt': return 'Bi-Directional 3-Phase CT & PT';
             case 'smart': return 'Smart AMR Meter';
             default: return cat;
           }
@@ -2351,6 +2355,8 @@ export default function ReportsArchiveView({
                     <option value="three_phase_whole">3-Phase Whole Current</option>
                     <option value="three_phase_ct">3-Phase CT Operated</option>
                     <option value="three_phase_ct_pt">3-Phase CT & PT</option>
+                    <option value="bi_directional_three_phase_whole">Bi-Directional 3-Phase Whole Current</option>
+                    <option value="bi_directional_ct_pt">Bi-Directional 3-Phase CT & PT</option>
                     <option value="smart">Smart AMR Meter</option>
                   </select>
                 </div>
