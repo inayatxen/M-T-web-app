@@ -77,6 +77,19 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         </div>
       </div>
 
+      {/* Interactive Print Instructions Card */}
+      <div className="bg-indigo-50 border-l-4 border-indigo-500 p-3.5 rounded-lg text-xs text-indigo-900 print:hidden shadow-sm flex items-start gap-2.5">
+        <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-extrabold text-indigo-950 uppercase tracking-wide">Print &amp; PDF Formatting Instructions</p>
+          <ul className="list-disc pl-4 space-y-1 text-indigo-800 font-medium">
+            <li>For 1:1 physical printing, click the <strong className="text-indigo-950">"Open in New Tab"</strong> button in the top-right of your workspace.</li>
+            <li>In the print settings dialog, enable <strong className="text-indigo-950">"Background graphics"</strong> to display security seals, stamps, watermarks, and verification QR codes.</li>
+            <li>Set margins to <strong className="text-indigo-950">"None"</strong> or <strong className="text-indigo-950">"Minimum"</strong> to achieve perfect professional alignments and avoid clipping headers/footers.</li>
+          </ul>
+        </div>
+      </div>
+
       {/* Printable Report Canvas */}
       {report.meterType === 'three_phase_ct' || report.meterType === 'three_phase_ct_pt' ? (
         <TwoPageCTReport report={report} />

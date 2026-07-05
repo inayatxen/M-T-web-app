@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Printer, ArrowLeft, Truck, FileText, Calendar, Hash, User, MapPin, Layers } from 'lucide-react';
+import { Printer, ArrowLeft, Truck, FileText, Calendar, Hash, User, MapPin, Layers, AlertCircle } from 'lucide-react';
 import { OutwardRecord } from '../types';
 import pescoLogo from '../assets/images/pesco_logo.jpg';
 import { formatPKTDate } from '../utils';
@@ -80,6 +80,19 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
             <Printer className="w-4 h-4" />
             Print Gate Pass / Save as PDF
           </button>
+        </div>
+
+        {/* Interactive Print Instructions Card */}
+        <div className="bg-indigo-50 border-l-4 border-indigo-500 p-3.5 rounded-lg text-xs text-indigo-900 print:hidden shadow-sm flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-extrabold text-indigo-950 uppercase tracking-wide">Print &amp; PDF Formatting Instructions (Dispatch Challan)</p>
+            <ul className="list-disc pl-4 space-y-1 text-indigo-800 font-medium">
+              <li>For 1:1 physical printing, click the <strong className="text-indigo-950">"Open in New Tab"</strong> button in the top-right of your workspace.</li>
+              <li>In the print settings dialog, enable <strong className="text-indigo-950">"Background graphics"</strong> to display PESCO watermarks and borders.</li>
+              <li>Set margins to <strong className="text-indigo-950">"None"</strong> or <strong className="text-indigo-950">"Minimum"</strong> to achieve perfect professional alignments.</li>
+            </ul>
+          </div>
         </div>
 
         {/* Printable Canvas */}
@@ -317,6 +330,19 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
           <Printer className="w-4 h-4" />
           Print Ledger Report / Save as PDF
         </button>
+      </div>
+
+      {/* Interactive Print Instructions Card */}
+      <div className="bg-indigo-50 border-l-4 border-indigo-500 p-3.5 rounded-lg text-xs text-indigo-900 print:hidden shadow-sm flex items-start gap-2.5">
+        <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-extrabold text-indigo-950 uppercase tracking-wide">Print &amp; PDF Formatting Instructions (Ledger Report)</p>
+          <ul className="list-disc pl-4 space-y-1 text-indigo-800 font-medium">
+            <li>For 1:1 physical printing, click the <strong className="text-indigo-950">"Open in New Tab"</strong> button in the top-right of your workspace.</li>
+            <li>In the print settings dialog, enable <strong className="text-indigo-950">"Background graphics"</strong> to display PESCO watermarks and borders.</li>
+            <li>Set margins to <strong className="text-indigo-950">"None"</strong> or <strong className="text-indigo-950">"Minimum"</strong> to achieve perfect professional alignments.</li>
+          </ul>
+        </div>
       </div>
 
       {/* Printable Ledger Canvas */}

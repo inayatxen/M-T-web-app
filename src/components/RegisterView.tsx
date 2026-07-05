@@ -430,7 +430,47 @@ export default function RegisterView({
   const [serialNumber, setSerialNumber] = useState('');
   const [make, setMake] = useState('');
   const [receivedFrom, setReceivedFrom] = useState('');
+  const [useCustomReceivedFrom, setUseCustomReceivedFrom] = useState(false);
+  const [selectedRegCircleCode, setSelectedRegCircleCode] = useState('');
+  const [selectedRegDivisionCode, setSelectedRegDivisionCode] = useState('');
+  const [selectedRegSubdivisionCode, setSelectedRegSubdivisionCode] = useState('');
   const [reasonForTesting, setReasonForTesting] = useState('');
+
+  // Flatten PESCO_HIERARCHY divisions & subdivisions for dropdown options
+  const officeOptions = React.useMemo(() => {
+    const list = new Set<string>();
+    
+    // Add common/seed offices for robust coverage
+    const commonSeeds = [
+      'Mardan Rural Division',
+      'Mardan Cantt Division',
+      'Sub-Division-III Zone-C',
+      'Commercial Line Sub-Grid-2',
+      'System Operations Division'
+    ];
+    commonSeeds.forEach(s => list.add(s));
+
+    // Dynamic offices from database hierarchy
+    PESCO_HIERARCHY.forEach(circle => {
+      circle.divisions.forEach(div => {
+        let divName = div.name.trim();
+        if (!divName.toUpperCase().includes('DIVISION') && !divName.toUpperCase().includes('DIV')) {
+          divName = `${divName} Division`;
+        }
+        list.add(divName);
+        
+        div.subdivisions.forEach(sub => {
+          let subName = sub.name.trim();
+          if (!subName.toUpperCase().includes('SUBDIVISION') && !subName.toUpperCase().includes('SUB-DIVISION') && !subName.toUpperCase().includes('SUB OFFICE')) {
+            subName = `${subName} Subdivision`;
+          }
+          list.add(subName);
+        });
+      });
+    });
+
+    return Array.from(list).sort((a, b) => a.localeCompare(b));
+  }, []);
   const [newOrUsed, setNewOrUsed] = useState<'New' | 'Used'>('Used');
   const [remarks, setRemarks] = useState('');
   const [nameplatePhotoUrl, setNameplatePhotoUrl] = useState<string | undefined>();
@@ -478,7 +518,14 @@ export default function RegisterView({
         if (parsedData.meterNumber) setMeterNumber(parsedData.meterNumber);
         if (parsedData.serialNumber) setSerialNumber(parsedData.serialNumber);
         if (parsedData.make) setMake(parsedData.make);
-        if (parsedData.receivedFrom) setReceivedFrom(parsedData.receivedFrom);
+        if (parsedData.receivedFrom) {
+          setReceivedFrom(parsedData.receivedFrom);
+          if (!officeOptions.includes(parsedData.receivedFrom)) {
+            setUseCustomReceivedFrom(true);
+          } else {
+            setUseCustomReceivedFrom(false);
+          }
+        }
         if (parsedData.reasonForTesting) setReasonForTesting(parsedData.reasonForTesting);
         if (parsedData.newOrUsed) setNewOrUsed(parsedData.newOrUsed === 'New' ? 'New' : 'Used');
         if (parsedData.remarks) setRemarks(parsedData.remarks);
@@ -612,6 +659,10 @@ export default function RegisterView({
     setSerialNumber('');
     setMake('');
     setReceivedFrom('');
+    setUseCustomReceivedFrom(false);
+    setSelectedRegCircleCode('');
+    setSelectedRegDivisionCode('');
+    setSelectedRegSubdivisionCode('');
     setReasonForTesting('');
     setRemarks('');
     setNameplatePhotoUrl(undefined);
@@ -1355,15 +1406,140 @@ export default function RegisterView({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">Origin Division Received From</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Sub-Division-IV"
-                      value={receivedFrom}
-                      onChange={(e) => setReceivedFrom(e.target.value)}
-                      className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
-                    />
+                  <div className="md:col-span-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300">Origin Office Received From</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseCustomReceivedFrom(!useCustomReceivedFrom);
+                          setReceivedFrom('');
+                          setSelectedRegCircleCode('');
+                          setSelectedRegDivisionCode('');
+                          setSelectedRegSubdivisionCode('');
+                        }}
+                        className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer select-none"
+                      >
+                        {useCustomReceivedFrom ? "Select from Hierarchy" : "Type custom"}
+                      </button>
+                    </div>
+
+                    {useCustomReceivedFrom ? (
+                      <input
+                        type="text"
+                        placeholder="e.g. Sub-Division-IV"
+                        value={receivedFrom}
+                        onChange={(e) => setReceivedFrom(e.target.value)}
+                        className="w-full text-xs p-1.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white"
+                      />
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded">
+                        {/* Circle Dropdown */}
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Circle</label>
+                          <select
+                            value={selectedRegCircleCode}
+                            onChange={(e) => {
+                              const code = e.target.value;
+                              setSelectedRegCircleCode(code);
+                              setSelectedRegDivisionCode('');
+                              setSelectedRegSubdivisionCode('');
+                              if (code) {
+                                const circleObj = PESCO_HIERARCHY.find(c => c.code === code);
+                                if (circleObj) {
+                                  const name = circleObj.name.trim();
+                                  setReceivedFrom(name.toUpperCase().includes('CIRCLE') ? name : `${name} Circle`);
+                                }
+                              } else {
+                                setReceivedFrom('');
+                              }
+                            }}
+                            className="w-full text-xs p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white cursor-pointer"
+                          >
+                            <option value="">-- Select Circle --</option>
+                            {PESCO_HIERARCHY.map(c => (
+                              <option key={c.code} value={c.code}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Division Dropdown */}
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Division</label>
+                          <select
+                            value={selectedRegDivisionCode}
+                            disabled={!selectedRegCircleCode}
+                            onChange={(e) => {
+                              const code = e.target.value;
+                              setSelectedRegDivisionCode(code);
+                              setSelectedRegSubdivisionCode('');
+                              const circleObj = PESCO_HIERARCHY.find(c => c.code === selectedRegCircleCode);
+                              if (code) {
+                                const divObj = circleObj?.divisions.find(d => d.code === code);
+                                if (divObj) {
+                                  const name = divObj.name.trim();
+                                  setReceivedFrom(name.toUpperCase().includes('DIVISION') || name.toUpperCase().includes('DIV') ? name : `${name} Division`);
+                                }
+                              } else if (circleObj) {
+                                const name = circleObj.name.trim();
+                                setReceivedFrom(name.toUpperCase().includes('CIRCLE') ? name : `${name} Circle`);
+                              } else {
+                                setReceivedFrom('');
+                              }
+                            }}
+                            className="w-full text-xs p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="">-- Select Division --</option>
+                            {selectedRegCircleCode && 
+                              PESCO_HIERARCHY.find(c => c.code === selectedRegCircleCode)
+                                ?.divisions.map(d => (
+                                  <option key={d.code} value={d.code}>{d.name}</option>
+                                ))
+                            }
+                          </select>
+                        </div>
+
+                        {/* Subdivision Dropdown */}
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Subdivision</label>
+                          <select
+                            value={selectedRegSubdivisionCode}
+                            disabled={!selectedRegDivisionCode}
+                            onChange={(e) => {
+                              const code = e.target.value;
+                              setSelectedRegSubdivisionCode(code);
+                              const circleObj = PESCO_HIERARCHY.find(c => c.code === selectedRegCircleCode);
+                              const divObj = circleObj?.divisions.find(d => d.code === selectedRegDivisionCode);
+                              if (code) {
+                                const subObj = divObj?.subdivisions.find(s => s.code === code);
+                                if (subObj) {
+                                  const name = subObj.name.trim();
+                                  setReceivedFrom(name.toUpperCase().includes('SUBDIVISION') || name.toUpperCase().includes('SUB-DIVISION') || name.toUpperCase().includes('SUB OFFICE') ? name : `${name} Subdivision`);
+                                }
+                              } else if (divObj) {
+                                const name = divObj.name.trim();
+                                setReceivedFrom(name.toUpperCase().includes('DIVISION') || name.toUpperCase().includes('DIV') ? name : `${name} Division`);
+                              } else if (circleObj) {
+                                const name = circleObj.name.trim();
+                                setReceivedFrom(name.toUpperCase().includes('CIRCLE') ? name : `${name} Circle`);
+                              } else {
+                                setReceivedFrom('');
+                              }
+                            }}
+                            className="w-full text-xs p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold dark:text-white cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="">-- Select Subdivision --</option>
+                            {selectedRegDivisionCode && 
+                              PESCO_HIERARCHY.find(c => c.code === selectedRegCircleCode)
+                                ?.divisions.find(d => d.code === selectedRegDivisionCode)
+                                ?.subdivisions.map(s => (
+                                  <option key={s.code} value={s.code}>{s.name}</option>
+                                ))
+                            }
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

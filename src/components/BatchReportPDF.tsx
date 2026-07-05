@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ShieldCheck, Printer, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Printer, ArrowLeft, AlertCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { TestReport, MeterCategory } from '../types';
@@ -69,6 +69,19 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
             <Printer className="w-4 h-4" />
             Print All {reports.length} Certificates
           </button>
+        </div>
+      </div>
+
+      {/* Interactive Print Instructions Card */}
+      <div className="bg-indigo-50 border-l-4 border-indigo-500 p-3.5 rounded-lg text-xs text-indigo-900 print:hidden shadow-sm flex items-start gap-2.5">
+        <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-extrabold text-indigo-950 uppercase tracking-wide">Print &amp; PDF Formatting Instructions (Batch Mode)</p>
+          <ul className="list-disc pl-4 space-y-1 text-indigo-800 font-medium">
+            <li>For 1:1 physical printing, click the <strong className="text-indigo-950">"Open in New Tab"</strong> button in the top-right of your workspace.</li>
+            <li>In the print settings dialog, enable <strong className="text-indigo-950">"Background graphics"</strong> to display security seals, stamps, watermarks, and verification QR codes.</li>
+            <li>Set margins to <strong className="text-indigo-950">"None"</strong> or <strong className="text-indigo-950">"Minimum"</strong> to achieve perfect professional alignments and avoid clipping headers/footers.</li>
+          </ul>
         </div>
       </div>
 

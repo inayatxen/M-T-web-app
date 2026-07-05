@@ -1707,6 +1707,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="single_phase" 
                 />
@@ -1718,6 +1719,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_whole" 
                 />
@@ -1729,6 +1731,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_ct" 
                 />
@@ -1740,6 +1743,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="three_phase_ct_pt" 
                 />
@@ -1751,6 +1755,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="bi_directional_three_phase_whole" 
                 />
@@ -1762,6 +1767,7 @@ export default function App() {
                   meters={meters} 
                   receipts={receipts}
                   onAddReportAndVerifyMeter={handleAddReportAndVerifyMeter} 
+                  onOpenReportPDF={setActivePdfReport}
                   currentUser={currentUser} 
                   defaultCategoryFilter="bi_directional_ct_pt" 
                 />

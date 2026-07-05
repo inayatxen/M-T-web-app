@@ -22,7 +22,8 @@ import {
   ClipboardList,
   Flame,
   FileCheck,
-  QrCode
+  QrCode,
+  Printer
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { SignaturePad } from './SignaturePad';
@@ -33,6 +34,7 @@ interface TestingViewProps {
   meters: Meter[];
   receipts?: EquipmentReceipt[];
   onAddReportAndVerifyMeter: (updatedMeter: Meter, report: TestReport) => void;
+  onOpenReportPDF?: (report: TestReport) => void;
   currentUser: any;
   defaultCategoryFilter: MeterCategory; // which bench is active
 }
@@ -41,6 +43,7 @@ export default function TestingView({
   meters, 
   receipts = [],
   onAddReportAndVerifyMeter, 
+  onOpenReportPDF,
   currentUser,
   defaultCategoryFilter
 }: TestingViewProps) {
@@ -122,6 +125,7 @@ export default function TestingView({
   
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
+  const [lastCreatedReport, setLastCreatedReport] = useState<TestReport | null>(null);
 
   // Extra CT/PT Fields state variables
   const [sanctionLoad, setSanctionLoad] = useState('');
@@ -463,11 +467,40 @@ export default function TestingView({
         removedBackupSum,
         removedBackupResetNo,
         removedCtsRatio,
-        kwhImportTotal, kwhExportTotal, kwhImportT1, kwhExportT1, kwhImportT2, kwhExportT2,
-        kvarhImportTotal, kvarhExportTotal, kvarhImportT1, kvarhExportT1, kvarhImportT2, kvarhExportT2,
-        mdiImportTotal, mdiExportTotal, mdiImportT1, mdiExportT1, mdiImportT2, mdiExportT2,
-        sumImportTotal, sumExportTotal, sumImportT1, sumExportT1, sumImportT2, sumExportT2,
-        resetImportTotal, resetExportTotal, resetImportT1, resetExportT1, resetImportT2, resetExportT2,
+        kwhImportTotal,
+        kwhExportTotal: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kwhExportTotal,
+        kwhImportT1,
+        kwhExportT1: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kwhExportT1,
+        kwhImportT2,
+        kwhExportT2: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kwhExportT2,
+
+        kvarhImportTotal,
+        kvarhExportTotal: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kvarhExportTotal,
+        kvarhImportT1,
+        kvarhExportT1: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kvarhExportT1,
+        kvarhImportT2,
+        kvarhExportT2: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : kvarhExportT2,
+
+        mdiImportTotal,
+        mdiExportTotal: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : mdiExportTotal,
+        mdiImportT1,
+        mdiExportT1: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : mdiExportT1,
+        mdiImportT2,
+        mdiExportT2: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : mdiExportT2,
+
+        sumImportTotal,
+        sumExportTotal: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : sumExportTotal,
+        sumImportT1,
+        sumExportT1: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : sumExportT1,
+        sumImportT2,
+        sumExportT2: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : sumExportT2,
+
+        resetImportTotal,
+        resetExportTotal: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : resetExportTotal,
+        resetImportT1,
+        resetExportT1: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : resetExportT1,
+        resetImportT2,
+        resetExportT2: defaultCategoryFilter === 'three_phase_ct_pt' ? undefined : resetExportT2,
       } : undefined
     };
 
@@ -490,6 +523,7 @@ export default function TestingView({
 
     onAddReportAndVerifyMeter(updatedMeterObj, reportObj);
     setFormSuccess(`Test Approved & Signed! Compliance report reference: ${reportNumber} successfully compiled.`);
+    setLastCreatedReport(reportObj);
     setActiveStep(1);
     setFormError('');
     
@@ -543,9 +577,21 @@ export default function TestingView({
       </div>
 
       {formSuccess && (
-        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs font-bold rounded-lg flex items-center gap-2 animate-bounce">
-          <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-          {formSuccess}
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-xs font-bold rounded-lg flex items-center justify-between gap-4 animate-bounce">
+          <div className="flex items-center gap-2">
+            <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{formSuccess}</span>
+          </div>
+          {lastCreatedReport && onOpenReportPDF && (
+            <button
+              type="button"
+              onClick={() => onOpenReportPDF(lastCreatedReport)}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow-md transition flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
+            >
+              <Printer className="w-4 h-4 text-emerald-100" />
+              <span>Print Created Certificate</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -1555,58 +1601,58 @@ export default function TestingView({
                         <tr>
                           <th className="p-2 text-slate-700 font-sans">Index Type</th>
                           <th className="p-2">Import Total</th>
-                          <th className="p-2">Export Total</th>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <th className="p-2">Export Total</th>}
                           <th className="p-2">Import T-1</th>
-                          <th className="p-2">Export T-1</th>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <th className="p-2">Export T-1</th>}
                           <th className="p-2">Import T-2</th>
-                          <th className="p-2">Export T-2</th>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <th className="p-2">Export T-2</th>}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-slate-100">
                         <tr>
                           <td className="p-2 font-bold font-sans">KWH</td>
                           <td className="p-1"><input type="text" value={kwhImportTotal} onChange={(e) => setKwhImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
-                          <td className="p-1"><input type="text" value={kwhExportTotal} onChange={(e) => setKwhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kwhExportTotal} onChange={(e) => setKwhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={kwhImportT1} onChange={(e) => setKwhImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={kwhExportT1} onChange={(e) => setKwhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kwhExportT1} onChange={(e) => setKwhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={kwhImportT2} onChange={(e) => setKwhImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={kwhExportT2} onChange={(e) => setKwhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kwhExportT2} onChange={(e) => setKwhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                         </tr>
                         <tr>
                           <td className="p-2 font-bold font-sans">KVARH</td>
                           <td className="p-1"><input type="text" value={kvarhImportTotal} onChange={(e) => setKvarhImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
-                          <td className="p-1"><input type="text" value={kvarhExportTotal} onChange={(e) => setKvarhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kvarhExportTotal} onChange={(e) => setKvarhExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={kvarhImportT1} onChange={(e) => setKvarhImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={kvarhExportT1} onChange={(e) => setKvarhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kvarhExportT1} onChange={(e) => setKvarhExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={kvarhImportT2} onChange={(e) => setKvarhImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={kvarhExportT2} onChange={(e) => setKvarhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={kvarhExportT2} onChange={(e) => setKvarhExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                         </tr>
                         <tr>
                           <td className="p-2 font-bold font-sans">MDI</td>
                           <td className="p-1"><input type="text" value={mdiImportTotal} onChange={(e) => setmdiImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
-                          <td className="p-1"><input type="text" value={mdiExportTotal} onChange={(e) => setmdiExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={mdiExportTotal} onChange={(e) => setmdiExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={mdiImportT1} onChange={(e) => setmdiImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={mdiExportT1} onChange={(e) => setmdiExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={mdiExportT1} onChange={(e) => setmdiExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={mdiImportT2} onChange={(e) => setmdiImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={mdiExportT2} onChange={(e) => setmdiExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={mdiExportT2} onChange={(e) => setmdiExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                         </tr>
                         <tr>
                           <td className="p-2 font-bold font-sans">Sum</td>
                           <td className="p-1"><input type="text" value={sumImportTotal} onChange={(e) => setSumImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
-                          <td className="p-1"><input type="text" value={sumExportTotal} onChange={(e) => setSumExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={sumExportTotal} onChange={(e) => setSumExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={sumImportT1} onChange={(e) => setSumImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={sumExportT1} onChange={(e) => setSumExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={sumExportT1} onChange={(e) => setSumExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={sumImportT2} onChange={(e) => setSumImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={sumExportT2} onChange={(e) => setSumExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={sumExportT2} onChange={(e) => setSumExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                         </tr>
                         <tr>
                           <td className="p-2 font-bold font-sans">Reset No.</td>
                           <td className="p-1"><input type="text" value={resetImportTotal} onChange={(e) => setResetImportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs font-bold" /></td>
-                          <td className="p-1"><input type="text" value={resetExportTotal} onChange={(e) => setResetExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={resetExportTotal} onChange={(e) => setResetExportTotal(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={resetImportT1} onChange={(e) => setResetImportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={resetExportT1} onChange={(e) => setResetExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={resetExportT1} onChange={(e) => setResetExportT1(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                           <td className="p-1"><input type="text" value={resetImportT2} onChange={(e) => setResetImportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
-                          <td className="p-1"><input type="text" value={resetExportT2} onChange={(e) => setResetExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>
+                          {defaultCategoryFilter !== 'three_phase_ct_pt' && <td className="p-1"><input type="text" value={resetExportT2} onChange={(e) => setResetExportT2(e.target.value)} className="w-full p-1 border border-slate-200 rounded text-center text-xs" /></td>}
                         </tr>
                       </tbody>
                     </table>

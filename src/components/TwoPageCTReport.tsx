@@ -85,10 +85,14 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         {/* Title Header */}
         <div className="text-center pb-5 border-b-2 border-slate-900">
           <h1 className="text-sm font-black tracking-tight text-slate-900 uppercase leading-none underline underline-offset-[5px] decoration-2">
-            CHECKING OF CONNECTION (IMPORT & EXPORT LT TOU) METERS
+            {report.meterType === 'three_phase_ct_pt'
+              ? 'CHECKING OF CONNECTION (IMPORT LT TOU) METERS'
+              : 'CHECKING OF CONNECTION (IMPORT & EXPORT LT TOU) METERS'}
           </h1>
           <h1 className="text-sm font-black tracking-tight text-slate-900 uppercase leading-none underline underline-offset-[5px] decoration-2 mt-2">
-            FOR NET METERING MARDAN CIRCLE (M&T) MARDAN
+            {report.meterType === 'three_phase_ct_pt'
+              ? 'FOR MARDAN CIRCLE (M&T) MARDAN'
+              : 'FOR NET METERING MARDAN CIRCLE (M&T) MARDAN'}
           </h1>
         </div>
 
@@ -136,7 +140,9 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         {/* Meter Particulars */}
         <div className="mt-8 space-y-3 pb-2 border-b border-slate-300">
           <h3 className="text-[11.5px] font-black underline uppercase text-slate-900 mb-2">
-            8. Import & Export LT TOU Meter Particulars & Hardware Details.
+            {report.meterType === 'three_phase_ct_pt'
+              ? '8. Import LT TOU Meter Particulars & Hardware Details.'
+              : '8. Import & Export LT TOU Meter Particulars & Hardware Details.'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3 gap-x-6 text-[10.5px] font-bold text-slate-800">
             <div className="flex items-baseline gap-1.5">
@@ -177,103 +183,172 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
           <div className="mt-4 border-2 border-slate-900 overflow-hidden">
             <table className="w-full text-center border-collapse text-[10.5px]">
               <thead>
-                <tr className="bg-slate-50 border-b-2 border-slate-900 text-[10px] font-black uppercase text-slate-900 divide-x divide-slate-900">
-                  <th className="p-1 px-2 text-left w-[12%]">Particulars</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 w-[13%]">Import Total</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 w-[13%]">Export Total</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 w-[13%]">Import T-1</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 w-[13%]">Export T-1</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 w-[13%]">Import T-2</th>
-                  <th className="p-1 w-[5%]">Code</th>
-                  <th className="p-1 border-r-0">Export T-2</th>
-                </tr>
+                {report.meterType === 'three_phase_ct_pt' ? (
+                  <tr className="bg-slate-50 border-b-2 border-slate-900 text-[10px] font-black uppercase text-slate-900 divide-x divide-slate-900">
+                    <th className="p-1 px-2 text-left w-[22%]">Particulars</th>
+                    <th className="p-1 w-[10%]">Code</th>
+                    <th className="p-1 w-[22%]">Import Total</th>
+                    <th className="p-1 w-[10%]">Code</th>
+                    <th className="p-1 w-[22%]">Import T-1</th>
+                    <th className="p-1 w-[10%]">Code</th>
+                    <th className="p-1 border-r-0">Import T-2</th>
+                  </tr>
+                ) : (
+                  <tr className="bg-slate-50 border-b-2 border-slate-900 text-[10px] font-black uppercase text-slate-900 divide-x divide-slate-900">
+                    <th className="p-1 px-2 text-left w-[12%]">Particulars</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 w-[13%]">Import Total</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 w-[13%]">Export Total</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 w-[13%]">Import T-1</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 w-[13%]">Export T-1</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 w-[13%]">Import T-2</th>
+                    <th className="p-1 w-[5%]">Code</th>
+                    <th className="p-1 border-r-0">Export T-2</th>
+                  </tr>
+                )}
               </thead>
               <tbody className="divide-y divide-slate-900 font-bold text-slate-950">
-                {/* KWH ROW */}
-                <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
-                  <td className="p-1 px-2 text-left font-black bg-slate-50">KWH</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">01</td>
-                  <td className="p-0.5 font-mono font-black">{extra.kwhImportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">02</td>
-                  <td className="p-0.5 font-mono">{extra.kwhExportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">03</td>
-                  <td className="p-0.5 font-mono">{extra.kwhImportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">04</td>
-                  <td className="p-0.5 font-mono">{extra.kwhExportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">05</td>
-                  <td className="p-0.5 font-mono">{extra.kwhImportT2}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">06</td>
-                  <td className="p-0.5 font-mono border-r-0">{extra.kwhExportT2}</td>
-                </tr>
-                {/* KVARH ROW */}
-                <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
-                  <td className="p-1 px-2 text-left font-black bg-slate-50">KVARH</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">11</td>
-                  <td className="p-0.5 font-mono font-black">{extra.kvarhImportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">12</td>
-                  <td className="p-0.5 font-mono">{extra.kvarhExportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">13</td>
-                  <td className="p-0.5 font-mono">{extra.kvarhImportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">14</td>
-                  <td className="p-0.5 font-mono">{extra.kvarhExportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">15</td>
-                  <td className="p-0.5 font-mono">{extra.kvarhImportT2}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">16</td>
-                  <td className="p-0.5 font-mono border-r-0">{extra.kvarhExportT2}</td>
-                </tr>
-                {/* MDI ROW */}
-                <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
-                  <td className="p-1 px-2 text-left font-black bg-slate-50">MDI</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">21</td>
-                  <td className="p-0.5 font-mono font-black text-indigo-950">{extra.mdiImportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">22</td>
-                  <td className="p-0.5 font-mono">{extra.mdiExportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">23</td>
-                  <td className="p-0.5 font-mono">{extra.mdiImportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">24</td>
-                  <td className="p-0.5 font-mono">{extra.mdiExportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">25</td>
-                  <td className="p-0.5 font-mono">{extra.mdiImportT2}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">26</td>
-                  <td className="p-0.5 font-mono border-r-0">{extra.mdiExportT2}</td>
-                </tr>
-                {/* SUM ROW */}
-                <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
-                  <td className="p-1 px-2 text-left font-black bg-slate-50">Sum</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">31</td>
-                  <td className="p-0.5 font-mono font-black">{extra.sumImportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">32</td>
-                  <td className="p-0.5 font-mono">{extra.sumExportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">33</td>
-                  <td className="p-0.5 font-mono">{extra.sumImportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">34</td>
-                  <td className="p-0.5 font-mono">{extra.sumExportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">35</td>
-                  <td className="p-0.5 font-mono">{extra.sumImportT2}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">36</td>
-                  <td className="p-0.5 font-mono border-r-0">{extra.sumExportT2}</td>
-                </tr>
-                {/* RESET ROW */}
-                <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
-                  <td className="p-1 px-2 text-left font-black bg-slate-50">Reset</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">41</td>
-                  <td className="p-0.5 font-mono font-black">{extra.resetImportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">42</td>
-                  <td className="p-0.5 font-mono">{extra.resetExportTotal}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">43</td>
-                  <td className="p-0.5 font-mono">{extra.resetImportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">44</td>
-                  <td className="p-0.5 font-mono">{extra.resetExportT1}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">45</td>
-                  <td className="p-0.5 font-mono">{extra.resetImportT2}</td>
-                  <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">46</td>
-                  <td className="p-0.5 font-mono border-r-0">{extra.resetExportT2}</td>
-                </tr>
+                {report.meterType === 'three_phase_ct_pt' ? (
+                  <>
+                    {/* KWH ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">KWH</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">01</td>
+                      <td className="p-0.5 font-mono font-black">{extra.kwhImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">03</td>
+                      <td className="p-0.5 font-mono">{extra.kwhImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">05</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.kwhImportT2}</td>
+                    </tr>
+                    {/* KVARH ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">KVARH</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">11</td>
+                      <td className="p-0.5 font-mono font-black">{extra.kvarhImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">13</td>
+                      <td className="p-0.5 font-mono">{extra.kvarhImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">15</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.kvarhImportT2}</td>
+                    </tr>
+                    {/* MDI ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">MDI</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">21</td>
+                      <td className="p-0.5 font-mono font-black text-indigo-950">{extra.mdiImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">23</td>
+                      <td className="p-0.5 font-mono">{extra.mdiImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">25</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.mdiImportT2}</td>
+                    </tr>
+                    {/* SUM ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">Sum</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">31</td>
+                      <td className="p-0.5 font-mono font-black">{extra.sumImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">33</td>
+                      <td className="p-0.5 font-mono">{extra.sumImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">35</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.sumImportT2}</td>
+                    </tr>
+                    {/* RESET ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">Reset</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">41</td>
+                      <td className="p-0.5 font-mono font-black">{extra.resetImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">43</td>
+                      <td className="p-0.5 font-mono">{extra.resetImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">45</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.resetImportT2}</td>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    {/* KWH ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">KWH</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">01</td>
+                      <td className="p-0.5 font-mono font-black">{extra.kwhImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">02</td>
+                      <td className="p-0.5 font-mono">{extra.kwhExportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">03</td>
+                      <td className="p-0.5 font-mono">{extra.kwhImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">04</td>
+                      <td className="p-0.5 font-mono">{extra.kwhExportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">05</td>
+                      <td className="p-0.5 font-mono">{extra.kwhImportT2}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">06</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.kwhExportT2}</td>
+                    </tr>
+                    {/* KVARH ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">KVARH</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">11</td>
+                      <td className="p-0.5 font-mono font-black">{extra.kvarhImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">12</td>
+                      <td className="p-0.5 font-mono">{extra.kvarhExportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">13</td>
+                      <td className="p-0.5 font-mono">{extra.kvarhImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">14</td>
+                      <td className="p-0.5 font-mono">{extra.kvarhExportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">15</td>
+                      <td className="p-0.5 font-mono">{extra.kvarhImportT2}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">16</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.kvarhExportT2}</td>
+                    </tr>
+                    {/* MDI ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">MDI</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">21</td>
+                      <td className="p-0.5 font-mono font-black text-indigo-950">{extra.mdiImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">22</td>
+                      <td className="p-0.5 font-mono">{extra.mdiExportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">23</td>
+                      <td className="p-0.5 font-mono">{extra.mdiImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">24</td>
+                      <td className="p-0.5 font-mono">{extra.mdiExportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">25</td>
+                      <td className="p-0.5 font-mono">{extra.mdiImportT2}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">26</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.mdiExportT2}</td>
+                    </tr>
+                    {/* SUM ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">Sum</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">31</td>
+                      <td className="p-0.5 font-mono font-black">{extra.sumImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">32</td>
+                      <td className="p-0.5 font-mono">{extra.sumExportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">33</td>
+                      <td className="p-0.5 font-mono">{extra.sumImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">34</td>
+                      <td className="p-0.5 font-mono">{extra.sumExportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">35</td>
+                      <td className="p-0.5 font-mono">{extra.sumImportT2}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">36</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.sumExportT2}</td>
+                    </tr>
+                    {/* RESET ROW */}
+                    <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">
+                      <td className="p-1 px-2 text-left font-black bg-slate-50">Reset</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">41</td>
+                      <td className="p-0.5 font-mono font-black">{extra.resetImportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">42</td>
+                      <td className="p-0.5 font-mono">{extra.resetExportTotal}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">43</td>
+                      <td className="p-0.5 font-mono">{extra.resetImportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">44</td>
+                      <td className="p-0.5 font-mono">{extra.resetExportT1}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">45</td>
+                      <td className="p-0.5 font-mono">{extra.resetImportT2}</td>
+                      <td className="p-0.5 font-mono text-[9px] text-slate-500 bg-slate-50/50">46</td>
+                      <td className="p-0.5 font-mono border-r-0">{extra.resetExportT2}</td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
