@@ -61,6 +61,112 @@
     page-break-after: always !important;
     break-after: page !important;
   }
+
+  body.print-ledger-active #active-dynamic-view-viewport,
+  body.print-periodic-active #active-dynamic-view-viewport {
+    display: none !important;
+  }
+  
+  body.print-ledger-active #printable-ledger-overlay-container,
+  body.print-periodic-active #printable-periodic-overlay-container {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    z-index: auto !important;
+  }
+
+  body.print-ledger-active #printable-ledger-overlay-container > div,
+  body.print-periodic-active #printable-periodic-overlay-container > div {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    position: static !important;
+  }
+}
+
+/* Print-light-only forces light-mode rules even inside .dark parent containers */
+.print-light-only,
+.dark .print-light-only {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Force slate text colors inside print-light-only to remain dark and high contrast */
+.print-light-only .text-slate-950, .dark .print-light-only .text-slate-950,
+.print-light-only .text-slate-900, .dark .print-light-only .text-slate-900 {
+  color: #0f172a !important;
+}
+.print-light-only .text-slate-850, .dark .print-light-only .text-slate-850,
+.print-light-only .text-slate-800, .dark .print-light-only .text-slate-800 {
+  color: #1e293b !important;
+}
+.print-light-only .text-slate-700, .dark .print-light-only .text-slate-700 {
+  color: #334155 !important;
+}
+.print-light-only .text-slate-600, .dark .print-light-only .text-slate-600,
+.print-light-only .text-slate-500, .dark .print-light-only .text-slate-500 {
+  color: #475569 !important;
+}
+.print-light-only .text-slate-400, .dark .print-light-only .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Force specific colors */
+.print-light-only .text-indigo-900, .dark .print-light-only .text-indigo-900,
+.print-light-only .text-blue-900, .dark .print-light-only .text-blue-900,
+.print-light-only .text-indigo-800, .dark .print-light-only .text-indigo-800,
+.print-light-only .text-indigo-950, .dark .print-light-only .text-indigo-950 {
+  color: #1e1b4b !important; /* dark indigo-950 */
+}
+
+.print-light-only .text-indigo-600, .dark .print-light-only .text-indigo-600,
+.print-light-only .text-blue-600, .dark .print-light-only .text-blue-600,
+.print-light-only .text-indigo-700, .dark .print-light-only .text-indigo-700 {
+  color: var(--primary-color, #4f46e5) !important;
+}
+
+/* Force backgrounds inside print-light-only */
+.print-light-only .bg-white, .dark .print-light-only .bg-white {
+  background-color: #ffffff !important;
+}
+.print-light-only .bg-slate-50, .dark .print-light-only .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+.print-light-only .bg-slate-100, .dark .print-light-only .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+.print-light-only .bg-indigo-50, .dark .print-light-only .bg-indigo-50,
+.print-light-only .bg-blue-50, .dark .print-light-only .bg-blue-50 {
+  background-color: #e0e7ff !important;
+}
+
+/* Force borders inside print-light-only */
+.print-light-only .border-slate-200, .dark .print-light-only .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+.print-light-only .border-slate-300, .dark .print-light-only .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+.print-light-only .border-slate-350, .dark .print-light-only .border-slate-350 {
+  border-color: #cbd5e1 !important;
+}
+.print-light-only .border-slate-400, .dark .print-light-only .border-slate-400 {
+  border-color: #94a3b8 !important;
+}
+.print-light-only .border-slate-900, .dark .print-light-only .border-slate-900 {
+  border-color: #0f172a !important;
+}
+.print-light-only .divide-slate-200 > * + *, .dark .print-light-only .divide-slate-200 > * + * {
+  border-color: #e2e8f0 !important;
+}
+.print-light-only .divide-slate-300 > * + *, .dark .print-light-only .divide-slate-300 > * + * {
+  border-color: #cbd5e1 !important;
 }
 
 /* Dark mode universal container and typography overrides */

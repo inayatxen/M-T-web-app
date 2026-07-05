@@ -98,7 +98,7 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
         {/* Printable Canvas */}
         <div 
           id="printable-challan-canvas" 
-          className="mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 print:m-0"
+          className="print-light-only mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 print:m-0"
         >
           {/* Centered Watermark Logo */}
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none z-0">
@@ -348,7 +348,7 @@ export default function OutwardReportPDF({ record, records, onBack, title }: Out
       {/* Printable Ledger Canvas */}
       <div 
         id="printable-ledger-canvas" 
-        className="mx-auto bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-10 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 print:m-0"
+        className="print-light-only mx-auto bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-10 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 print:m-0"
       >
         {/* Centered Watermark Logo */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none z-0">

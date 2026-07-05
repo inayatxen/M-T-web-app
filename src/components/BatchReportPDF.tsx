@@ -100,7 +100,7 @@ export default function BatchReportPDF({ reports, onBack }: BatchReportPDFProps)
           return (
             <div 
               key={report.id}
-              className={`printable-batch-canvas mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 ${
+              className={`print-light-only printable-batch-canvas mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0 ${
                 idx < reports.length - 1 ? 'print-page-break' : ''
               }`}
             >

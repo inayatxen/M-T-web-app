@@ -96,7 +96,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
       ) : (
         <div 
           id="printable-certificate-canvas" 
-          className="mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
+          className="print-light-only mx-auto max-w-[800px] bg-white text-slate-900 border border-slate-300 shadow-xl p-8 sm:p-12 md:p-16 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
         >
           {/* Centered Watermark Logo */}
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">

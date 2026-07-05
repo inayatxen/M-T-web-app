@@ -78,6 +78,28 @@ export default function ReportsArchiveView({
   const [tabEndDate, setTabEndDate] = useState('');
   const [isTabulatedPrintOpen, setIsTabulatedPrintOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (isTabulatedPrintOpen) {
+      document.body.classList.add('print-ledger-active');
+    } else {
+      document.body.classList.remove('print-ledger-active');
+    }
+    return () => {
+      document.body.classList.remove('print-ledger-active');
+    };
+  }, [isTabulatedPrintOpen]);
+
+  React.useEffect(() => {
+    if (isPrintModalOpen) {
+      document.body.classList.add('print-periodic-active');
+    } else {
+      document.body.classList.remove('print-periodic-active');
+    }
+    return () => {
+      document.body.classList.remove('print-periodic-active');
+    };
+  }, [isPrintModalOpen]);
+
   // Periodic and Jurisdictional Report states
   const [repLevel, setRepLevel] = useState<'pesco' | 'circle' | 'division' | 'subdivision'>('pesco');
   const [repInterval, setRepInterval] = useState<'monthly' | 'quarterly' | 'half_annual' | 'annual'>('monthly');
@@ -1997,8 +2019,8 @@ export default function ReportsArchiveView({
 
             {/* Print Letterhead Modal Dialog */}
             {isPrintModalOpen && (
-              <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
-                <div className="bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-4xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
+              <div id="printable-periodic-overlay-container" className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-4xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
                   {/* Action Buttons inside modal (hidden on print) */}
                   <div className="absolute top-4 right-4 flex gap-2 print:hidden">
@@ -2558,8 +2580,8 @@ export default function ReportsArchiveView({
 
             {/* TABULATED PRINT LEADERSHIP OVERLAY MODAL */}
             {isTabulatedPrintOpen && (
-              <div className="fixed inset-0 z-50 bg-slate-900/65 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
-                <div className="bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-6xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
+              <div id="printable-ledger-overlay-container" className="fixed inset-0 z-50 bg-slate-900/65 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-6xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
                   {/* Action row at bottom/top inside print modal overlay (hidden on physical paper) */}
                   <div className="absolute top-4 right-4 flex gap-2 print:hidden z-10">

@@ -66,7 +66,7 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
     <div className="space-y-12 print:space-y-0 text-slate-900 mx-auto max-w-[850px] font-sans">
       {/* ================= PAGE 1 ================= */}
       <div 
-        className="bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
+        className="print-light-only bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
         style={{ pageBreakAfter: 'always' }}
       >
         {/* Centered Watermark Logo */}
@@ -536,7 +536,7 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
 
       {/* ================= PAGE 2 ================= */}
       <div 
-        className="bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
+        className="print-light-only bg-white border border-slate-350 shadow-xl p-8 sm:p-12 md:p-14 rounded-xl relative overflow-hidden print:border-0 print:shadow-none print:p-0"
       >
         {/* Centered Watermark Logo */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
