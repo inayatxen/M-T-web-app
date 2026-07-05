@@ -77,6 +77,7 @@ export default function ReportsArchiveView({
   const [tabStartDate, setTabStartDate] = useState('');
   const [tabEndDate, setTabEndDate] = useState('');
   const [isTabulatedPrintOpen, setIsTabulatedPrintOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (isTabulatedPrintOpen) {
@@ -110,7 +111,6 @@ export default function ReportsArchiveView({
   const [repFilterCircle, setRepFilterCircle] = useState<string>('all');
   const [repFilterDivision, setRepFilterDivision] = useState<string>('all');
   const [repFilterSubdivision, setRepFilterSubdivision] = useState<string>('all');
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   
   // Advanced search parameters
