@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FileText, 
   Search, 
@@ -2018,26 +2019,28 @@ export default function ReportsArchiveView({
             )}
 
             {/* Print Letterhead Modal Dialog */}
-            {isPrintModalOpen && (
+            {isPrintModalOpen && createPortal(
               <div id="printable-periodic-overlay-container" className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                {/* Action Buttons (Fixed at viewport bottom-right for accessibility) */}
+                <div className="fixed bottom-6 right-6 flex gap-2 print:hidden z-50">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-lg shadow-xl hover:shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Send to Printer</span>
+                  </button>
+                  <button
+                    onClick={() => setIsPrintModalOpen(false)}
+                    className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-sm rounded-lg shadow-xl transition-all border border-slate-200 cursor-pointer active:scale-95"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+
                 <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-4xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
-                  {/* Action Buttons inside modal (hidden on print) */}
-                  <div className="absolute bottom-4 right-4 flex gap-2 print:hidden">
-                    <button
-                      onClick={() => window.print()}
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded transition flex items-center gap-1.5"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Send to Printer</span>
-                    </button>
-                    <button
-                      onClick={() => setIsPrintModalOpen(false)}
-                      className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded transition border border-slate-300"
-                    >
-                      Close Preview
-                    </button>
-                  </div>
+                  {/* Action Buttons removed from here */}
 
                   {/* Printable Executive Letterhead */}
                   <div className="space-y-6 text-slate-850 font-serif p-2">
@@ -2187,7 +2190,8 @@ export default function ReportsArchiveView({
 
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
 
           </div>
@@ -2335,7 +2339,7 @@ export default function ReportsArchiveView({
                   <button
                     onClick={() => setIsTabulatedPrintOpen(true)}
                     disabled={tabFilteredTotal === 0}
-                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10.5px] rounded border border-indigo-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 duration-150"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-[#d90a0a] hover:bg-[#d90a0a]/90 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 duration-150"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Tabulated Ledger ({tabFilteredTotal})</span>
@@ -2579,28 +2583,30 @@ export default function ReportsArchiveView({
             </div>
 
             {/* TABULATED PRINT LEADERSHIP OVERLAY MODAL */}
-            {isTabulatedPrintOpen && (
+            {isTabulatedPrintOpen && createPortal(
               <div id="printable-ledger-overlay-container" className="fixed inset-0 z-50 bg-slate-900/65 dark:bg-slate-950/80 flex items-center justify-center p-3 animate-in fade-in duration-150 overflow-y-auto">
+                {/* Action Row (Fixed at viewport bottom-right for accessibility) */}
+                <div className="fixed bottom-6 right-6 flex gap-2 print:hidden z-50">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-lg shadow-xl hover:shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Send to Printer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTabulatedPrintOpen(false)}
+                    className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-sm rounded-lg shadow-xl transition-all border border-slate-200 cursor-pointer active:scale-95"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+
                 <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-6xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
-                  {/* Action row at bottom/top inside print modal overlay (hidden on physical paper) */}
-                  <div className="absolute bottom-4 right-4 flex gap-2 print:hidden z-10">
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Send to Printer</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsTabulatedPrintOpen(false)}
-                      className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded transition border border-slate-300 cursor-pointer active:scale-95"
-                    >
-                      Close Preview
-                    </button>
-                  </div>
+                  {/* Action row removed from here */}
 
                   {/* Header Letterhead for PESCO Official Regulatory Document */}
                   <div className="space-y-6 text-slate-950 font-serif p-2">
@@ -2704,7 +2710,7 @@ export default function ReportsArchiveView({
                               <td className="p-1.5 px-1.5 font-bold font-mono text-slate-950">{r.reportNumber}</td>
                               <td className="p-1.5 px-1.5 font-mono">{r.testDate || r.approvalDate}</td>
                               <td className="p-1.5 px-1.5 uppercase font-medium">
-                                <span className="font-extrabold block text-[9.5px] max-w-[130px] truncate">{r.consumerName}</span>
+                                <span className="font-extrabold block text-[9.5px]">{r.consumerName}</span>
                                 <span className="text-[8.5px] font-mono text-slate-600 block mt-0.5 font-mono">Acc: {r.accountNumber}</span>
                               </td>
                               <td className="p-1.5 px-1.5">
@@ -2767,7 +2773,8 @@ export default function ReportsArchiveView({
                   </div>
 
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
 
           </div>
