@@ -85,12 +85,12 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         {/* Title Header */}
         <div className="text-center pb-5 border-b-2 border-slate-900">
           <h1 className="text-sm font-black tracking-tight text-slate-900 uppercase leading-none underline underline-offset-[5px] decoration-2">
-            {report.meterType === 'three_phase_ct_pt'
+            {(report.meterType === 'three_phase_ct_pt' || report.meterType === 'three_phase_ct')
               ? 'CHECKING OF CONNECTION (IMPORT LT TOU) METERS'
               : 'CHECKING OF CONNECTION (IMPORT & EXPORT LT TOU) METERS'}
           </h1>
           <h1 className="text-sm font-black tracking-tight text-slate-900 uppercase leading-none underline underline-offset-[5px] decoration-2 mt-2">
-            {report.meterType === 'three_phase_ct_pt'
+            {(report.meterType === 'three_phase_ct_pt' || report.meterType === 'three_phase_ct')
               ? 'FOR MARDAN CIRCLE (M&T) MARDAN'
               : 'FOR NET METERING MARDAN CIRCLE (M&T) MARDAN'}
           </h1>
@@ -140,7 +140,7 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
         {/* Meter Particulars */}
         <div className="mt-8 space-y-3 pb-2 border-b border-slate-300">
           <h3 className="text-[11.5px] font-black underline uppercase text-slate-900 mb-2">
-            {report.meterType === 'three_phase_ct_pt'
+            {(report.meterType === 'three_phase_ct_pt' || report.meterType === 'three_phase_ct')
               ? '8. Import LT TOU Meter Particulars & Hardware Details.'
               : '8. Import & Export LT TOU Meter Particulars & Hardware Details.'}
           </h3>
@@ -183,7 +183,7 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
           <div className="mt-4 border-2 border-slate-900 overflow-hidden">
             <table className="w-full text-center border-collapse text-[10.5px]">
               <thead>
-                {report.meterType === 'three_phase_ct_pt' ? (
+                {(report.meterType === 'three_phase_ct_pt' || report.meterType === 'three_phase_ct') ? (
                   <tr className="bg-slate-50 border-b-2 border-slate-900 text-[10px] font-black uppercase text-slate-900 divide-x divide-slate-900">
                     <th className="p-1 px-2 text-left w-[22%]">Particulars</th>
                     <th className="p-1 w-[10%]">Code</th>
@@ -212,7 +212,7 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
                 )}
               </thead>
               <tbody className="divide-y divide-slate-900 font-bold text-slate-950">
-                {report.meterType === 'three_phase_ct_pt' ? (
+                {(report.meterType === 'three_phase_ct_pt' || report.meterType === 'three_phase_ct') ? (
                   <>
                     {/* KWH ROW */}
                     <tr className="divide-x divide-slate-900 h-7 text-[10.5px]">

@@ -272,60 +272,52 @@ export default function LoginView({
 
         <div className="p-6 space-y-6">
           
-          {/* SECURE TERMINAL ROLE SELECTOR */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
-              Select Authorized System Access Role
-            </h3>
-            
-            <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
-              {roleOptions.map((opt) => {
-                const isActive = activeRole === opt.role;
-                return (
-                  <div
-                    key={opt.role}
-                    id={`role-opt-${opt.role}`}
-                    onClick={() => {
-                      setActiveRole(opt.role);
-                      setErrorMsg('');
-                      setPassword('');
-                    }}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all duration-200 flex items-start gap-3 relative ${
-                      isActive 
-                        ? opt.activeColorClass 
-                        : 'border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <div className="mt-0.5">
-                      {isActive ? (
-                        <div className="w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full flex items-center justify-center animate-in scale-in duration-150">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                      ) : (
-                        <div className="w-4 h-4 border border-slate-300 dark:border-slate-700 rounded-full flex items-center justify-center bg-white dark:bg-slate-900" />
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className={`text-xs font-bold tracking-tight ${
-                          isActive ? 'text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'
-                        }`}>
-                          {opt.title}
-                        </span>
-                        <span className="text-[8.5px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                          {opt.badge}
-                        </span>
-                      </div>
-                      <p className="text-[10px] mt-1 text-slate-500 dark:text-slate-400 leading-snug">
-                        {opt.description}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* QUICK ACCOUNT SELECTOR DROPDOWN */}
+          <div className="space-y-2 p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl">
+            <label className="block text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-1.5 font-sans">
+              <User className="w-3.5 h-3.5" />
+              <span>Select Authorized Staff / Officer Account</span>
+            </label>
+            <select
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                setErrorMsg('');
+                
+                if (val === 'supervisor') {
+                  setActiveRole('circle_supervisor');
+                  setSupervisorEmail('supervisor.mardan@pesco.com.pk');
+                  setSupervisorName('Engr. Mardan Supervisor');
+                  setCircleCode('261');
+                  setPassword('supervisor123');
+                } else {
+                  const u = users.find(user => user.id === val);
+                  if (u) {
+                    setActiveRole(u.role);
+                    setSelectedUserId(u.id);
+                    setPassword(u.password || 'password123');
+                  }
+                }
+              }}
+              value={activeRole === 'circle_supervisor' ? 'supervisor' : selectedUserId}
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800 dark:text-slate-200 cursor-pointer"
+            >
+              <option value="" disabled>-- Choose an Account to Autofill Credentials --</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} — {roleOptions.find(o => o.role === u.role)?.title || u.role}
+                </option>
+              ))}
+              <option value="supervisor">
+                Engr. Mardan Supervisor — Circle Supervisor (Code 261)
+              </option>
+            </select>
+            <p className="text-[9px] text-slate-500 dark:text-slate-450 font-medium">
+              Selecting an account automatically switches the role, loads the verified profile, and populates the passcode.
+            </p>
           </div>
+
+
 
           <form onSubmit={handleLogin} className="border-t border-slate-100 dark:border-slate-800/80 pt-5 space-y-4">
             
