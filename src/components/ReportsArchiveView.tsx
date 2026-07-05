@@ -580,7 +580,7 @@ export default function ReportsArchiveView({
                 <button
                   type="button"
                   onClick={handleExportAreaData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-650 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e40e0e] hover:bg-[#e40e0e]/90 text-white font-extrabold text-[10.5px] rounded border border-[#93c200] hover:border-[#93c200]/90 shadow-xs transition-all active:scale-95 cursor-pointer"
                   title="Export styled Excel report containing filtered area metrics and certificate registry"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1569,7 +1569,7 @@ export default function ReportsArchiveView({
                   <button
                     onClick={handleExportPeriodicCSV}
                     disabled={summaryTotal === 0}
-                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-650 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-[#d90a0a] hover:bg-[#d90a0a]/90 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Export the filtered periodic regional breakdown and trace log directly to spreadsheet format"
                   >
                     <FileDown className="w-3.5 h-3.5" />
@@ -2023,7 +2023,7 @@ export default function ReportsArchiveView({
                 <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-4xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
                   {/* Action Buttons inside modal (hidden on print) */}
-                  <div className="absolute top-4 right-4 flex gap-2 print:hidden">
+                  <div className="absolute bottom-4 right-4 flex gap-2 print:hidden">
                     <button
                       onClick={() => window.print()}
                       className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded transition flex items-center gap-1.5"
@@ -2325,7 +2325,7 @@ export default function ReportsArchiveView({
                   <button
                     onClick={handleExportTabulatedCSV}
                     disabled={tabFilteredTotal === 0}
-                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-650 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-[#d90a0a] hover:bg-[#d90a0a]/90 text-white font-extrabold text-[10.5px] rounded border border-emerald-500/10 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Export currently filtered rows to spreadsheet form"
                   >
                     <FileDown className="w-3.5 h-3.5" />
@@ -2584,7 +2584,7 @@ export default function ReportsArchiveView({
                 <div className="print-light-only bg-white text-slate-900 p-8 rounded border border-slate-350 shadow-2xl max-w-6xl w-full relative space-y-6 my-8 print:border-none print:shadow-none print:p-0 print:my-0">
                   
                   {/* Action row at bottom/top inside print modal overlay (hidden on physical paper) */}
-                  <div className="absolute top-4 right-4 flex gap-2 print:hidden z-10">
+                  <div className="absolute bottom-4 right-4 flex gap-2 print:hidden z-10">
                     <button
                       type="button"
                       onClick={() => window.print()}
