@@ -237,7 +237,7 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         <div className="mb-8">
           <div className="bg-indigo-900/5 px-3 py-1.5 rounded border-l-4 border-indigo-900 mb-4">
             <h2 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
-              III. AS-FOUND RETRIEVED REGISTER READINGS
+              III. AS-FOUND REGISTER DIAL INDEXES (INWARD VS. TESTING)
             </h2>
           </div>
           <div className="overflow-hidden border border-slate-200 rounded-lg">
@@ -245,83 +245,102 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
               <thead>
                 <tr className="bg-indigo-50 text-indigo-950 font-bold border-b border-slate-200">
                   <th className="p-3">Register / Billing Parameter</th>
-                  <th className="p-3 text-right">As-Registered Raw Value</th>
+                  <th className="p-3 text-right">Inward Reading</th>
+                  <th className="p-3 text-right">Testing Reading</th>
+                  <th className="p-3 text-right">Retrieved Units</th>
                   <th className="p-3 text-right">Unit of Measure</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                 {report.meterType === 'single_phase' ? (
                   <tr>
-                    <td className="p-2.5 pl-3">Final Reading (Active Energy)</td>
-                    <td className="p-2.5 text-right font-mono font-bold text-indigo-905">{report.readings.kwhPeak}</td>
+                    <td className="p-2.5 pl-3">Active Energy (KWH Peak)</td>
+                    <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kwhPeak || '---'}</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-indigo-900">{report.readings?.kwhPeak || '0.00'}</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">{report.retrievedUnits?.kwhPeak || '0.00'}</td>
                     <td className="p-2.5 text-right text-slate-500">kWh</td>
                   </tr>
                 ) : (report.meterType === 'bi_directional_three_phase_whole' || report.meterType === 'bi_directional_ct_pt') ? (
                   <>
                     <tr className="bg-amber-50/50 font-bold">
-                      <td colSpan={3} className="p-2.5 pl-3 text-amber-900 uppercase">1 - Import Readings</td>
+                      <td colSpan={5} className="p-2.5 pl-3 text-amber-900 uppercase">1 - Import Readings</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy Consumption - Peak Hours (Import)</td>
-                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kwhPeak || report.readings.kwhPeak}</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy (Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kwhPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kwhPeak || report.readings?.kwhPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">{report.retrievedUnits?.kwhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy Consumption - Off-Peak Hours (Import)</td>
-                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kwhOffPeak || report.readings.kwhOffPeak}</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy (Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kwhOffPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kwhOffPeak || report.readings?.kwhOffPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">{report.retrievedUnits?.kwhOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy Consumption - Peak Hours (Import)</td>
-                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kvarhPeak || report.readings.kvarhPeak}</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy (Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kvarhPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kvarhPeak || report.readings?.kvarhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy Consumption - Off-Peak Hours (Import)</td>
-                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kvarhOffPeak || report.readings.kvarhOffPeak}</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy (Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kvarhOffPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono">{report.importReadings?.kvarhOffPeak || report.readings?.kvarhOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Maximum Demand Indicator (MDI) - Peak Hours (Import)</td>
-                      <td className="p-2.5 text-right font-mono text-indigo-900">{report.importReadings?.mdiPeak || report.readings.mdiPeak}</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Max Demand (MDI Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.mdiPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono text-indigo-900">{report.importReadings?.mdiPeak || report.readings?.mdiPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Maximum Demand Indicator (MDI) - Off-Peak Hours (Import)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Max Demand (MDI Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.mdiOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono text-indigo-900">{report.importReadings?.mdiOffPeak || report.readings.mdiOffPeak}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
-
                     <tr className="bg-rose-50/50 font-bold border-t border-slate-200">
-                      <td colSpan={3} className="p-2.5 pl-3 text-rose-900 uppercase">2 - Export Readings</td>
+                      <td colSpan={5} className="p-2.5 pl-3 text-rose-900 uppercase">2 - Export Readings</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy Consumption - Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy (Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.kwhPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono">{report.exportReadings?.kwhPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-rose-700 bg-rose-50/50">{report.retrievedExportUnits?.kwhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy Consumption - Off-Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Active Energy (Off-Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.kwhOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono">{report.exportReadings?.kwhOffPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-rose-700 bg-rose-50/50">{report.retrievedExportUnits?.kwhOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy Consumption - Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy (Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.kvarhPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono">{report.exportReadings?.kvarhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy Consumption - Off-Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Reactive Energy (Off-Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.kvarhOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono">{report.exportReadings?.kvarhOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Maximum Demand Indicator (MDI) - Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Max Demand (MDI Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.mdiPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono text-indigo-900">{report.exportReadings?.mdiPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
                     <tr className="bg-slate-50/30">
-                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Maximum Demand Indicator (MDI) - Off-Peak Hours (Export)</td>
+                      <td className="p-2.5 pl-5 text-slate-600 font-medium">Max Demand (MDI Off-Peak Export)</td>
+                      <td className="p-2.5 text-right font-mono text-rose-300">{report.inwardExportReadings?.mdiOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono text-indigo-900">{report.exportReadings?.mdiOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
@@ -329,32 +348,40 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
                 ) : (
                   <>
                     <tr>
-                      <td className="p-2.5 pl-3">Active Energy Consumption - Peak Hours</td>
-                      <td className="p-2.5 text-right font-mono">{report.readings.kwhPeak}</td>
+                      <td className="p-2.5 pl-3">Active Energy (Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kwhPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-indigo-900">{report.readings?.kwhPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">{report.retrievedUnits?.kwhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr className="bg-slate-50/50">
-                      <td className="p-2.5 pl-3">Active Energy Consumption - Off-Peak Hours</td>
-                      <td className="p-2.5 text-right font-mono">{report.readings.kwhOffPeak}</td>
+                      <td className="p-2.5 pl-3">Active Energy (Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kwhOffPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-indigo-900">{report.readings?.kwhOffPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">{report.retrievedUnits?.kwhOffPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kWh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-3">Reactive Energy Consumption - Peak Hours</td>
-                      <td className="p-2.5 text-right font-mono">{report.readings.kvarhPeak}</td>
+                      <td className="p-2.5 pl-3">Reactive Energy (Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kvarhPeak || '---'}</td>
+                      <td className="p-2.5 text-right font-mono">{report.readings?.kvarhPeak || '0.00'}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr className="bg-slate-50/50">
-                      <td className="p-2.5 pl-3">Reactive Energy Consumption - Off-Peak Hours</td>
+                      <td className="p-2.5 pl-3">Reactive Energy (Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.kvarhOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono">{report.readings.kvarhOffPeak}</td>
                       <td className="p-2.5 text-right text-slate-500">kVARh</td>
                     </tr>
                     <tr>
-                      <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Peak Hours</td>
+                      <td className="p-2.5 pl-3">Max Demand (MDI Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.mdiPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiPeak}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
                     <tr className="bg-slate-50/50">
-                      <td className="p-2.5 pl-3">Maximum Demand Indicator (MDI) - Off-Peak Hours</td>
+                      <td className="p-2.5 pl-3">Max Demand (MDI Off-Peak)</td>
+                      <td className="p-2.5 text-right font-mono text-slate-500">{report.inwardReadings?.mdiOffPeak || '---'}</td>
                       <td className="p-2.5 text-right font-mono text-indigo-900">{report.readings.mdiOffPeak}</td>
                       <td className="p-2.5 text-right text-slate-500">kW</td>
                     </tr>
@@ -365,11 +392,61 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
           </div>
         </div>
 
+        {/* 4. Retrieved Units Section */}
+        {report.retrievedUnits && (
+          <div className="mb-8 print:break-inside-avoid">
+            <div className="bg-emerald-900/5 px-3 py-1.5 rounded border-l-4 border-emerald-600 mb-4">
+              <h2 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                IV. CALCULATED RETRIEVED UNITS (CONSUMPTION SUMMARY)
+              </h2>
+            </div>
+            <div className="overflow-hidden border border-emerald-100 rounded-lg bg-emerald-50/20">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-emerald-100 text-emerald-950 font-bold border-b border-emerald-200">
+                    <th className="p-3">Energy Parameter</th>
+                    <th className="p-3 text-right">Inward Reading</th>
+                    <th className="p-3 text-right">Testing Reading</th>
+                    <th className="p-3 text-right bg-emerald-200">Retrieved Units</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-emerald-100 font-medium text-emerald-900 font-mono">
+                  <tr>
+                    <td className="p-2.5 pl-3 font-sans font-bold">Active Energy (KWH Peak)</td>
+                    <td className="p-2.5 text-right">{report.inwardReadings?.kwhPeak || '0.00'}</td>
+                    <td className="p-2.5 text-right">{report.readings?.kwhPeak || '0.00'}</td>
+                    <td className="p-2.5 text-right font-black bg-emerald-50">{report.retrievedUnits?.kwhPeak || '0.00'}</td>
+                  </tr>
+                  {report.meterType !== 'single_phase' && (
+                    <tr>
+                      <td className="p-2.5 pl-3 font-sans font-bold">Active Energy (KWH Off-Peak)</td>
+                      <td className="p-2.5 text-right">{report.inwardReadings?.kwhOffPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right">{report.readings?.kwhOffPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-black bg-emerald-50">{report.retrievedUnits?.kwhOffPeak || '0.00'}</td>
+                    </tr>
+                  )}
+                  {report.retrievedExportUnits && (
+                    <tr className="border-t-2 border-emerald-200">
+                      <td className="p-2.5 pl-3 font-sans font-bold text-rose-800">Export Energy (KWH Peak)</td>
+                      <td className="p-2.5 text-right">{report.inwardExportReadings?.kwhPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right">{report.exportReadings?.kwhPeak || '0.00'}</td>
+                      <td className="p-2.5 text-right font-black text-rose-900 bg-emerald-50">{report.retrievedExportUnits?.kwhPeak || '0.00'}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="p-3 bg-emerald-100/30 text-[9px] text-emerald-800 font-bold uppercase tracking-tight italic">
+                Note: Retrieved units represent the consumption recorded between Inward Registration and Laboratory Testing.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 5. Phase Accuracy Tests */}
-        <div className="mb-8">
+        <div className="mb-8 print:break-inside-avoid">
           <div className="bg-indigo-900/5 px-3 py-1.5 rounded border-l-4 border-indigo-900 mb-4">
             <h2 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
-              IV. PHASE COMPARATOR ACCURACY CHECK
+              V. PHASE COMPARATOR ACCURACY CHECK
             </h2>
           </div>
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-medium">
@@ -412,10 +489,10 @@ export default function ReportPDF({ report, onBack }: ReportPDFProps) {
         </div>
 
         {/* 6. Discrepancies and Findings */}
-        <div className="mb-10">
+        <div className="mb-10 print:break-inside-avoid">
           <div className="bg-indigo-900/5 px-3 py-1.5 rounded border-l-4 border-indigo-900 mb-4">
             <h2 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
-              V. PHYSICAL & TAMPER DISCREPANCY AUDIT
+              VI. PHYSICAL & TAMPER DISCREPANCY AUDIT
             </h2>
           </div>
           <div className="border border-slate-200 rounded-lg p-4 bg-white">

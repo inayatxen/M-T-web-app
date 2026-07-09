@@ -641,6 +641,49 @@ export default function TwoPageCTReport({ report }: TwoPageCTReportProps) {
             <span className="flex-1 border-b border-dotted border-slate-400 pb-0.5 font-extrabold text-slate-950 px-1 text-center">{extra.removedCtsRatio}</span>
           </div>
 
+          {/* 16-B. Retrieved Units Calculation Section */}
+          {report.retrievedUnits && (
+            <div className="space-y-2 pt-2 print:break-inside-avoid">
+              <span className="block underline uppercase font-black text-slate-900">16-B. Retrieved Units (Inward Register vs. Checking)</span>
+              <div className="border-2 border-emerald-900 overflow-hidden bg-emerald-50/20">
+                <table className="w-full text-center border-collapse text-[10.5px]">
+                  <thead>
+                    <tr className="bg-emerald-100 border-b-2 border-emerald-900 text-[10px] font-black uppercase text-emerald-900 divide-x divide-emerald-900">
+                      <th className="p-1 px-2 text-left w-[35%]">Parameter</th>
+                      <th className="p-1 w-[20%]">Inward</th>
+                      <th className="p-1 w-[20%]">Testing</th>
+                      <th className="p-1 border-r-0 w-[25%] bg-emerald-200">Retrieved</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-emerald-900 font-mono">
+                    <tr className="divide-x divide-emerald-900 h-6.5">
+                      <td className="p-1 px-2 text-left font-black font-sans uppercase">Active (KWH P)</td>
+                      <td className="p-0.5">{report.inwardReadings?.kwhPeak || '0.00'}</td>
+                      <td className="p-0.5">{report.readings?.kwhPeak || '0.00'}</td>
+                      <td className="p-0.5 font-black text-emerald-900 bg-emerald-50">{report.retrievedUnits?.kwhPeak || '0.00'}</td>
+                    </tr>
+                    {report.meterType !== 'single_phase' && (
+                      <tr className="divide-x divide-emerald-900 h-6.5">
+                        <td className="p-1 px-2 text-left font-black font-sans uppercase">Active (KWH OP)</td>
+                        <td className="p-0.5">{report.inwardReadings?.kwhOffPeak || '0.00'}</td>
+                        <td className="p-0.5">{report.readings?.kwhOffPeak || '0.00'}</td>
+                        <td className="p-0.5 font-black text-emerald-900 bg-emerald-50">{report.retrievedUnits?.kwhOffPeak || '0.00'}</td>
+                      </tr>
+                    )}
+                    {report.retrievedExportUnits && (
+                      <tr className="divide-x divide-emerald-900 h-6.5">
+                        <td className="p-1 px-2 text-left font-black font-sans uppercase text-rose-800">Export (KWH P)</td>
+                        <td className="p-0.5">{report.inwardExportReadings?.kwhPeak || '0.00'}</td>
+                        <td className="p-0.5">{report.exportReadings?.kwhPeak || '0.00'}</td>
+                        <td className="p-0.5 font-black text-rose-900 bg-emerald-50">{report.retrievedExportUnits?.kwhPeak || '0.00'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Observations & recommendations */}
           <div className="space-y-2 pt-2">
             <span className="block underline uppercase font-black text-slate-900">17. Observation & Recommendations / Remarks</span>

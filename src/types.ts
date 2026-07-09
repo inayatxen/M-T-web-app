@@ -76,6 +76,9 @@ export interface EquipmentReceipt {
   receivedBy: string;
   remarks?: string;
   fatherName?: string;
+  tariff?: string;
+  readings?: MeterReadings;
+  exportReadings?: MeterReadings;
 }
 
 export interface OutwardRecord {
@@ -253,9 +256,13 @@ export interface TestReport {
   serialNumber: string;
   installationDate: string;
   removalDate: string;
-  readings: MeterReadings;
+  readings: MeterReadings; // Testing readings
+  inwardReadings?: MeterReadings; // Inward readings
+  inwardExportReadings?: MeterReadings; // Inward export readings
   importReadings?: MeterReadings;
   exportReadings?: MeterReadings;
+  retrievedUnits?: MeterReadings;
+  retrievedExportUnits?: MeterReadings;
   accuracyTest: AccuracyTest;
   discrepancies: string[]; // ['Slow Meter', 'burnt', etc]
   otherDiscrepancyRemarks?: string;

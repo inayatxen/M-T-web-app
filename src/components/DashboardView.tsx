@@ -1458,11 +1458,11 @@ export default function DashboardView({
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-slate-400 font-mono">{rep.testDate}</span>
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                  rep.accuracyTest.passFail === 'Pass'
+                                  rep.accuracyTest?.passFail === 'Pass'
                                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400'
                                     : 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
                                 }`}>
-                                  {rep.accuracyTest.passFail} ({rep.accuracyTest.errorPercentage || rep.accuracyTest.accuracyPercentage})
+                                  {rep.accuracyTest?.passFail} ({rep.accuracyTest?.errorPercentage || rep.accuracyTest?.accuracyPercentage || 'N/A'})
                                 </span>
                               </div>
                             </div>
@@ -1478,15 +1478,15 @@ export default function DashboardView({
                                   <div className="grid grid-cols-3 gap-x-1 font-mono font-bold">
                                     <div>
                                       <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH Pk</span>
-                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhPeak || rep.readings.kwhPeak || '—'}</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhPeak || rep.readings?.kwhPeak || '—'}</span>
                                     </div>
                                     <div>
                                       <span className="text-slate-400 block text-[7px] uppercase font-bold">KWH OP</span>
-                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhOffPeak || rep.readings.kwhOffPeak || '—'}</span>
+                                      <span className="text-slate-800 dark:text-slate-200">{rep.importReadings?.kwhOffPeak || rep.readings?.kwhOffPeak || '—'}</span>
                                     </div>
                                     <div>
                                       <span className="text-slate-400 block text-[7px] uppercase font-bold">MDI Pk</span>
-                                      <span className="text-indigo-600 dark:text-indigo-400">{rep.importReadings?.mdiPeak || rep.readings.mdiPeak || '—'}</span>
+                                      <span className="text-indigo-600 dark:text-indigo-400">{rep.importReadings?.mdiPeak || rep.readings?.mdiPeak || '—'}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1516,23 +1516,23 @@ export default function DashboardView({
                               <div className="flex flex-wrap gap-x-6 gap-y-1.5 font-mono font-bold text-[10.5px]">
                                 <div>
                                   <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Active Energy</span>
-                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kwhPeak} kWh</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings?.kwhPeak || '—'} kWh</span>
                                 </div>
                                 <div>
                                   <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Off-Peak Active</span>
-                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kwhOffPeak || '—'} kWh</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings?.kwhOffPeak || '—'} kWh</span>
                                 </div>
                                 <div>
                                   <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Reactive</span>
-                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kvarhPeak || '—'} kVARh</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings?.kvarhPeak || '—'} kVARh</span>
                                 </div>
                                 <div>
                                   <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Off-Peak Reactive</span>
-                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings.kvarhOffPeak || '—'} kVARh</span>
+                                  <span className="text-slate-800 dark:text-slate-200">{rep.readings?.kvarhOffPeak || '—'} kVARh</span>
                                 </div>
                                 <div>
                                   <span className="text-slate-400 block text-[7.5px] uppercase font-bold tracking-wider">Peak Demand (MDI)</span>
-                                  <span className="text-indigo-600 dark:text-indigo-400">{rep.readings.mdiPeak || '—'} kW</span>
+                                  <span className="text-indigo-600 dark:text-indigo-400">{rep.readings?.mdiPeak || '—'} kW</span>
                                 </div>
                               </div>
                             )}

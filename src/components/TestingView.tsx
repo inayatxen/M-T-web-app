@@ -14,6 +14,8 @@ import {
   Search, 
   ShieldAlert, 
   CheckSquare, 
+  Database,
+  ClipboardCheck,
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -83,6 +85,48 @@ export default function TestingView({
   const [kvarhOffPeak, setKvarhOffPeak] = useState('');
   const [mdiPeak, setMdiPeak] = useState('');
   const [mdiOffPeak, setMdiOffPeak] = useState('');
+  
+  // Storage for inward readings to calculate "Retrieved Units"
+  const [inwardReadings, setInwardReadings] = useState<MeterReadings | null>(null);
+  const [bulkInwardText, setBulkInwardText] = useState("");
+  const [isBulkMode, setIsBulkMode] = useState(false);
+
+  // Bulk parser for Inward Readings
+  const handleBulkInwardParse = (text: string) => {
+    setBulkInwardText(text);
+    if (!text.trim()) return;
+
+    // Common format: KWH P: 123, KWH OP: 456, KVARH P: 789, KVARH OP: 012, MDI P: 12, MDI OP: 34
+    // Or just numbers separated by spaces/newlines/tabs
+    const values = text.match(/\d+(\.\d+)?/g);
+    if (values && values.length > 0) {
+      setInwardReadings({
+        kwhPeak: values[0] || "0.00",
+        kwhOffPeak: values[1] || "0.00",
+        kvarhPeak: values[2] || "0.00",
+        kvarhOffPeak: values[3] || "0.00",
+        mdiPeak: values[4] || "0.00",
+        mdiOffPeak: values[5] || "0.00",
+      });
+    }
+  };
+  const [inwardExportReadings, setInwardExportReadings] = useState<MeterReadings | null>(null);
+  const [bulkHardwareText, setBulkHardwareText] = useState("");
+  const [isBulkHardwareMode, setIsBulkHardwareMode] = useState(false);
+
+  // Bulk parser for Hardware Specifications
+  const handleBulkHardwareParse = (text: string) => {
+    setBulkHardwareText(text);
+    if (!text.trim()) return;
+
+    // Try to find patterns like MTR-XXXX or SN-XXXX or just tokens
+    const tokens = text.split(/[\s,]+/).filter(t => t.length > 2);
+    if (tokens.length >= 1) setMeterNumber(tokens[0].toUpperCase());
+    if (tokens.length >= 2) setSerialNumber(tokens[1].toUpperCase());
+    if (tokens.length >= 3) setManufacturer(tokens[2]);
+  };
+  const [retrievedUnits, setRetrievedUnits] = useState<MeterReadings | null>(null);
+  const [retrievedExportUnits, setRetrievedExportUnits] = useState<MeterReadings | null>(null);
 
   // Bi-Directional specific states
   const [importKwhPeak, setImportKwhPeak] = useState('');
@@ -230,8 +274,38 @@ export default function TestingView({
           setAccountNumber(matchedReceipt.consumerAccount || '');
           setConsumerName(matchedReceipt.consumerName || '');
           setNatureOfConnection(matchedReceipt.reasonForTesting || 'Routine Calibration');
-          setTariff(matchedReceipt.remarks?.includes('Commercial') ? 'A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)' : 'A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)');
+          setTariff(matchedReceipt.tariff || (matchedReceipt.remarks?.includes('Commercial') ? 'A-2a Commercial Non-ToU (Sanctioned load up to 5 kW)' : 'A-1a Domestic Non-ToU (Sanctioned load up to 5 kW)'));
           setFatherName(matchedReceipt.fatherName || 'Official Utility Custody');
+          
+          // Pre-fill readings if available from inward register/bulk import
+          if (matchedReceipt.readings) {
+            setKwhPeak(matchedReceipt.readings?.kwhPeak || '');
+            setKwhOffPeak(matchedReceipt.readings?.kwhOffPeak || '');
+            setKvarhPeak(matchedReceipt.readings?.kvarhPeak || '');
+            setKvarhOffPeak(matchedReceipt.readings?.kvarhOffPeak || '');
+            setMdiPeak(matchedReceipt.readings?.mdiPeak || '');
+            setMdiOffPeak(matchedReceipt.readings?.mdiOffPeak || '');
+            
+            // Mirror to bi-directional import fields as well
+            setImportKwhPeak(matchedReceipt.readings?.kwhPeak || '');
+            setImportKwhOffPeak(matchedReceipt.readings?.kwhOffPeak || '');
+            setImportKvarhPeak(matchedReceipt.readings?.kvarhPeak || '');
+            setImportKvarhOffPeak(matchedReceipt.readings?.kvarhOffPeak || '');
+            setImportMdiPeak(matchedReceipt.readings?.mdiPeak || '');
+            setImportMdiOffPeak(matchedReceipt.readings?.mdiOffPeak || '');
+
+            setInwardReadings(matchedReceipt.readings);
+          }
+          if (matchedReceipt.exportReadings) {
+            setExportKwhPeak(matchedReceipt.exportReadings.kwhPeak || '');
+            setExportKwhOffPeak(matchedReceipt.exportReadings.kwhOffPeak || '');
+            setExportKvarhPeak(matchedReceipt.exportReadings.kvarhPeak || '');
+            setExportKvarhOffPeak(matchedReceipt.exportReadings.kvarhOffPeak || '');
+            setExportMdiPeak(matchedReceipt.exportReadings.mdiPeak || '');
+            setExportMdiOffPeak(matchedReceipt.exportReadings.mdiOffPeak || '');
+
+            setInwardExportReadings(matchedReceipt.exportReadings);
+          }
         } else {
           // Custom consumer mapping based on preseeded receipts (if exist)
           if (match.meterNumber === 'MTR-102941') {
@@ -266,6 +340,25 @@ export default function TestingView({
       setManufacturer('');
       setAccountNumber('');
       setConsumerName('');
+      setFatherName('');
+      setKwhPeak('');
+      setKwhOffPeak('');
+      setKvarhPeak('');
+      setKvarhOffPeak('');
+      setMdiPeak('');
+      setMdiOffPeak('');
+      setImportKwhPeak('');
+      setImportKwhOffPeak('');
+      setImportKvarhPeak('');
+      setImportKvarhOffPeak('');
+      setImportMdiPeak('');
+      setImportMdiOffPeak('');
+      setExportKwhPeak('');
+      setExportKwhOffPeak('');
+      setExportKvarhPeak('');
+      setExportKvarhOffPeak('');
+      setExportMdiPeak('');
+      setExportMdiOffPeak('');
     }
   }, [selectedMeterId, meters, receipts]);
 
@@ -275,13 +368,41 @@ export default function TestingView({
       const matchReceipt = receipts.find(r => r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase());
       const matchMeter = meters.find(m => m.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase());
       
-      if (matchReceipt) {
-        setAccountNumber(matchReceipt.consumerAccount || '');
-        setConsumerName(matchReceipt.consumerName || '');
-        setSerialNumber(matchReceipt.serialNumber || '');
-        setManufacturer(matchReceipt.make || '');
-        setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
-      }
+        if (matchReceipt) {
+          setAccountNumber(matchReceipt.consumerAccount || '');
+          setConsumerName(matchReceipt.consumerName || '');
+          setSerialNumber(matchReceipt.serialNumber || '');
+          setManufacturer(matchReceipt.make || '');
+          setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
+          if (matchReceipt.tariff) setTariff(matchReceipt.tariff);
+
+          if (matchReceipt.readings) {
+            setKwhPeak(matchReceipt.readings?.kwhPeak || '');
+            setKwhOffPeak(matchReceipt.readings?.kwhOffPeak || '');
+            setKvarhPeak(matchReceipt.readings?.kvarhPeak || '');
+            setKvarhOffPeak(matchReceipt.readings?.kvarhOffPeak || '');
+            setMdiPeak(matchReceipt.readings?.mdiPeak || '');
+            setMdiOffPeak(matchReceipt.readings?.mdiOffPeak || '');
+            setImportKwhPeak(matchReceipt.readings?.kwhPeak || '');
+            setImportKwhOffPeak(matchReceipt.readings?.kwhOffPeak || '');
+            setImportKvarhPeak(matchReceipt.readings?.kvarhPeak || '');
+            setImportKvarhOffPeak(matchReceipt.readings?.kvarhOffPeak || '');
+            setImportMdiPeak(matchReceipt.readings?.mdiPeak || '');
+            setImportMdiOffPeak(matchReceipt.readings?.mdiOffPeak || '');
+
+            setInwardReadings(matchReceipt.readings);
+          }
+          if (matchReceipt.exportReadings) {
+            setExportKwhPeak(matchReceipt.exportReadings.kwhPeak || '');
+            setExportKwhOffPeak(matchReceipt.exportReadings.kwhOffPeak || '');
+            setExportKvarhPeak(matchReceipt.exportReadings.kvarhPeak || '');
+            setExportKvarhOffPeak(matchReceipt.exportReadings.kvarhOffPeak || '');
+            setExportMdiPeak(matchReceipt.exportReadings.mdiPeak || '');
+            setExportMdiOffPeak(matchReceipt.exportReadings.mdiOffPeak || '');
+
+            setInwardExportReadings(matchReceipt.exportReadings);
+          }
+        }
       if (matchMeter && matchMeter.nameplatePhotoUrl) {
         setNameplatePhotoUrl(matchMeter.nameplatePhotoUrl);
       }
@@ -298,6 +419,34 @@ export default function TestingView({
         setMeterNumber(matchReceipt.meterNumber || '');
         setManufacturer(matchReceipt.make || '');
         setNatureOfConnection(matchReceipt.reasonForTesting || 'Routine Calibration');
+        if (matchReceipt.tariff) setTariff(matchReceipt.tariff);
+
+        if (matchReceipt.readings) {
+          setKwhPeak(matchReceipt.readings?.kwhPeak || '');
+          setKwhOffPeak(matchReceipt.readings?.kwhOffPeak || '');
+          setKvarhPeak(matchReceipt.readings?.kvarhPeak || '');
+          setKvarhOffPeak(matchReceipt.readings?.kvarhOffPeak || '');
+          setMdiPeak(matchReceipt.readings?.mdiPeak || '');
+          setMdiOffPeak(matchReceipt.readings?.mdiOffPeak || '');
+          setImportKwhPeak(matchReceipt.readings?.kwhPeak || '');
+          setImportKwhOffPeak(matchReceipt.readings?.kwhOffPeak || '');
+          setImportKvarhPeak(matchReceipt.readings?.kvarhPeak || '');
+          setImportKvarhOffPeak(matchReceipt.readings?.kvarhOffPeak || '');
+          setImportMdiPeak(matchReceipt.readings?.mdiPeak || '');
+          setImportMdiOffPeak(matchReceipt.readings?.mdiOffPeak || '');
+
+          setInwardReadings(matchReceipt.readings);
+        }
+        if (matchReceipt.exportReadings) {
+          setExportKwhPeak(matchReceipt.exportReadings.kwhPeak || '');
+          setExportKwhOffPeak(matchReceipt.exportReadings.kwhOffPeak || '');
+          setExportKvarhPeak(matchReceipt.exportReadings.kvarhPeak || '');
+          setExportKvarhOffPeak(matchReceipt.exportReadings.kvarhOffPeak || '');
+          setExportMdiPeak(matchReceipt.exportReadings.mdiPeak || '');
+          setExportMdiOffPeak(matchReceipt.exportReadings.mdiOffPeak || '');
+
+          setInwardExportReadings(matchReceipt.exportReadings);
+        }
       }
       if (matchMeter && matchMeter.nameplatePhotoUrl) {
         setNameplatePhotoUrl(matchMeter.nameplatePhotoUrl);
@@ -384,6 +533,28 @@ export default function TestingView({
       mdiOffPeak: exportMdiOffPeak
     } : undefined;
 
+    // Calculate Retrieved Units (Current Reading - Inward Reading)
+    const calculateDiff = (curr: MeterReadings, prev: MeterReadings | null): MeterReadings => {
+      if (!prev) return { ...curr };
+      const diff = (c: string, p: string) => {
+        const cv = parseFloat(c) || 0;
+        const pv = parseFloat(p) || 0;
+        const result = cv - pv;
+        return result.toFixed(2);
+      };
+      return {
+        kwhPeak: diff(curr.kwhPeak, prev.kwhPeak),
+        kwhOffPeak: diff(curr.kwhOffPeak, prev.kwhOffPeak),
+        kvarhPeak: diff(curr.kvarhPeak, prev.kvarhPeak),
+        kvarhOffPeak: diff(curr.kvarhOffPeak, prev.kvarhOffPeak),
+        mdiPeak: diff(curr.mdiPeak, prev.mdiPeak),
+        mdiOffPeak: diff(curr.mdiOffPeak, prev.mdiOffPeak)
+      };
+    };
+
+    const retrievedUnitsData = calculateDiff(readings, inwardReadings);
+    const retrievedExportUnitsData = isBiDirectional && exportReadings ? calculateDiff(exportReadings, inwardExportReadings) : undefined;
+
     const accuracyTest: AccuracyTest = {
       accuracyPercentage: `${accuracyPercentage}%`,
       testLoad,
@@ -416,8 +587,12 @@ export default function TestingView({
       installationDate: approvalDate,
       removalDate: approvalDate,
       readings,
+      inwardReadings: inwardReadings || undefined,
+      inwardExportReadings: inwardExportReadings || undefined,
       importReadings,
       exportReadings,
+      retrievedUnits: retrievedUnitsData,
+      retrievedExportUnits: retrievedExportUnitsData,
       accuracyTest,
       discrepancies,
       otherDiscrepancyRemarks: otherDiscrepancyRemarks || undefined,
@@ -759,6 +934,43 @@ export default function TestingView({
               </div>
             </div>
 
+            {/* Persistent Inward Readings Banner (Read-Only) */}
+            {inwardReadings && (
+              <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-950/20 border-l-4 border-indigo-500 rounded-r-xl shadow-sm animate-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-300">
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Inward Register Readings (Locked)</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-indigo-600/70 bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded italic">Displayed read-only in each step</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-bold text-slate-500 uppercase">KWH Peak</p>
+                    <p className="text-sm font-black font-mono text-slate-900 dark:text-white leading-none">{inwardReadings.kwhPeak || '0.00'}</p>
+                  </div>
+                  {defaultCategoryFilter !== 'single_phase' && (
+                    <div className="space-y-0.5">
+                      <p className="text-[9px] font-bold text-slate-500 uppercase">KWH Off-Peak</p>
+                      <p className="text-sm font-black font-mono text-slate-900 dark:text-white leading-none">{inwardReadings.kwhOffPeak || '0.00'}</p>
+                    </div>
+                  )}
+                  {inwardExportReadings && (
+                    <>
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-bold text-rose-500 uppercase">Export P</p>
+                        <p className="text-sm font-black font-mono text-rose-700 leading-none">{inwardExportReadings.kwhPeak || '0.00'}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-bold text-rose-500 uppercase">Export OP</p>
+                        <p className="text-sm font-black font-mono text-rose-700 leading-none">{inwardExportReadings.kwhOffPeak || '0.00'}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* STEP 1: CONSUMER INFORMATION */}
             <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
               <button
@@ -788,36 +1000,6 @@ export default function TestingView({
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
                 <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">I. Consumer Account Profile Information</h4>
               </div>
-
-              {(() => {
-                const matchingReceipt = receipts.find(r => {
-                  const m = selectedMeterId ? meters.find(item => item.id === selectedMeterId) : null;
-                  if (m) {
-                    return r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
-                           r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase();
-                  }
-                  return (meterNumber && r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase()) ||
-                         (serialNumber && r.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
-                });
-
-                if (!matchingReceipt) return null;
-
-                return (
-                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/80 p-2.5 rounded-lg text-xs flex items-center justify-between text-emerald-800 dark:text-emerald-300 font-semibold animate-in fade-in duration-200">
-                    <span className="flex items-center gap-1.5">
-                      <BookmarkCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>
-                        Inward Data Carried Forward from Receipt:{' '}
-                        <span className="font-mono font-bold text-slate-800 dark:text-white">{matchingReceipt.receiptNumber}</span>
-                        {' '}({matchingReceipt.consumerName})
-                      </span>
-                    </span>
-                    <span className="text-[9px] font-black uppercase bg-emerald-600 text-white px-2 py-0.5 rounded tracking-wider shrink-0 ml-2">
-                      Active Linked
-                    </span>
-                  </div>
-                );
-              })()}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-slate-800">
                 <div>
@@ -959,53 +1141,190 @@ export default function TestingView({
             </button>
 
             <div className={`${activeStep === 2 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
-              <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
-                <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-                <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">II. Tested Meter Specifications</h4>
+              <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
+                  <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">II. Tested Meter Specifications</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkHardwareMode(!isBulkHardwareMode)}
+                  className={`text-[9px] font-bold px-2 py-1 rounded transition-colors uppercase tracking-tight ${
+                    isBulkHardwareMode 
+                      ? 'bg-indigo-600 text-white shadow-sm' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {isBulkHardwareMode ? 'Switch to Manual Entry' : 'Bulk Paste Specs'}
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Target Number *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. MTR-982103"
-                    value={meterNumber}
-                    onChange={(e) => setMeterNumber(e.target.value.toUpperCase())}
-                    className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-indigo-950 uppercase"
-                    required
+              {isBulkHardwareMode ? (
+                <div className="bg-indigo-50/30 p-4 rounded-xl border border-indigo-100 space-y-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ClipboardCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <label className="text-[10px] font-bold text-indigo-900 uppercase">Paste Specs (Meter#, SN, Make)</label>
+                  </div>
+                  <textarea
+                    value={bulkHardwareText}
+                    onChange={(e) => handleBulkHardwareParse(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. MTR-982103 SN-882103 Holley"
+                    className="w-full text-xs font-mono p-3 bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none"
                   />
+                  <p className="text-[9px] text-slate-500 italic">
+                    Format: Meter Number, Serial Number, Make (Separated by spaces or commas)
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Warp / Serial Code:</label>
-                  <input
-                    type="text"
-                    placeholder="SN-...."
-                    value={serialNumber}
-                    onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
-                    className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
-                    required
-                  />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Target Number *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MTR-982103"
+                      value={meterNumber}
+                      onChange={(e) => setMeterNumber(e.target.value.toUpperCase())}
+                      className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg font-bold text-indigo-950 uppercase"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Warp / Serial Code:</label>
+                    <input
+                      type="text"
+                      placeholder="SN-...."
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
+                      className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Make</label>
+                    <input
+                      type="text"
+                      placeholder="Make / Brand"
+                      value={manufacturer}
+                      onChange={(e) => setManufacturer(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Testing Date</label>
+                    <input
+                      type="date"
+                      value={approvalDate}
+                      onChange={(e) => setApprovalDate(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-bold"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Meter Make</label>
-                  <input
-                    type="text"
-                    placeholder="Make / Brand"
-                    value={manufacturer}
-                    onChange={(e) => setManufacturer(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
-                  />
+              )}
+
+              {/* Inward Register Readings Section */}
+              <div className="mt-6 border-t border-slate-100 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-indigo-600" />
+                    <h5 className="text-[11px] font-black uppercase text-indigo-950 tracking-wider">Inward Register Readings</h5>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsBulkMode(!isBulkMode)}
+                      className={`text-[9px] font-bold px-2 py-1 rounded transition-colors uppercase tracking-tight ${
+                        isBulkMode 
+                          ? 'bg-indigo-600 text-white shadow-sm' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {isBulkMode ? 'Switch to Manual Entry' : 'Use Bulk Paste Tool'}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Testing Date</label>
-                  <input
-                    type="date"
-                    value={approvalDate}
-                    onChange={(e) => setApprovalDate(e.target.value)}
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-bold"
-                  />
-                </div>
+
+                {(() => {
+                  const matchingReceipt = receipts.find(r => {
+                    const m = selectedMeterId ? meters.find(item => item.id === selectedMeterId) : null;
+                    if (m) {
+                      return r.meterNumber.toUpperCase() === m.meterNumber.toUpperCase() ||
+                             r.serialNumber.toUpperCase() === m.serialNumber.toUpperCase();
+                    }
+                    return (meterNumber && r.meterNumber.toUpperCase() === meterNumber.trim().toUpperCase()) ||
+                           (serialNumber && r.serialNumber.toUpperCase() === serialNumber.trim().toUpperCase());
+                  });
+
+                  return (
+                    <div className="space-y-4">
+                      {matchingReceipt && !isBulkMode && (
+                        <div className="bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-800/40 p-2.5 rounded-xl flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400">
+                              Data linked from Receipt #{matchingReceipt.receiptNumber}
+                            </span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if (matchingReceipt.readings) {
+                                setInwardReadings(matchingReceipt.readings);
+                              }
+                            }}
+                            className="text-[9px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded font-black uppercase hover:bg-emerald-200"
+                          >
+                            Reset to Receipt Data
+                          </button>
+                        </div>
+                      )}
+
+                      {isBulkMode ? (
+                        <div className="bg-indigo-50/30 p-4 rounded-xl border border-indigo-100 space-y-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <ClipboardCheck className="w-3.5 h-3.5 text-indigo-600" />
+                            <label className="text-[10px] font-bold text-indigo-900 uppercase">Paste Readings (Raw Text)</label>
+                          </div>
+                          <textarea
+                            value={bulkInwardText}
+                            onChange={(e) => handleBulkInwardParse(e.target.value)}
+                            rows={3}
+                            placeholder="Paste your readings here... (e.g. 123.45 678.90 ...)"
+                            className="w-full text-xs font-mono p-3 bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                          />
+                          <p className="text-[9px] text-slate-500 italic">
+                            Format: KWH Peak, KWH Off-Peak, KVARH Peak, KVARH Off-Peak, MDI Peak, MDI Off-Peak (Space or Comma separated)
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 md:grid-cols-6 gap-4">
+                          {[
+                            { key: 'kwhPeak', label: 'KWH Peak', show: true },
+                            { key: 'kwhOffPeak', label: 'KWH Off-Peak', show: defaultCategoryFilter !== 'single_phase' },
+                            { key: 'kvarhPeak', label: 'KVARH Peak', show: defaultCategoryFilter !== 'single_phase' },
+                            { key: 'kvarhOffPeak', label: 'KVARH Off-Peak', show: defaultCategoryFilter !== 'single_phase' },
+                            { key: 'mdiPeak', label: 'MDI Peak', show: defaultCategoryFilter !== 'single_phase' },
+                            { key: 'mdiOffPeak', label: 'MDI Off-Peak', show: defaultCategoryFilter !== 'single_phase' }
+                          ].filter(i => i.show).map((item) => (
+                            <div key={item.key}>
+                              <label className="block text-[9px] font-black text-slate-500 mb-1 uppercase tracking-wider">{item.label}</label>
+                              <input
+                                type="text"
+                                value={(inwardReadings as any)?.[item.key] || ''}
+                                onChange={(e) => setInwardReadings(prev => ({ 
+                                  ...(prev || { kwhPeak: '', kwhOffPeak: '', kvarhPeak: '', kvarhOffPeak: '', mdiPeak: '', mdiOffPeak: '' }), 
+                                  [item.key]: e.target.value 
+                                }))}
+                                className="w-full text-[10px] p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded font-mono font-bold text-indigo-950 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Navigation Actions for Step 2 */}
@@ -1049,8 +1368,8 @@ export default function TestingView({
                   activeStep === 3 ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}>III</span>
                 <div>
-                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">III. As-Found Register Dial Indexes</h3>
-                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Active/Reactive energy consumption and demand logs</p>
+                  <h3 className="text-xs font-black uppercase text-indigo-950 dark:text-white leading-tight">III. Testing Phase Register Dial Indexes</h3>
+                  <p className="text-[9px] text-slate-400 leading-none mt-0.5 font-semibold">Active/Reactive energy consumption recorded during laboratory testing</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1064,7 +1383,7 @@ export default function TestingView({
             <div className={`${activeStep === 3 ? 'p-4 sm:p-5 space-y-4' : 'hidden'} animate-in fade-in duration-200`}>
               <div className="flex items-center gap-1.5 border-b border-indigo-100 pb-2">
                 <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-                <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">III. As-Found Register Dial Indexes</h4>
+                <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider">III. Testing Phase Register Dial Indexes</h4>
               </div>
 
               {defaultCategoryFilter === 'single_phase' ? (
@@ -1223,6 +1542,56 @@ export default function TestingView({
                       </div>
                     </div>
                   </div>
+
+                  {/* Retrieved Units Display for Bi-Directional */}
+                  {inwardReadings && (
+                    <div className="p-4 bg-emerald-50/40 dark:bg-emerald-950/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Gauge className="w-4 h-4 text-emerald-600" />
+                        <h5 className="text-[11px] font-black uppercase text-emerald-950 dark:text-emerald-400 tracking-wider">Consumption Audit (Inward vs. Final Testing)</h5>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px] text-center border-collapse">
+                          <thead>
+                            <tr className="bg-emerald-100/50 text-emerald-900 font-bold uppercase tracking-tighter">
+                              <th className="p-2 text-left border border-emerald-100">Parameter</th>
+                              <th className="p-2 border border-emerald-100">Inward Reading</th>
+                              <th className="p-2 border border-emerald-100">Testing Reading</th>
+                              <th className="p-2 border border-emerald-100 bg-emerald-200">Retrieved Units</th>
+                            </tr>
+                          </thead>
+                          <tbody className="font-mono">
+                            <tr className="border-b border-emerald-100">
+                              <td className="p-2 text-left font-sans font-bold border border-emerald-100">Import KWH P</td>
+                              <td className="p-2 border border-emerald-100">{inwardReadings.kwhPeak}</td>
+                              <td className="p-2 border border-emerald-100">{importKwhPeak || '0'}</td>
+                              <td className="p-2 border border-emerald-100 bg-emerald-50 font-black text-emerald-700">
+                                {(parseFloat(importKwhPeak || '0') - parseFloat(inwardReadings.kwhPeak || '0')).toFixed(2)}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-emerald-100">
+                              <td className="p-2 text-left font-sans font-bold border border-emerald-100">Import KWH OP</td>
+                              <td className="p-2 border border-emerald-100">{inwardReadings.kwhOffPeak}</td>
+                              <td className="p-2 border border-emerald-100">{importKwhOffPeak || '0'}</td>
+                              <td className="p-2 border border-emerald-100 bg-emerald-50 font-black text-emerald-700">
+                                {(parseFloat(importKwhOffPeak || '0') - parseFloat(inwardReadings.kwhOffPeak || '0')).toFixed(2)}
+                              </td>
+                            </tr>
+                            {inwardExportReadings && (
+                              <tr>
+                                <td className="p-2 text-left font-sans font-bold border border-emerald-100 text-rose-800">Export KWH P</td>
+                                <td className="p-2 border border-emerald-100">{inwardExportReadings.kwhPeak}</td>
+                                <td className="p-2 border border-emerald-100">{exportKwhPeak || '0'}</td>
+                                <td className="p-2 border border-emerald-100 bg-rose-50/50 font-black text-rose-700">
+                                  {(parseFloat(exportKwhPeak || '0') - parseFloat(inwardExportReadings.kwhPeak || '0')).toFixed(2)}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono">
@@ -1285,6 +1654,48 @@ export default function TestingView({
                       className="w-full text-xs p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg font-black text-indigo-900"
                       required
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Retrieved Units Display for Single/Three Phase */}
+              {inwardReadings && (
+                <div className="p-4 bg-emerald-50/30 rounded-xl border border-emerald-100 space-y-4 mt-4">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="w-4 h-4 text-emerald-600" />
+                    <h5 className="text-[11px] font-black uppercase text-emerald-950 tracking-wider">Consumption Audit (Inward vs. Final Testing)</h5>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px] text-center border-collapse">
+                      <thead>
+                        <tr className="bg-emerald-100/50 text-emerald-900 font-bold uppercase tracking-tighter">
+                          <th className="p-2 text-left border border-emerald-100">Parameter</th>
+                          <th className="p-2 border border-emerald-100">Inward Reading</th>
+                          <th className="p-2 border border-emerald-100">Testing Reading</th>
+                          <th className="p-2 border border-emerald-100 bg-emerald-200">Retrieved Units</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-mono">
+                        <tr className="border-b border-emerald-100">
+                          <td className="p-2 text-left font-sans font-bold border border-emerald-100">KWH Peak</td>
+                          <td className="p-2 border border-emerald-100">{inwardReadings.kwhPeak}</td>
+                          <td className="p-2 border border-emerald-100">{kwhPeak || '0'}</td>
+                          <td className="p-2 border border-emerald-100 bg-emerald-50 font-black text-emerald-700">
+                            {(parseFloat(kwhPeak || '0') - parseFloat(inwardReadings.kwhPeak || '0')).toFixed(2)}
+                          </td>
+                        </tr>
+                        {defaultCategoryFilter !== 'single_phase' && (
+                          <tr className="border-b border-emerald-100">
+                            <td className="p-2 text-left font-sans font-bold border border-emerald-100">KWH Off-Peak</td>
+                            <td className="p-2 border border-emerald-100">{inwardReadings.kwhOffPeak}</td>
+                            <td className="p-2 border border-emerald-100">{kwhOffPeak || '0'}</td>
+                            <td className="p-2 border border-emerald-100 bg-emerald-50 font-black text-emerald-700">
+                              {(parseFloat(kwhOffPeak || '0') - parseFloat(inwardReadings.kwhOffPeak || '0')).toFixed(2)}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}

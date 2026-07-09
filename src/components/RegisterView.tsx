@@ -30,12 +30,15 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Cpu,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import QRScannerModal from './QRScannerModal';
 import { PhotoCapture } from './PhotoCapture';
 import { read, utils, write } from 'xlsx';
-import { EquipmentReceipt, MeterCategory, Meter } from '../types';
+import { EquipmentReceipt, MeterCategory, Meter, MeterReadings } from '../types';
 import { parseAccountNumber, getCircleName, getDivisionName, getSubdivisionName, PESCO_HIERARCHY } from '../utils';
 
 const mapMeterCategory = (rawType: string): MeterCategory => {
@@ -73,9 +76,12 @@ interface ParsedBulkRow {
   consumerAccount: string;
   consumerName: string;
   fatherName: string;
+  tariff: string;
   meterType: MeterCategory;
   meterNumber: string;
   readings: string;
+  structuredReadings?: MeterReadings;
+  structuredExportReadings?: MeterReadings;
   serialNumber: string;
   make: string;
   reasonForTesting: string;
@@ -84,7 +90,7 @@ interface ParsedBulkRow {
   errors: string[];
 }
 
-const parseBulkInput = (text: string): ParsedBulkRow[] => {
+const parseBulkInput = (text: string, targetType: MeterCategory | 'all' = 'all'): ParsedBulkRow[] => {
   if (!text.trim()) return [];
   const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
   const results: ParsedBulkRow[] = [];
@@ -136,13 +142,99 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
     const consumerAccountRaw = (parts[0] || '').trim();
     const consumerName = (parts[1] || '').trim();
     const fatherName = (parts[2] || '').trim();
-    const meterTypeRaw = (parts[3] || '').trim();
-    const meterNumber = (parts[4] || '').trim();
-    const readings = (parts[5] || '').trim();
-    const serialNumber = (parts[6] || '').trim();
-    const make = (parts[7] || '').trim();
-    const reasonForTesting = (parts[8] || '').trim();
-    const receivedFrom = (parts[9] || '').trim();
+    const tariff = (parts[3] || '').trim();
+    const meterTypeRaw = (parts[4] || '').trim();
+    const meterNumber = (parts[5] || '').trim();
+    
+    const meterType = targetType !== 'all' ? targetType : mapMeterCategory(meterTypeRaw);
+    
+    let readings = '';
+    let structuredReadings: MeterReadings | undefined = undefined;
+    let structuredExportReadings: MeterReadings | undefined = undefined;
+    let serialNumber = '';
+    let make = '';
+    let reasonForTesting = '';
+    let receivedFrom = '';
+
+    // Smart parsing based on targetType or column count
+    if (targetType === 'single_phase' || (targetType === 'all' && parts.length <= 12 && parts.length > 7)) {
+      // Single Phase Format: Account, Name, Father, Tariff, Type, MeterNo, Reading, Serial, Make, Reason, Division
+      readings = (parts[6] || '').trim();
+      serialNumber = (parts[7] || '').trim();
+      make = (parts[8] || '').trim();
+      reasonForTesting = (parts[9] || '').trim();
+      receivedFrom = (parts[10] || '').trim();
+
+      structuredReadings = {
+        kwhPeak: readings || '0',
+        kwhOffPeak: '0',
+        kvarhPeak: '0',
+        kvarhOffPeak: '0',
+        mdiPeak: '0',
+        mdiOffPeak: '0'
+      };
+    } else if (targetType.includes('bi_directional') || (targetType === 'all' && parts.length >= 18)) {
+      // Bi-Directional Format: 12 readings (6 Imp, 6 Exp)
+      const kwhP = (parts[6] || '').trim();
+      const kwhOP = (parts[7] || '').trim();
+      const kvarhP = (parts[8] || '').trim();
+      const kvarhOP = (parts[9] || '').trim();
+      const mdiP = (parts[10] || '').trim();
+      const mdiOP = (parts[11] || '').trim();
+
+      const ekwhP = (parts[12] || '').trim();
+      const ekwhOP = (parts[13] || '').trim();
+      const ekvarhP = (parts[14] || '').trim();
+      const ekvarhOP = (parts[15] || '').trim();
+      const emdiP = (parts[16] || '').trim();
+      const emdiOP = (parts[17] || '').trim();
+
+      serialNumber = (parts[18] || '').trim();
+      make = (parts[19] || '').trim();
+      reasonForTesting = (parts[20] || '').trim();
+      receivedFrom = (parts[21] || '').trim();
+
+      readings = kwhP;
+      structuredReadings = {
+        kwhPeak: kwhP || '0',
+        kwhOffPeak: kwhOP || '0',
+        kvarhPeak: kvarhP || '0',
+        kvarhOffPeak: kvarhOP || '0',
+        mdiPeak: mdiP || '0',
+        mdiOffPeak: mdiOP || '0'
+      };
+      structuredExportReadings = {
+        kwhPeak: ekwhP || '0',
+        kwhOffPeak: ekwhOP || '0',
+        kvarhPeak: ekvarhP || '0',
+        kvarhOffPeak: ekvarhOP || '0',
+        mdiPeak: emdiP || '0',
+        mdiOffPeak: emdiOP || '0'
+      };
+    } else {
+      // Three Phase Format (6 readings)
+      const kwhP = (parts[6] || '').trim();
+      const kwhOP = (parts[7] || '').trim();
+      const kvarhP = (parts[8] || '').trim();
+      const kvarhOP = (parts[9] || '').trim();
+      const mdiP = (parts[10] || '').trim();
+      const mdiOP = (parts[11] || '').trim();
+
+      serialNumber = (parts[12] || '').trim();
+      make = (parts[13] || '').trim();
+      reasonForTesting = (parts[14] || '').trim();
+      receivedFrom = (parts[15] || '').trim();
+
+      readings = kwhP;
+      structuredReadings = {
+        kwhPeak: kwhP || '0',
+        kwhOffPeak: kwhOP || '0',
+        kvarhPeak: kvarhP || '0',
+        kvarhOffPeak: kvarhOP || '0',
+        mdiPeak: mdiP || '0',
+        mdiOffPeak: mdiOP || '0'
+      };
+    }
 
     const digitsOnlyObj = consumerAccountRaw.replace(/\D/g, '');
     if (!consumerAccountRaw) {
@@ -175,17 +267,18 @@ const parseBulkInput = (text: string): ParsedBulkRow[] => {
       errors.push('Testing Reason missing');
     }
 
-    const meterType = mapMeterCategory(meterTypeRaw);
-
     results.push({
       index: idx + (isHeader ? 1 : 1),
       rawText: line,
       consumerAccount: consumerAccountRaw,
       consumerName,
       fatherName,
+      tariff,
       meterType,
       meterNumber,
       readings,
+      structuredReadings,
+      structuredExportReadings,
       serialNumber,
       make,
       reasonForTesting,
@@ -245,28 +338,60 @@ export default function RegisterView({
   
   // Intake Form Mode configuration: Single record entry vs Bulk intake sheets import
   const [formMode, setFormMode] = useState<'single' | 'bulk'>('single');
+  const [bulkTargetType, setBulkTargetType] = useState<MeterCategory | 'all'>('single_phase');
   const [bulkText, setBulkText] = useState('');
 
   const downloadExcelTemplate = () => {
     try {
-      const headers = [
-        [
-          'Consumer Account Number (14 Digits) *',
-          'Consumer Primary Name *',
-          'Father / Guardian Name *',
-          'Meter Target Type (single_phase / three_phase_whole / three_phase_ct / three_phase_ct_pt / bi_directional_three_phase_whole / bi_directional_ct_pt / smart) *',
-          'Meter ID / Number *',
-          'Readings',
-          'Warp / Serial Code:',
-          'Manufacturer Make *',
-          'Testing Reason *',
-          'Origin Division Received From'
-        ]
+      let headers: string[][] = [];
+      let sampleData: string[][] = [];
+      
+      const baseHeaders = [
+        'Consumer Account Number (14 Digits) *',
+        'Consumer Primary Name *',
+        'Father / Guardian Name *',
+        'Tariff *',
+        'Meter Target Type *',
+        'Meter ID / Number *'
       ];
-      const sampleData = [
-        ['01263110083301', 'Blue Ridge Textiles Ltd', 'Haji Waris Khan', 'single_phase', 'MTR-102941', '12845.2', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II'],
-        ['02334881099234', 'Farhan Brothers Rice Mill', 'Muhammad Farhan', 'three_phase_whole', 'MTR-503921', '45812.9', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge High Reading', 'Peshawar Cantt Division']
+      
+      const tailHeaders = [
+        'Warp / Serial Code:',
+        'Manufacturer Make *',
+        'Testing Reason *',
+        'Origin Division Received From'
       ];
+
+      if (bulkTargetType === 'single_phase') {
+        headers = [[...baseHeaders, 'KWH Reading (Single) *', ...tailHeaders]];
+        sampleData = [['01263110083301', 'Blue Ridge Textiles Ltd', 'Haji Waris Khan', 'A-1a(01) Domestic', 'single_phase', 'MTR-102941', '12845.2', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II']];
+      } else if (bulkTargetType.includes('bi_directional')) {
+        headers = [[...baseHeaders, 
+          'KWH Peak (Imp) *', 'KWH Off Peak (Imp)', 'KVARH Peak (Imp)', 'KVARH Off Peak (Imp)', 'MDI Peak (kW) (Imp)', 'MDI Off Peak (kW) (Imp)',
+          'KWH Peak (Exp) *', 'KWH Off Peak (Exp)', 'KVARH Peak (Exp)', 'KVARH Off Peak (Exp)', 'MDI Peak (kW) (Exp)', 'MDI Off Peak (kW) (Exp)',
+          ...tailHeaders
+        ]];
+        sampleData = [['03112998412233', 'Lucky Cement Ind.', 'Ind. Govt.', 'B-3 Industrial', 'bi_directional_ct_pt', 'MTR-990021', '5500.1', '5100.2', '450.5', '400.1', '150.2', '110.4', '2200.5', '2100.2', '180.4', '160.1', '60.5', '45.2', 'SN-LUCKY-99', 'Microtech', 'Net Metering Audit', 'Kohat Division']];
+      } else if (bulkTargetType === 'all') {
+        headers = [[
+          ...baseHeaders,
+          'KWH Peak (Imp/Single) *', 'KWH Off Peak (Imp)', 'KVARH Peak (Imp)', 'KVARH Off Peak (Imp)', 'MDI Peak (kW) (Imp)', 'MDI Off Peak (kW) (Imp)',
+          'KWH Peak (Exp)', 'KWH Off Peak (Exp)', 'KVARH Peak (Exp)', 'KVARH Off Peak (Exp)', 'MDI Peak (kW) (Exp)', 'MDI Off Peak (kW) (Exp)',
+          ...tailHeaders
+        ]];
+        sampleData = [
+          ['01263110083301', 'Blue Ridge Textiles Ltd', 'Haji Waris Khan', 'A-1a(01) Domestic', 'single_phase', 'MTR-102941', '12845.2', '', '', '', '', '', '', '', '', '', '', 'SN-109281-B', 'Landis+Gyr', 'Billing Dispute', 'Mardan Division-II'],
+          ['02334881099234', 'Farhan Brothers Rice Mill', 'Muhammad Farhan', 'A-2b(02) Commercial', 'three_phase_whole', 'MTR-503921', '45812.9', '42100.5', '1280.4', '1100.2', '12.5', '8.4', '', '', '', '', '', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge', 'Peshawar Cantt Division'],
+          ['03112998412233', 'Lucky Cement Ind.', 'Ind. Govt.', 'B-3 Industrial', 'bi_directional_ct_pt', 'MTR-990021', '5500.1', '5100.2', '450.5', '400.1', '150.2', '110.4', '2200.5', '2100.2', '180.4', '160.1', '60.5', '45.2', 'SN-LUCKY-99', 'Microtech', 'Net Metering Audit', 'Kohat Division']
+        ];
+      } else {
+        // Three Phase General (6 readings)
+        headers = [[...baseHeaders, 
+          'KWH Peak *', 'KWH Off Peak', 'KVARH Peak', 'KVARH Off Peak', 'MDI Peak (kW)', 'MDI Off Peak (kW)',
+          ...tailHeaders
+        ]];
+        sampleData = [['02334881099234', 'Farhan Brothers Rice Mill', 'Muhammad Farhan', 'A-2b(02) Commercial', 'three_phase_whole', 'MTR-503921', '45812.9', '42100.5', '1280.4', '1100.2', '12.5', '8.4', 'SN-998241-K', 'Secure Metering', 'Sudden Surcharge', 'Peshawar Cantt Division']];
+      }
       
       const ws = utils.aoa_to_sheet([...headers, ...sampleData]);
       const wb = utils.book_new();
@@ -345,7 +470,7 @@ export default function RegisterView({
           }).join(',');
         });
         
-        const parsedRows = parseBulkInput(formattedLines.join('\n'));
+        const parsedRows = parseBulkInput(formattedLines.join('\n'), bulkTargetType);
         const validRows = parsedRows.filter(r => r.isValid);
         
         if (validRows.length === 0) {
@@ -1679,7 +1804,7 @@ export default function RegisterView({
                 return;
               }
 
-              const parsedRows = parseBulkInput(bulkText);
+              const parsedRows = parseBulkInput(bulkText, bulkTargetType);
               const validRows = parsedRows.filter(r => r.isValid);
               if (validRows.length === 0) {
                 setErrorMsg('No valid rows found to import. Verify your fields format.');
@@ -1701,6 +1826,7 @@ export default function RegisterView({
                   consumerAccount: row.consumerAccount,
                   consumerName: row.consumerName,
                   fatherName: row.fatherName,
+                  tariff: row.tariff,
                   meterType: row.meterType,
                   meterNumber: row.meterNumber,
                   serialNumber: row.serialNumber,
@@ -1709,6 +1835,8 @@ export default function RegisterView({
                   reasonForTesting: row.reasonForTesting,
                   newOrUsed: 'Used',
                   receivedBy: currentUser.name,
+                  readings: row.structuredReadings,
+                  exportReadings: row.structuredExportReadings,
                   remarks: row.readings ? `Readings: ${row.readings}` : undefined
                 };
 
@@ -1763,6 +1891,43 @@ export default function RegisterView({
                   </div>
                 )}
 
+                {/* Bulk Type Selector */}
+                <div className="bg-slate-50 dark:bg-slate-850/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Boxes className="w-4 h-4 text-indigo-500" />
+                    <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">Select Meter Type for Bulk Import</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'single_phase', label: 'Single Phase', icon: Cpu },
+                      { id: 'three_phase_whole', label: '3-Ph Whole', icon: Layers },
+                      { id: 'three_phase_ct', label: '3-Ph CT Op', icon: SlidersHorizontal },
+                      { id: 'three_phase_ct_pt', label: '3-Ph CT/PT', icon: Building2 },
+                      { id: 'bi_directional_three_phase_whole', label: 'Bi-Dir Whole', icon: Zap },
+                      { id: 'bi_directional_ct_pt', label: 'Bi-Dir CT/PT', icon: ShieldCheck },
+                      { id: 'all', label: 'Auto Detect (General)', icon: Sparkles }
+                    ].map(type => {
+                      const isSelected = bulkTargetType === type.id;
+                      const Icon = (type.icon as any) || Boxes;
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setBulkTargetType(type.id as any)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-tight transition-all border ${
+                            isSelected 
+                              ? 'bg-blue-600 border-blue-500 text-white shadow-sm' 
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-blue-400'
+                          }`}
+                        >
+                          <Icon className={`w-3 h-3 ${isSelected ? 'text-amber-300' : 'text-slate-400'}`} />
+                          {type.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Excel File Drop Area */}
                   <div className="md:col-span-2 border-2 border-dashed border-indigo-200 dark:border-indigo-900/40 hover:border-indigo-500 dark:hover:border-indigo-600 bg-indigo-50/10 dark:bg-indigo-950/5 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2 group transition-all relative">
@@ -1796,7 +1961,10 @@ export default function RegisterView({
                         <span>Receipt Columns Sequence</span>
                       </div>
                       <p className="text-[10.5px] text-slate-500 leading-relaxed font-bold">
-                        Requires columns: Account No, Consumer Name, Father Name, Meter Type, Meter No, Readings, Warp / Serial Code, Make, Reason, Origin Division.
+                        {bulkTargetType === 'single_phase' && "Requires columns: Account No, Name, Father, Tariff, Type, Meter No, Reading, Serial, Make, Reason, Division."}
+                        {bulkTargetType.includes('three_phase') && "Requires columns: Account No, Name, Father, Tariff, Type, Meter No, [6 Readings: KWH P, KWH OP, KVARH P, KVARH OP, MDI P, MDI OP], Serial, Make, Reason, Division."}
+                        {bulkTargetType.includes('bi_directional') && "Requires columns: Account No, Name, Father, Tariff, Type, Meter No, [6 Imp Readings], [6 Exp Readings], Serial, Make, Reason, Division."}
+                        {bulkTargetType === 'all' && "Requires columns: Account No, Name, Father, Tariff, Type, Meter No, [Reading Columns], Serial Code, Make, Reason, Division."}
                       </p>
                     </div>
 
@@ -1835,9 +2003,9 @@ export default function RegisterView({
                   </div>
                 </details>
 
-                {bulkText.trim().length > 0 && (() => {
-                  const parsed = parseBulkInput(bulkText);
-                  const validRows = parsed.filter(r => r.isValid);
+                  {bulkText.trim().length > 0 && (() => {
+                    const parsed = parseBulkInput(bulkText, bulkTargetType);
+                    const validRows = parsed.filter(r => r.isValid);
                   const invalidRows = parsed.filter(r => !r.isValid);
 
                   return (
